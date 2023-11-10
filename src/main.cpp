@@ -12,11 +12,11 @@ void setup(){
 void loop(){
     switch(state){
         case OFF:
-            state = off();
+            //state = off();
             break;
 
         case DRIVE:
-            state = drive();
+            //state = drive();
             break;
     }
 }
