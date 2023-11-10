@@ -1,1 +1,1 @@
-enum States {OFF, ON, DRIVE, D_PLAUS};
+enum States {OFF, ON, DRIVE_READY, D_PLAUS};
