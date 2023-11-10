@@ -20,11 +20,15 @@ void loop(){
     switch (state) {
         case OFF:
             state = off();
+            break;
         case ON:
             state = on();
+            break;
         case DRIVE_READY:
             state = drive_ready();
+            break;
         case D_PLAUSE:
             staet = d_plaus();
+            break;
     }
 }
