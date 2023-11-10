@@ -27,8 +27,8 @@ void loop(){
         case DRIVE_READY:
             state = drive_ready();
             break;
-        case D_PLAUSE:
-            staet = d_plaus();
+        case D_PLAUS:
+            state = d_plaus();
             break;
     }
 }
