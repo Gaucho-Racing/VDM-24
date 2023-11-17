@@ -2,9 +2,8 @@ possible errors
 - dysfunctional brakes
 - dysfunctional steering
 - pedal travel is not at 0% when accelerator pedal is not pushed
-- sensor screw up
+
 - engine temperature
-- brake temperature
 - inverter temperature
 - battery temperature
 - bms temperature
