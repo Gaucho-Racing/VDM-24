@@ -10,7 +10,6 @@ int drive(){
         return DRIVE_READY;
     }
     
-
     // if car is not on
     if(!FAKENODES::on_switch()){
         return OFF;
