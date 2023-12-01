@@ -3,7 +3,7 @@
 #include <main.h>
 #include <fakenodes.h>
 
-int drive_plausibility(){
+int drive_plausibility(iCANflex &Car){
 
     // set current to 0;
 
