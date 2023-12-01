@@ -30,7 +30,8 @@ struct switchboard{
   int traction_control;
   int fan_override;
   int regen;
-
+  
+  double pwr_lvl;
   double brake_balance;
   int race_mode;
 
