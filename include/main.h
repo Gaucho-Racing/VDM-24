@@ -21,15 +21,17 @@ static unordered_map<State, string> stateToString = {
     {TESTING, "TESTING"}
 };
 iCANflex Car = iCANflex();
+switchboard switches;
 
 
 struct switchboard{
   int drive_enable;
   int drive_engage;
   int traction_control;
+  int fan_override;
   int regen;
 
-  double brak_balance;
+  double brake_balance;
   int race_mode;
 
   // this is for all digital read switchboard pins
