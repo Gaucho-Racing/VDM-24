@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include "Nodes.h"
 
 using namespace std;
 
