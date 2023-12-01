@@ -2,18 +2,40 @@
 #define MAIN
 
 #include <vector>
+#include <Arduino.h>
 #include <string>
-#include "icanflex.h"
-#include "Nodes.h"
+#include <imxrt.h>
+#include "iCANflex.h"
+#include <unordered_map>
+
 
 using namespace std;
 
-enum State {OFF, ON, DRIVE_READY, D_PLAUS, ERROR, TESTING};
-static vector<string> statesString = {"OFF", "ON", "DRIVE_READY", "D_PLAUS", "ERROR", "TESTING"};
+enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR, TESTING};
+static unordered_map<State, string> stateToString = {
+    {OFF, "OFF"},
+    {ON, "ON"},
+    {DRIVE_READY, "DRIVE_READY"},
+    {DRIVE, "DRIVE"},
+    {ERROR, "ERROR"},
+    {TESTING, "TESTING"}
+};
 iCANflex Car = iCANflex();
 
-static string getTextForEnum( int enumVal ) {
-  return statesString[enumVal];
-}
+
+struct switchboard{
+  int drive_enable;
+  int drive_engage;
+  int traction_control;
+  int regen;
+
+  double brak_balance;
+  int race_mode;
+
+  // this is for all digital read switchboard pins
+  // we will use this later when we order switches and encoders.
+
+
+};
 
 #endif
