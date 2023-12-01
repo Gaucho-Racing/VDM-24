@@ -1,10 +1,14 @@
 // off.cpp
 #include <Arduino.h>
 #include <imxrt.h>
-#include "main.h"
-#include "fakenodes.h"
+#include <main.h>
+#include <fakenodes.h>
 
-State off(iCANflex &Car) {
-    return OFF;
+States off(){
+
+    
+    if(FAKENODES::on() && !FAKENODES::drive()) { //there should also be a check for wrong, but we are ignoring that for now
+            return ON;
+        }
+
 }
-
