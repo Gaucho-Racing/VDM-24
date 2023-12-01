@@ -9,8 +9,8 @@ int drive(){
     //Fix units for brake pressure
     //on_switch and ready_to_drive are still fake nodes
     if(FAKENODES::on_switch() && 
-       Pedals.getBrakePressureF() > 0.0 &&
-       Pedals.getBrakePressureR() > 0.0 &&
+       Car.Pedals.getBrakePressureF() > 0.0 &&
+       Car.Pedals.getBrakePressureR() > 0.0 &&
        FAKENODES::ready_to_drive())
     {
         return DRIVE_READY;
