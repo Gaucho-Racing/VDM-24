@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <imxrt.h>
 
-#include "main.h"
 //#include "fakenodes.cpp"
 #include "iCANflex.h"
 #include "machine.h"
@@ -10,6 +9,12 @@
 volatile State state;
 volatile State prevState;
 volatile bool (*errorCheck)(void); 
+
+//comment these out when the corresponding file exists
+//State off(iCANflex &Car, switchboard& switches) { return ON; } //off
+State on(iCANflex &Car, switchboard& switches) { return DRIVE; } //on
+//State drive(iCANflex &Car, switchboard& switches) { return D_PLAUS; } //drive (it's DRIVE READY in the state diagram)
+//State d_plaus(iCANflex &Car, switchboard& switches) { return D_PLAUS; } //d_plaus
 
 State sendToError(volatile State currentState, volatile bool (*erFunc)(void)) {
    errorCheck = erFunc; 
@@ -36,7 +41,6 @@ void loop(){
             break;
         // case TESTING;
     }
-
     //test
 }
 
