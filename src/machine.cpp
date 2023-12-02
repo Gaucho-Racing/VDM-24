@@ -1,6 +1,7 @@
 #include "machine.h"
 
 State off(iCANflex& Car, switchboard& switches) {
+    /*
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
     bool reject_on = false;
@@ -10,6 +11,7 @@ State off(iCANflex& Car, switchboard& switches) {
     }
     if (!switches.on && !switches.drive_engage) reject_on = false;
     return OFF;
+    */
 
 }   
 
@@ -21,6 +23,7 @@ float motorOut(float throttle, iCANflex& car, switchboard& switches) {
 }
 
 State drive(iCANflex& Car, switchboard& switches) {
+    /*
     if(Car.PEDALS.getAPPS1() < 0.05 || Car.PEDALS.getAPPS2() < 0.05) return DRIVE;
 
     float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2;
@@ -29,4 +32,5 @@ State drive(iCANflex& Car, switchboard& switches) {
     Car.DTI.setRCurrent(motorOut(throttle, Car, switches));
     
     return DRIVE;
+    */
 }
