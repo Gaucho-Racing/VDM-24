@@ -11,12 +11,12 @@
 
 using namespace std;
 
-enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR, TESTING};
+enum State {OFF, ON, DRIVE, D_PLAUS, ERROR, TESTING};
 static unordered_map<State, string> stateToString = {
     {OFF, "OFF"},
     {ON, "ON"},
-    {DRIVE_READY, "DRIVE_READY"},
     {DRIVE, "DRIVE"},
+    {D_PLAUS, "D_PLAUS"},
     {ERROR, "ERROR"},
     {TESTING, "TESTING"}
 };
@@ -25,7 +25,7 @@ switchboard switches;
 
 
 struct switchboard{
-  int drive_enable;
+  int on;
   int drive_engage;
   int traction_control;
   int fan_override;

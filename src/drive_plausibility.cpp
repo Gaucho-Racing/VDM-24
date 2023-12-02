@@ -3,7 +3,11 @@
 #include <main.h>
 //#include <fakenodes.h>
 
-int drive_plausibility(iCANflex &Car){
+int d_plaus(iCANflex &Car){
+    /*
+    needs more logic.
+    change all fakenodes to actual nodes.
+    */
 
     // set current to 0;
 
