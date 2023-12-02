@@ -7,10 +7,18 @@
 #include <imxrt.h>
 #include "iCANflex.h"
 #include <unordered_map>
+#include "systems_check.h" 
 
 
 using namespace std;
 
+// OFF
+// ON // TURN CAR ON, RUN ERROR CHECKS
+// DRIVE_READY // WAIT FOR DRIVER TO PRESS THROTTLE
+// DRIVE // DRIVE
+// ERROR // ERROR
+// TESTING // TESTING
+ 
 enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR, TESTING};
 static unordered_map<State, string> stateToString = {
     {OFF, "OFF"},
@@ -25,9 +33,10 @@ switchboard switches;
 
 
 struct switchboard{
-  int drive_enable;
-  int drive_engage;
+  int drive_enable; //1
+  int drive_engage; //2
   int traction_control;
+  int launch_control;
   int fan_override;
   int regen;
   
