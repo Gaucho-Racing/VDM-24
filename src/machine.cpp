@@ -1,33 +1,32 @@
 #include "machine.h"
 
 
-State off(iCANflex& Car, switchboard& switches) {
+State off(iCANflex& Car, vector<int>& switches) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);    
 
-
-    if(switches.drive_enable && !switches.drive_engage) { return ON; }
+    if(switches[0] && !switches[1]) { return ON; }
     return OFF;
 }   
 
 
 
-State on(iCANflex& Car, switchboard& switches) {
+State on(iCANflex& Car, vector<int>& switches) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
 
     // switch 1 turned off
-    if(!switches.drive_enable){
+    if(!switches[0]){
         return OFF;
     }
     // Stay here if any startup error is detected or switch 2 is not yet on
-    else if(!switches.drive_engage ||  ECU_Startup_Rejection(Car, switches)) {
+    else if(!switches[1] ||  ECU_Startup_Rejection(Car)) {
         return ON;
     }
     // if switch 2 is on and no startup errors, run more systems checks and go to drive ready
-    else if(switches.drive_engage) {
-        if(Critical_Systems_Fault(Car, switches)) return ERROR;
-        Warning_Systems_Fault(Car, switches);
+    else if(switches[1]) {
+        if(Critical_Systems_Fault(Car)) return ERROR;
+        Warning_Systems_Fault(Car);
         // play RTD sound
         return DRIVE_READY;
     } 
@@ -39,15 +38,15 @@ State on(iCANflex& Car, switchboard& switches) {
 
 
 
-State drive_ready(iCANflex& Car, switchboard& switches, bool& BSE_APPS_violation) {
+State drive_ready(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) {
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(0);
     //start cooling system and all that jazz
 
     // switch 1 turned off 
-    if(!switches.drive_enable) { return OFF;}
+    if(!switches[0]) { return OFF;}
     // switch 2 turned off while 1 is on
-    else if(!switches.drive_engage) { return ON;}
+    else if(!switches[1]) { return ON;}
 
     float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
@@ -71,16 +70,16 @@ State drive_ready(iCANflex& Car, switchboard& switches, bool& BSE_APPS_violation
 
 
 
-float motorOut(float throttle, iCANflex& car, switchboard& switches) {
+float motorOut(float throttle, iCANflex& car, vector<int>& switches) {
     const int HIGH_PWR_R_CURRENT = 50;
     const int LOW_PWR_R_CURRENT = 25; 
     // change these to a continuous power curve later^^^
-    return switches.pwr_lvl ? HIGH_PWR_R_CURRENT *throttle: LOW_PWR_R_CURRENT*throttle; 
+    return switches[3] ? HIGH_PWR_R_CURRENT *throttle: LOW_PWR_R_CURRENT*throttle; 
 }
 
-State drive(iCANflex& Car, switchboard& switches, bool& BSE_APPS_violation) {
-    if(!switches.drive_enable) return OFF;
-    if(!switches.drive_engage) return ON;
+State drive(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) {
+    if(!switches[0]) return OFF;
+    if(!switches[1]) return ON;
 
     float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2;
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
@@ -101,17 +100,17 @@ State drive(iCANflex& Car, switchboard& switches, bool& BSE_APPS_violation) {
     return DRIVE;
 }
 
-State error(iCANflex& Car, switchboard& switches, State prevState, volatile bool (*errorCheck)(iCANflex& c, switchboard& s)) {
+State error(iCANflex& Car, vector<int>& switches, State prevState, volatile bool (*errorCheck)(iCANflex& c)) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
 
     
-    if(!switches.drive_enable) return OFF;
-    if(!switches.drive_engage) return ON;
+    if(!switches[0]) return OFF;
+    if(!switches[1]) return ON;
 
     
 
-    if(errorCheck(Car, switches)) {
+    if(errorCheck(Car)) {
         return ERROR;
     }
     else {

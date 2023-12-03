@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include <imxrt.h>
-
 #include "main.h"
-#include "fakenodes.cpp"
 #include "iCANflex.h"
 #include "machine.h"
 
@@ -10,10 +8,10 @@
 
 volatile State state;
 volatile State prevState;
-volatile bool (*errorCheck)(iCANflex& Car, switchboard& switches); 
+volatile bool (*errorCheck)(iCANflex& Car); 
 bool BSE_APPS_violation = false;
 
-State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex& Car, switchboard& switches)) {
+State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex& Car)) {
    errorCheck = erFunc; 
    prevState = currentState; 
    return ERROR;

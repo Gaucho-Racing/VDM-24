@@ -4,6 +4,7 @@
 #include <vector>
 #include <Arduino.h>
 #include <string>
+#include <vector>
 #include <imxrt.h>
 #include "iCANflex.h"
 #include <unordered_map>
@@ -14,7 +15,7 @@ using namespace std;
 
 // OFF
 // ON // TURN CAR ON, RUN ERROR CHECKS
-// DRIVE_READY // WAIT FOR DRIVER TO PRESS THROTTLE
+// DRIVE_READY // CAR IS READY TO DRIVE
 // DRIVE // DRIVE
 // ERROR // ERROR
 // TESTING // TESTING
@@ -28,26 +29,12 @@ static unordered_map<State, string> stateToString = {
     {ERROR, "ERROR"},
     {TESTING, "TESTING"}
 };
-iCANflex Car = iCANflex();
-switchboard switches;
+static iCANflex Car;
+static vector<int> switches(10);
 
 
-struct switchboard{
-  int drive_enable; //1
-  int drive_engage; //2
-  int traction_control;
-  int launch_control;
-  int fan_override;
-  int regen;
-  
-  double pwr_lvl;
-  double brake_balance;
-  int race_mode;
-
-  // this is for all digital read switchboard pins
-  // we will use this later when we order switches and encoders.
 
 
-};
+
 
 #endif
