@@ -11,10 +11,14 @@ State off(iCANflex& Car, vector<int>& switches) {
 
 
 
-State on(iCANflex& Car, vector<int>& switches) {
+State on(iCANflex& Car, vector<int>& switches) { // ON is when PRECHARGING BEGINS
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
+    //activate relay to TS
+    //activate Precharge through ACU;
 
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
+    float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
     // switch 1 turned off
     if(!switches[0]){
         return OFF;
@@ -24,9 +28,11 @@ State on(iCANflex& Car, vector<int>& switches) {
         return ON;
     }
     // if switch 2 is on and no startup errors, run more systems checks and go to drive ready
-    else if(switches[1]) {
+    else if(switches[1] && brake > 0.05 && throttle < 0.05) {
         if(Critical_Systems_Fault(Car)) return ERROR;
         Warning_Systems_Fault(Car);
+        // start powertrain cooling
+        // WAIT FOR PRECHARGE COMPLETE SIGNAL FROM ACU!!!!!!
         // play RTD sound
         return DRIVE_READY;
     } 
@@ -38,7 +44,7 @@ State on(iCANflex& Car, vector<int>& switches) {
 
 
 
-State drive_ready(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) {
+State drive_ready(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) { // PRECHARGING MUST BE COMPLETE BEFORE ENTERING THIS STATE
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(0);
     //start cooling system and all that jazz
