@@ -15,8 +15,32 @@ State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex&
    return ERROR;
 }
 
+void motorTempHigh_ISR() {
+    Car.sendDashError(5); // send placeholder error byte code to dash
+    State = sendToError(state, motorTempHighExitCondition(Car));
+}
+
+volatile bool motorTempHighExitCondition(iCANflex& car) {
+    if Car.getMotorTemp() < 55 {
+        return false;
+    }
+    return true;
+}
+
+volatile bool motorTempHighEntryCondition(iCANflex& Car) {
+    if (Car.getMotorTemp() >= 60) {
+        return true;
+    }
+    return false;
+}
+
 
 void loop(){
+
+    if(motorTempHighEntry(Car)) {
+        NVIC_TRIGGER_IRQ(3); //placeholder pin number 3
+    }
+
     switch (state) {
         case OFF:
             state = off(Car, switches);
