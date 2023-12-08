@@ -4,8 +4,6 @@
 #include "iCANflex.h"
 #include "machine.h"
 
-
-
 volatile State state;
 volatile State prevState;
 volatile bool (*errorCheck)(iCANflex& Car); 
@@ -86,6 +84,8 @@ void setup() {
 
     Serial.begin(9600);
     Car.begin();
+
+    attachInterruptVector(3, &motorTempHigh_ISR); //placeholder pin number 3
 
     attachInterruptVector(1, &currentLimitExceeded_ISR); // pin number is filler
 
