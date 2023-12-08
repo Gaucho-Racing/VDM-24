@@ -15,23 +15,23 @@ State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex&
    return ERROR;
 }
 
-void motorTempHigh_ISR() {
-    Car.sendDashError(5); // send placeholder error byte code to dash
-    State = sendToError(state, motorTempHighExitCondition(Car));
-}
-
 volatile bool motorTempHighExitCondition(iCANflex& car) {
-    if Car.getMotorTemp() < 55 {
+    if (Car.DTI.getMotorTemp() < 55) {
         return false;
     }
     return true;
 }
 
 volatile bool motorTempHighEntryCondition(iCANflex& Car) {
-    if (Car.getMotorTemp() >= 60) {
+    if (Car.DTI.getMotorTemp() >= 60) {
         return true;
     }
     return false;
+}
+
+void motorTempHigh_ISR() {
+    Car.sendDashError(5); // send placeholder error byte code to dash
+    state = sendToError(state, motorTempHighExitCondition);
 }
 
 const int canFailureThreshold = 100; // msec
@@ -72,7 +72,7 @@ void currentLimitExceeded_ISR() {
 
 void loop(){
 
-    if(motorTempHighEntry(Car)) {
+    if(motorTempHighEntryCondition(Car)) {
         NVIC_TRIGGER_IRQ(3); //placeholder pin number 3
     }
 
@@ -104,13 +104,12 @@ void loop(){
 }
 
 void setup() {
-    attachInterruptVector(10, &canReceiveFailure_ISR);
 
     Serial.begin(9600);
     Car.begin();
 
     attachInterruptVector(3, &motorTempHigh_ISR); //placeholder pin number 3
-
+    attachInterruptVector(10, &canReceiveFailure_ISR);
     attachInterruptVector(1, &currentLimitExceeded_ISR); // pin number is filler
 
     // set all the switchboard pins to  digital read inputs
