@@ -17,6 +17,29 @@ State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex&
    return ERROR;
 }
 
+const int canFailureThreshold = 100; // msec
+
+volatile bool canReceiveFailure(iCANflex& Car) {
+    return 
+        Car.DTI.getAge() > canFailureThreshold ||
+        Car.ECU.getAge() > canFailureThreshold ||
+        Car.WFL.getAge() > canFailureThreshold ||
+        Car.WFR.getAge() > canFailureThreshold ||
+        Car.WRL.getAge() > canFailureThreshold ||
+        Car.WRR.getAge() > canFailureThreshold ||
+        Car.GPS1.getAge() > canFailureThreshold ||
+        Car.PEDALS.getAge() > canFailureThreshold ||
+        Car.ACU1.getAge() > canFailureThreshold ||
+        Car.BCM1.getAge() > canFailureThreshold ||
+        Car.DASHBOARD.getAge() > canFailureThreshold ||
+        Car.ENERGY_METER.getAge() > canFailureThreshold;
+}
+
+void canReceiveFailure_ISR() {
+    Car.sendDashError(100);
+    state = sendToError(state, canReceiveFailure);
+}
+
 volatile bool currentLimitSafe(iCANflex& Car) {
     return (Car.DTI.getDCCurrent() > 575); // based on below current limit
 }
@@ -31,6 +54,8 @@ void currentLimitExceeded_ISR() {
 }
 
 void loop(){
+    if (canReceiveFailure(Car)) {NVIC_TRIGGER_IRQ(10);}
+
     if (currentLimitExceeded(Car)) { 
         NVIC_TRIGGER_IRQ(1); // pin number is filler
     }
@@ -57,6 +82,8 @@ void loop(){
 }
 
 void setup() {
+    attachInterruptVector(10, &canReceiveFailure_ISR);
+
     Serial.begin(9600);
     Car.begin();
 
