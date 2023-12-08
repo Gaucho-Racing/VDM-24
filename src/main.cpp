@@ -34,6 +34,41 @@ volatile bool motorTempHighEntryCondition(iCANflex& Car) {
     return false;
 }
 
+const int canFailureThreshold = 100; // msec
+
+volatile bool canReceiveFailure(iCANflex& Car) {
+    return 
+        Car.DTI.getAge() > canFailureThreshold ||
+        Car.ECU.getAge() > canFailureThreshold ||
+        Car.WFL.getAge() > canFailureThreshold ||
+        Car.WFR.getAge() > canFailureThreshold ||
+        Car.WRL.getAge() > canFailureThreshold ||
+        Car.WRR.getAge() > canFailureThreshold ||
+        Car.GPS1.getAge() > canFailureThreshold ||
+        Car.PEDALS.getAge() > canFailureThreshold ||
+        Car.ACU1.getAge() > canFailureThreshold ||
+        Car.BCM1.getAge() > canFailureThreshold ||
+        Car.DASHBOARD.getAge() > canFailureThreshold ||
+        Car.ENERGY_METER.getAge() > canFailureThreshold;
+}
+
+void canReceiveFailure_ISR() {
+    Car.sendDashError(100);
+    state = sendToError(state, canReceiveFailure);
+}
+
+volatile bool currentLimitSafe(iCANflex& Car) {
+    return (Car.DTI.getDCCurrent() > 575); // based on below current limit
+}
+
+volatile bool currentLimitExceeded(iCANflex& Car) {
+    return (Car.DTI.getDCCurrent() > 600); // taken from last year's implementation
+}
+
+void currentLimitExceeded_ISR() {
+    Car.sendDashError(106);
+    state = sendToError(state, currentLimitSafe);
+}
 
 void loop(){
 
@@ -41,6 +76,11 @@ void loop(){
         NVIC_TRIGGER_IRQ(3); //placeholder pin number 3
     }
 
+    if (canReceiveFailure(Car)) {NVIC_TRIGGER_IRQ(10);}
+
+    if (currentLimitExceeded(Car)) { 
+        NVIC_TRIGGER_IRQ(1); // pin number is filler
+    }
     switch (state) {
         case OFF:
             state = off(Car, switches);
@@ -71,6 +111,7 @@ void setup() {
 
     attachInterruptVector(3, &motorTempHigh_ISR); //placeholder pin number 3
 
+    attachInterruptVector(1, &currentLimitExceeded_ISR); // pin number is filler
 
     // set all the switchboard pins to  digital read inputs
 
