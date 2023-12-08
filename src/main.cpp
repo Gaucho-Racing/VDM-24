@@ -1,34 +1,56 @@
 #include <Arduino.h>
 #include <imxrt.h>
+#include "main.h"
+#include "iCANflex.h"
+#include "machine.h"
 
-#include "enums.h"
-#include "fakenodes.cpp"
 
-States state;
 
-//comment these out when the corresponding file exists
-States off() { return ON; } //off
-States on() { return DRIVE_READY; } //on
-States drive_ready() { return D_PLAUS; } //drive_ready
-States d_plaus() { return D_PLAUS; } //d_plaus
+volatile State state;
+volatile State prevState;
+volatile bool (*errorCheck)(iCANflex& Car); 
+bool BSE_APPS_violation = false;
 
-void setup() {
-    state = OFF;  
+State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex& Car)) {
+   errorCheck = erFunc; 
+   prevState = currentState; 
+   return ERROR;
 }
+
 
 void loop(){
     switch (state) {
         case OFF:
-            state = off();
+            state = off(Car, switches);
             break;
         case ON:
-            state = on();
+            if ((state = on(Car, switches)) == ERROR) sendToError(ON, &ECU_Startup_Rejection);
             break;
         case DRIVE_READY:
-            state = drive_ready();
+            state = drive_ready(Car, switches, BSE_APPS_violation); 
             break;
-        case D_PLAUS:
-            state = d_plaus();
+        case DRIVE:
+            state = drive(Car, switches, BSE_APPS_violation);
             break;
+        case ERROR:
+            state = error(Car, switches, prevState, errorCheck);
+            break;
+        // case TESTING;
     }
+
+    //test
 }
+
+void setup() {
+    Serial.begin(9600);
+    Car.begin();
+
+
+    // set all the switchboard pins to  digital read inputs
+
+
+
+    // set state  
+    state = OFF;  
+}
+
