@@ -47,7 +47,7 @@ State on(iCANflex& Car, vector<int>& switches) { // ON is when PRECHARGING BEGIN
 State drive_ready(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) { // PRECHARGING MUST BE COMPLETE BEFORE ENTERING THIS STATE
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(0);
-    //start cooling system and all that jazz
+    //start cooling system and all that 
 
     // switch 1 turned off 
     if(!switches[0]) { return OFF;}
@@ -79,6 +79,7 @@ State drive_ready(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation
 float motorOut(float throttle, iCANflex& car, vector<int>& switches) {
     const int HIGH_PWR_R_CURRENT = 50;
     const int LOW_PWR_R_CURRENT = 25; 
+    // regen curve is neg on 0 -delta from -const variable on steering angle and battery level
     // change these to a continuous power curve later^^^
     return switches[3] ? HIGH_PWR_R_CURRENT *throttle: LOW_PWR_R_CURRENT*throttle; 
 }
