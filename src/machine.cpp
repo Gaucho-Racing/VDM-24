@@ -2,7 +2,7 @@
 #include <imxrt.h>
 #include "machine.h"
 
-volatile bool reject_on = true;
+bool reject_on = true;
 
 State off(iCANflex& Car, vector<int>& switches) {
     Car.DTI.setDriveEnable(0);
@@ -103,6 +103,8 @@ State drive(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) {
         BSE_APPS_violation = true;
         return DRIVE_READY;
     }
+
+    // APPS plausibility violation?
 
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(motorOut(throttle, Car, switches));
