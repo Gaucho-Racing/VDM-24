@@ -19,18 +19,20 @@ State on(iCANflex& Car, vector<int>& switches) { // ON is when PRECHARGING BEGIN
     //activate relay to TS
     //activate Precharge through ACU;
 
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
-    float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
+    //float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
+    //float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
+    
     // switch 1 turned off
     if(!switches[0]){
         return OFF;
     }
     // Stay here if any startup error is detected or switch 2 is not yet on
-    else if(!switches[1] ||  ECU_Startup_Rejection(Car)) {
+    else if (!switches[1] || ECU_Startup_Rejection(Car)) {
         return ON;
     }
     // if switch 2 is on and no startup errors, run more systems checks and go to drive ready
-    else if(switches[1] && brake > 0.05 && throttle < 0.05) {
+    // here, ECU_Startup_Rejection is implicitly false, no need to recheck brakes and throttle
+    else if (switches[1]) {
         if(Critical_Systems_Fault(Car)) return ERROR;
         Warning_Systems_Fault(Car);
         // start powertrain cooling
