@@ -118,7 +118,7 @@ State error(iCANflex& Car, vector<int>& switches, State prevState, volatile bool
 
     
     if(!switches[0]) return OFF;
-    if(!switches[1]) return ON;
+    //if(!switches[1]) return ON;
 
     
 
