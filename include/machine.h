@@ -3,11 +3,11 @@
 
 #include "main.h"
 
-State off(iCANflex& Car, switchboard& switches);
-State on(iCANflex& Car, switchboard& switches);
-State drive(iCANflex& Car, switchboard& switches);
-State d_plaus(iCANflex& Car, switchboard& switches);
-State error(iCANflex& Car, switchboard& switches, State prevState, volatile bool (*errorCheck)(void));
-State testing(iCANflex& Car, switchboard& switches);
+State off(iCANflex& Car, vector<int>& switches);
+State on(iCANflex& Car, vector<int>& switches);
+State drive_ready(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation);
+State drive(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation);
+State error(iCANflex& Car, vector<int>& switches, State prevState, volatile bool (*errorCheck)(iCANflex& c));
+State testing(iCANflex& Car);
 
 #endif

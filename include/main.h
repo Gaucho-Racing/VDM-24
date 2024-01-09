@@ -4,41 +4,36 @@
 #include <vector>
 #include <Arduino.h>
 #include <string>
+#include <vector>
 #include <imxrt.h>
 #include "iCANflex.h"
 #include <unordered_map>
+#include "systems_check.h" 
 
 
 using namespace std;
 
-enum State {OFF, ON, DRIVE, D_PLAUS, ERROR, TESTING};
+// OFF
+// ON // TURN CAR ON, (START PRECHARGE) RUN ERROR CHECKS
+// DRIVE_READY // CAR IS READY TO DRIVE
+// DRIVE // DRIVE
+// ERROR // ERROR
+// TESTING // TESTING
+ 
+enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR, TESTING};
 static unordered_map<State, string> stateToString = {
     {OFF, "OFF"},
     {ON, "ON"},
     {DRIVE, "DRIVE"},
-    {D_PLAUS, "D_PLAUS"},
     {ERROR, "ERROR"},
     {TESTING, "TESTING"}
 };
-iCANflex Car = iCANflex();
-switchboard switches;
+static iCANflex Car;
+static vector<int> switches(10);
 
 
-struct switchboard{
-  int on;
-  int drive_engage;
-  int traction_control;
-  int fan_override;
-  int regen;
-  
-  double pwr_lvl;
-  double brake_balance;
-  int race_mode;
-
-  // this is for all digital read switchboard pins
-  // we will use this later when we order switches and encoders.
 
 
-};
+
 
 #endif
