@@ -2,16 +2,17 @@
 #include <imxrt.h>
 #include "machine.h"
 
+volatile bool reject_on = true;
 
 State off(iCANflex& Car, vector<int>& switches) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);    
-
-    if(switches[0] && !switches[1]) { return ON; }
+   
+    reject_on = switches[1];
+    if (switches[0] && !reject_on) return ON;
+    if (!switches[0] && !switches[1]) reject_on = false;
     return OFF;
 }   
-
-
 
 State on(iCANflex& Car, vector<int>& switches) { // ON is when PRECHARGING BEGINS
     Car.DTI.setDriveEnable(0);
@@ -31,8 +32,8 @@ State on(iCANflex& Car, vector<int>& switches) { // ON is when PRECHARGING BEGIN
         return ON;
     }
     // if switch 2 is on and no startup errors, run more systems checks and go to drive ready
-    // here, ECU_Startup_Rejection is implicitly false, no need to recheck brakes and throttle
-    else if (switches[1]) {
+    // here, switch 2 is implicitly on and ECU_Startup_Rejection is implicitly false, no need to recheck everything
+    else /*if (switches[1] && !ECU_Startup_Rejection(Car))*/ {
         if(Critical_Systems_Fault(Car)) return ERROR;
         Warning_Systems_Fault(Car);
         // start powertrain cooling
@@ -40,9 +41,7 @@ State on(iCANflex& Car, vector<int>& switches) { // ON is when PRECHARGING BEGIN
         // play RTD sound
         return DRIVE_READY;
     } 
-    else {
-        return ON;
-    }
+    return ON;
 }
 
 
