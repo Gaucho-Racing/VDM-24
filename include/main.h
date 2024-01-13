@@ -20,7 +20,7 @@ using namespace std;
 // ERROR // ERROR
 // TESTING // TESTING
  
-enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR, TESTING};
+enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR, TESTING, LAUNCH};
 static unordered_map<State, string> stateToString = {
     {OFF, "OFF"},
     {ON, "ON"},
