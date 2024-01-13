@@ -84,10 +84,11 @@ State launch(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violatio
 }
 
 float motorOut(float throttle, iCANflex& car, const vector<int>& switches) {
-    const int PWR_R_CURRENT_MAX = 50;
-    // regen curve is neg on 0 -delta from -const variable on steering angle and battery level
-    // change these to a continuous power curve later^^^
-    return PWR_R_CURRENT_MAX*throttle;
+    // const int PWR_R_CURRENT_MAX = 50;
+    // // regen curve is neg on 0 -delta from -const variable on steering angle and battery level
+    // // change these to a continuous power curve later^^^
+    // return PWR_R_CURRENT_MAX*throttle;
+    return 0;
 }
 
 State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation) {

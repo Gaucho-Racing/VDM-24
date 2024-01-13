@@ -12,7 +12,11 @@ volatile State prevState;
 volatile bool (*errorCheck)(iCANflex& Car); 
 bool BSE_APPS_violation = false;
 
-// ECU TUNE Reads.
+// ECU TUNE Reads
+float PWR_CURRENT_MAX;
+float REGEN_LVL;
+float BRAKE_BALANCE;
+unordered_map<int>
 
 State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex& Car)) {
    errorCheck = erFunc; 
@@ -65,6 +69,8 @@ void setup() {
     Serial.println("Initializing SD Card...");
     if(!SD.begin(BUILTIN_SDCARD)){
         Serial.println("CRITICAL FAULT: PLEASE INSERT SD CARD CONTAINING ECU FLASH TUNE");
+        Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
+
         state = ERROR;
     }
     else{
@@ -75,13 +81,10 @@ void setup() {
             Serial.print("Reading ECU FLASH....");
             string tune;
             while(ecu_tune.available()){
+                Serial.print(".");
                 tune += (char)ecu_tune.read();
             }
             ecu_tune.close();
-            for(int i = 0; i < 10; i++){
-                delay(100);
-                Serial.print("..");
-            }
             Serial.println("");
 
 
@@ -92,6 +95,7 @@ void setup() {
         }
         else {
             Serial.println("CRITICAL FAULT: ERROR OPENING GR24 ECU TUNE");
+            Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
             state = ERROR;
         }
     }
