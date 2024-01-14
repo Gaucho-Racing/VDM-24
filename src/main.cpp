@@ -14,9 +14,14 @@ bool BSE_APPS_violation = false;
 
 // ECU TUNE Reads
 float PWR_CURRENT_MAX;
-float REGEN_LVL;
+float PWR_REGEN_MAX;
 float BRAKE_BALANCE;
-unordered_map<int>
+unordered_map<float, float> THROTTLE_MAPPING;
+unordered_map<float, float> REGEN_TORQUE_MAPPING;
+vector<float> LAUNCH_CONTROL_FUNCTION;
+float LAUNCH_CONTROL_INTERVAL;
+
+
 
 State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex& Car)) {
    errorCheck = erFunc; 
