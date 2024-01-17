@@ -135,9 +135,13 @@ void setup() {
     Car.begin();
 
     attachInterruptVector(IRQ_GPIO1_INT2, &motorTempHigh_ISR); //placeholder pin number 3
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT2);
     attachInterruptVector(IRQ_GPIO1_INT1, &canReceiveFailure_ISR);
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT1);
     attachInterruptVector(IRQ_GPIO1_INT3, &currentLimitExceeded_ISR); // pin number is filler
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT3);
     attachInterruptVector(IRQ_GPIO1_INT0, &shutdown_pinned_ISR); 
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT0);
 
      // set state  
     state = OFF; 
