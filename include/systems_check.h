@@ -9,7 +9,7 @@ static volatile bool ECU_Startup_Rejection(iCANflex& Car) {
         return true;
         // send error code to dash
     }   
-    if(Car.PEDALS.getBrakePressureF() > 0.05 || Car.PEDALS.getBrakePressureR() > 0.05) {
+    if(Car.PEDALS.getBrakePressureF() < 0.05 || Car.PEDALS.getBrakePressureR() < 0.05) {
         return true;
         // send error code to dash
     }
