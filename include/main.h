@@ -25,6 +25,7 @@ static unordered_map<State, string> stateToString = {
     {OFF, "OFF"},
     {ON, "ON"},
     {DRIVE, "DRIVE"},
+    {DRIVE_READY, "DRIVE_READY"},
     {ERROR, "ERROR"},
     {TESTING, "TESTING"}
 };
