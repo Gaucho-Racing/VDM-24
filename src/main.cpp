@@ -23,7 +23,7 @@ State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex&
    return ERROR;
 }
 
-volatile bool motorTempHighExitCondition(iCANflex& car) {
+volatile bool motorTempHighExitCondition(iCANflex& Car) {
     if (Car.DTI.getMotorTemp() < 55) {
         return false;
     }
@@ -78,6 +78,15 @@ void currentLimitExceeded_ISR() {
     state = sendToError(state, currentLimitSafe);
 }
 
+volatile bool shutdown_pinned(iCANflex& Car) {
+    return (bool)digitalRead(shutdown_pin);
+}
+
+void shutdown_pinned_ISR() {
+    Car.sendDashError(150);
+    state = sendToError(OFF, shutdown_pinned);
+}
+
 void loop(){
 
     if(motorTempHighEntryCondition(Car)) {
@@ -128,6 +137,7 @@ void setup() {
     attachInterruptVector(3, &motorTempHigh_ISR); //placeholder pin number 3
     attachInterruptVector(10, &canReceiveFailure_ISR);
     attachInterruptVector(1, &currentLimitExceeded_ISR); // pin number is filler
+    attachInterruptVector(22, &shutdown_pinned_ISR); 
 
      // set state  
     state = OFF; 
