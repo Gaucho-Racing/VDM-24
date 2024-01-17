@@ -13,15 +13,15 @@ volatile bool (*errorCheck)(iCANflex& Car);
 bool BSE_APPS_violation = false;
 
 // ECU TUNE Reads
-float PWR_CURRENT_MAX;
 float PWR_REGEN_MAX;
 float BRAKE_BALANCE;
-unordered_map<float, float> THROTTLE_MAPPING;
+float MAX_MOTOR_CURRENT;
+vector<unordered_map<int, float>> THROTTLE_MAPPING(100); // index is throttle position, value[rpm] is the % of max current
 unordered_map<float, float> REGEN_TORQUE_MAPPING;
 vector<float> LAUNCH_CONTROL_FUNCTION;
 float LAUNCH_CONTROL_INTERVAL;
 
-
+const int REV_LIMITER = 5500;
 
 State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex& Car)) {
    errorCheck = erFunc; 

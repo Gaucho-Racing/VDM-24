@@ -99,7 +99,7 @@ State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     
     // TODO: NEEDS WORK for actual calculation
-    bool APPS_GRADIENT_FAULT = false;
+    bool APPS_GRADIENT_FAULT = abs(Car.PEDALS.getAPPS1() < Car.PEDALS.getAPPS2()) > 0.05;
     if(APPS_GRADIENT_FAULT) { return OFF; }
 
 
