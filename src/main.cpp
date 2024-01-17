@@ -1,8 +1,4 @@
-#include <Arduino.h>
-#include <imxrt.h>
 #include "main.h"
-#include "iCANflex.h"
-#include "machine.h"
 
 volatile State state;
 volatile State prevState;
