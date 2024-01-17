@@ -21,6 +21,7 @@ using namespace std;
 // TESTING // TESTING
  
 enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR, TESTING};
+const int shutdown_pin = 0; // placeholder
 static unordered_map<State, string> stateToString = {
     {OFF, "OFF"},
     {ON, "ON"},
