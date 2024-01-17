@@ -1,7 +1,7 @@
 #ifndef SYSTEMS_CHECK
 #define SYSTEMS_CHECK
 
-#include "main.h"
+#include "machine.h"
 
 //BSE and APPS check for input at startup ONLY
 static volatile bool ECU_Startup_Rejection(iCANflex& Car) {

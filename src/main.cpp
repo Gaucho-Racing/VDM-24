@@ -1,7 +1,4 @@
-#include "iCANflex.h"
 #include "machine.h"
-#include "SD.h"
-
 
 // volatile stuff and state transition
 volatile State state;
