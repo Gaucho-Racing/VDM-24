@@ -1,10 +1,4 @@
-#include <Arduino.h>
-#include <imxrt.h>
-#include "main.h"
-#include "iCANflex.h"
 #include "machine.h"
-#include "SD.h"
-
 
 // volatile stuff and state transition
 volatile State state;
@@ -29,8 +23,81 @@ State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex&
    return ERROR;
 }
 
+volatile bool motorTempHighExitCondition(iCANflex& Car) {
+    if (Car.DTI.getMotorTemp() < 55) {
+        return false;
+    }
+    return true;
+}
+
+volatile bool motorTempHighEntryCondition(iCANflex& Car) {
+    if (Car.DTI.getMotorTemp() >= 60) {
+        return true;
+    }
+    return false;
+}
+
+void motorTempHigh_ISR() {
+    Car.sendDashError(5); // send placeholder error byte code to dash
+    state = sendToError(state, motorTempHighExitCondition);
+}
+
+const int canFailureThreshold = 100; // msec
+
+volatile bool canReceiveFailure(iCANflex& Car) {
+    return 
+        Car.DTI.getAge() > canFailureThreshold ||
+        Car.ECU.getAge() > canFailureThreshold ||
+        Car.WFL.getAge() > canFailureThreshold ||
+        Car.WFR.getAge() > canFailureThreshold ||
+        Car.WRL.getAge() > canFailureThreshold ||
+        Car.WRR.getAge() > canFailureThreshold ||
+        Car.GPS1.getAge() > canFailureThreshold ||
+        Car.PEDALS.getAge() > canFailureThreshold ||
+        Car.ACU1.getAge() > canFailureThreshold ||
+        Car.BCM1.getAge() > canFailureThreshold ||
+        Car.DASHBOARD.getAge() > canFailureThreshold ||
+        Car.ENERGY_METER.getAge() > canFailureThreshold;
+}
+
+void canReceiveFailure_ISR() {
+    Car.sendDashError(100);
+    state = sendToError(state, canReceiveFailure);
+}
+
+volatile bool currentLimitSafe(iCANflex& Car) {
+    return (Car.DTI.getDCCurrent() > 575); // based on below current limit
+}
+
+volatile bool currentLimitExceeded(iCANflex& Car) {
+    return (Car.DTI.getDCCurrent() > 600); // taken from last year's implementation
+}
+
+void currentLimitExceeded_ISR() {
+    Car.sendDashError(106);
+    state = sendToError(state, currentLimitSafe);
+}
+
+volatile bool shutdown_pinned(iCANflex& Car) {
+    return (bool)digitalRead(shutdown_pin);
+}
+
+void shutdown_pinned_ISR() {
+    Car.sendDashError(150);
+    state = sendToError(OFF, shutdown_pinned);
+}
 
 void loop(){
+
+    if(motorTempHighEntryCondition(Car)) {
+        NVIC_TRIGGER_IRQ(3); //placeholder pin number 3
+    }
+
+    if (canReceiveFailure(Car)) {NVIC_TRIGGER_IRQ(10);}
+
+    if (currentLimitExceeded(Car)) { 
+        NVIC_TRIGGER_IRQ(1); // pin number is filler
+    }
     switch (state) {
         case OFF:
             state = off(Car, switches);
@@ -57,6 +124,7 @@ void loop(){
 }
 
 void setup() {
+
     Serial.begin(9600);
     Serial.println("Waiting for Serial Port to connect");
     while(!Serial){
@@ -66,6 +134,14 @@ void setup() {
 
     Car.begin();
 
+    attachInterruptVector(IRQ_GPIO1_INT2, &motorTempHigh_ISR); //placeholder pin number 3
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT2);
+    attachInterruptVector(IRQ_GPIO1_INT1, &canReceiveFailure_ISR);
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT1);
+    attachInterruptVector(IRQ_GPIO1_INT3, &currentLimitExceeded_ISR); // pin number is filler
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT3);
+    attachInterruptVector(IRQ_GPIO1_INT0, &shutdown_pinned_ISR); 
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT0);
 
      // set state  
     state = OFF; 

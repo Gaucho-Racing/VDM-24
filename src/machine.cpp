@@ -1,6 +1,5 @@
 #include "machine.h"
 
-
 State off(iCANflex& Car, const vector<int>& switches) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);    

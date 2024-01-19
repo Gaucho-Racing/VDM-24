@@ -1,4 +1,7 @@
-#include "main.h"
+#ifndef SYSTEMS_CHECK
+#define SYSTEMS_CHECK
+
+#include "machine.h"
 
 //BSE and APPS check for input at startup ONLY
 static volatile bool ECU_Startup_Rejection(iCANflex& Car) {
@@ -23,3 +26,5 @@ static volatile bool Critical_Systems_Fault(iCANflex& Car) {
 static volatile void Warning_Systems_Fault(iCANflex& Car) {
     Serial.println("NON CRITICAL ERROR CODES");
 }
+
+#endif
