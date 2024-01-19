@@ -1,0 +1,17 @@
+possible errors
+- dysfunctional brakes
+- dysfunctional steering
+- pedal travel is not at 0% when accelerator pedal is not pushed
+
+- engine temperature
+- inverter temperature
+- battery temperature
+- bms temperature
+- 
+
+error guidelines
+- risks driver safety
+- risks car mechanics function/safety
+- merits immediate car shutdown until error is resolved
+
+goes back to off once error resolved 

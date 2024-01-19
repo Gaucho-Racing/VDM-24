@@ -12,13 +12,14 @@ State off(iCANflex& Car, vector<int>& switches) {
     if (switches[0] && !reject_on) return ON;
     if (!switches[0] && !switches[1]) reject_on = false;
     return OFF;
-}   
+}  
 
-State on(iCANflex& Car, vector<int>& switches) { // ON is when PRECHARGING BEGINS
+
+
+State on(iCANflex& Car, const vector<int>& switches) { // ON is when PRECHARGING BEGINS
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
-    //activate relay to TS
-    //activate Precharge through ACU;
+    
 
     //float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
     //float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
@@ -47,7 +48,7 @@ State on(iCANflex& Car, vector<int>& switches) { // ON is when PRECHARGING BEGIN
 
 
 
-State drive_ready(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) { // PRECHARGING MUST BE COMPLETE BEFORE ENTERING THIS STATE
+State drive_ready(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation) { // PRECHARGING MUST BE COMPLETE BEFORE ENTERING THIS STATE
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(0);
     //start cooling system and all that 
@@ -68,6 +69,7 @@ State drive_ready(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation
         }
         // else loop back into DRIVE_READY state with Violation still true
     }
+
     // only if no violation, and throttle is pressed, go to DRIVE
     if(!BSE_APPS_violation && throttle > 0.05) {
         return DRIVE;
@@ -76,18 +78,20 @@ State drive_ready(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation
     return DRIVE_READY;
 }
 
-
-
-
-float motorOut(float throttle, iCANflex& car, vector<int>& switches) {
-    const int HIGH_PWR_R_CURRENT = 50;
-    const int LOW_PWR_R_CURRENT = 25; 
-    // regen curve is neg on 0 -delta from -const variable on steering angle and battery level
-    // change these to a continuous power curve later^^^
-    return switches[3] ? HIGH_PWR_R_CURRENT *throttle: LOW_PWR_R_CURRENT*throttle; 
+State launch(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation){
+    if(Car.PEDALS.getAPPS1() < 0.90 || Car.PEDALS.getAPPS2() < 0)
+    return LAUNCH;
 }
 
-State drive(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) {
+float motorOut(float throttle, iCANflex& car, const vector<int>& switches) {
+    // const int PWR_R_CURRENT_MAX = 50;
+    // // regen curve is neg on 0 -delta from -const variable on steering angle and battery level
+    // // change these to a continuous power curve later^^^
+    // return PWR_R_CURRENT_MAX*throttle;
+    return 0;
+}
+
+State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation) {
     if(!switches[0]) return OFF;
     if(!switches[1]) return ON;
 
@@ -95,8 +99,9 @@ State drive(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) {
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     
     // TODO: NEEDS WORK for actual calculation
-    bool APPS_GRADIENT_FAULT = false;
+    bool APPS_GRADIENT_FAULT = abs(Car.PEDALS.getAPPS1() < Car.PEDALS.getAPPS2()) > 0.05;
     if(APPS_GRADIENT_FAULT) { return OFF; }
+
 
     // set violation condtion, and return to DRIVE_READY, cutting motor power. 
     if(brake > 0.05 && throttle > 0.25) {
@@ -104,7 +109,6 @@ State drive(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) {
         return DRIVE_READY;
     }
 
-    // APPS plausibility violation?
 
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(motorOut(throttle, Car, switches));
@@ -112,15 +116,12 @@ State drive(iCANflex& Car, vector<int>& switches, bool& BSE_APPS_violation) {
     return DRIVE;
 }
 
-State error(iCANflex& Car, vector<int>& switches, State prevState, volatile bool (*errorCheck)(iCANflex& c)) {
+State error(iCANflex& Car, const vector<int>& switches, State prevState, volatile bool (*errorCheck)(iCANflex& c)) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
-
     
     if(!switches[0]) return OFF;
     //if(!switches[1]) return ON;
-
-    
 
     if(errorCheck(Car)) {
         return ERROR;

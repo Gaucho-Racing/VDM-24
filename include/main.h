@@ -6,10 +6,10 @@
 #include <string>
 #include <vector>
 #include <imxrt.h>
-#include "iCANflex.h"
 #include <unordered_map>
+#include "iCANflex.h"
+#include "SD.h"
 #include "systems_check.h" 
-
 
 using namespace std;
 
@@ -20,7 +20,8 @@ using namespace std;
 // ERROR // ERROR
 // TESTING // TESTING
  
-enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR, TESTING};
+enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR, TESTING, LAUNCH};
+const int shutdown_pin = 41;
 static unordered_map<State, string> stateToString = {
     {OFF, "OFF"},
     {ON, "ON"},
