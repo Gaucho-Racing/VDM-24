@@ -90,20 +90,23 @@ void shutdown_pinned_ISR() {
 void loop(){
 
     if(motorTempHighEntryCondition(Car)) {
-        NVIC_TRIGGER_IRQ(3); //placeholder pin number 3
+        NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT2);
     }
 
-    if (canReceiveFailure(Car)) {NVIC_TRIGGER_IRQ(10);}
+    if (canReceiveFailure(Car)) { NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT1); }
 
     if (currentLimitExceeded(Car)) { 
-        NVIC_TRIGGER_IRQ(1); // pin number is filler
+        NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT3);
     }
+
+    if (shutdown_pinned(Car)) { NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT0); }
+
     switch (state) {
         case OFF:
             state = off(Car, switches);
             break;
         case ON:
-            if ((state = on(Car, switches)) == ERROR) sendToError(ON, &ECU_Startup_Rejection);
+            state = on(Car, switches);
             break;
         case DRIVE_READY:
             state = drive_ready(Car, switches, BSE_APPS_violation); 
