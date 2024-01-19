@@ -106,7 +106,7 @@ void loop(){
             state = off(Car, switches);
             break;
         case ON:
-            if ((state = on(Car, switches)) == ERROR) sendToError(ON, &ECU_Startup_Rejection);
+            state = on(Car, switches);
             break;
         case DRIVE_READY:
             state = drive_ready(Car, switches, BSE_APPS_violation); 

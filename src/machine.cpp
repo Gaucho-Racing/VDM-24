@@ -4,7 +4,7 @@
 
 bool reject_on = true;
 
-State off(iCANflex& Car, vector<int>& switches) {
+State off(iCANflex& Car, const vector<int>& switches) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);    
    
@@ -13,7 +13,6 @@ State off(iCANflex& Car, vector<int>& switches) {
     if (!switches[0] && !switches[1]) reject_on = false;
     return OFF;
 }  
-
 
 
 State on(iCANflex& Car, const vector<int>& switches) { // ON is when PRECHARGING BEGINS
