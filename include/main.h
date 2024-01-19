@@ -25,8 +25,8 @@ const int shutdown_pin = 41;
 static unordered_map<State, string> stateToString = {
     {OFF, "OFF"},
     {ON, "ON"},
-    {DRIVE_READY, "DRIVE_READY"},
     {DRIVE, "DRIVE"},
+    {DRIVE_READY, "DRIVE_READY"},
     {ERROR, "ERROR"},
     {TESTING, "TESTING"}
 };

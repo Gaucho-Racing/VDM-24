@@ -1,6 +1,6 @@
 #include "machine.h"
 
-// volatile stuff and state transition
+
 volatile State state;
 volatile State prevState;
 volatile bool (*errorCheck)(iCANflex& Car); 
@@ -119,13 +119,13 @@ void loop(){
             break;
         // case TESTING;
     }
-
     //test
 }
 
 void setup() {
 
     Serial.begin(9600);
+
     Serial.println("Waiting for Serial Port to connect");
     while(!Serial){
         Serial.println("Waiting for Serial Port to connect");

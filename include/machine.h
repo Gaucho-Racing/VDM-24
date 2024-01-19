@@ -1,5 +1,5 @@
-#ifndef STUBS
-#define STUBS
+#ifndef MACHINE
+#define MACHINE
 
 #include "main.h"
 

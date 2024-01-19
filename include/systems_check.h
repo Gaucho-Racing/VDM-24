@@ -5,17 +5,18 @@
 
 //BSE and APPS check for input at startup ONLY
 static volatile bool ECU_Startup_Rejection(iCANflex& Car) {
-    if(Car.PEDALS.getAPPS1() > 0.05 && Car.PEDALS.getAPPS2() > 0.05) {
-        return true;
+    if (Car.PEDALS.getAPPS1() > 0.05 || 
+        Car.PEDALS.getAPPS2() > 0.05 ||
+        Car.PEDALS.getBrakePressureF() <= 0.05 || 
+        Car.PEDALS.getBrakePressureR() <= 0.05) {
+        Serial.println("ECU REJECTED STARTUP");
         // send error code to dash
     }   
     if(Car.PEDALS.getBrakePressureF() < 0.05 || Car.PEDALS.getBrakePressureR() < 0.05) {
         return true;
-        // send error code to dash
     }
-
-
-    Serial.println("ECU REJECTED STARTUP");
+    Serial.println("ECU STARTUP PASS");
+    return false;
 }
 
 static volatile bool Critical_Systems_Fault(iCANflex& Car) {
