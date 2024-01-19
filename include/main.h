@@ -28,7 +28,8 @@ static unordered_map<State, string> stateToString = {
     {DRIVE, "DRIVE"},
     {DRIVE_READY, "DRIVE_READY"},
     {ERROR, "ERROR"},
-    {TESTING, "TESTING"}
+    {TESTING, "TESTING"},
+    {LAUNCH, "LAUNCH"}
 };
 static iCANflex Car;
 static vector<int> switches(10);
