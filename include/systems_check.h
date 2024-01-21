@@ -9,11 +9,10 @@ static volatile bool ECU_Startup_Rejection(iCANflex& Car) {
         Car.PEDALS.getAPPS2() > 0.05 ||
         Car.PEDALS.getBrakePressureF() <= 0.05 || 
         Car.PEDALS.getBrakePressureR() <= 0.05) {
-        Serial.println("ECU REJECTED STARTUP");
+        Serial.println("ECU STARTUP REJECTION: HOLD BRAKES");
         // send error code to dash
         return true;
     }
-    Serial.println("ECU STARTUP PASS");
     return false;
 }
 
