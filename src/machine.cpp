@@ -73,6 +73,11 @@ State drive_ready(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_vio
     return DRIVE_READY;
 }
 
+float requested_torque(iCANflex& Car, float throttle, int rpm) {
+    // z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
+    float tq_percent = (throttle-(1-throttle)*(throttle+TORQUE_PROFILE_B)*pow(rpm/REV_LIMIT, TORQUE_PROFILE_P)*TORQUE_PROFILE_K);
+    return tq_percent*MAX_MOTOR_CURRENT;
+}
 
 State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation) {
     if(!switches[0]) return OFF;
@@ -81,10 +86,7 @@ State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation
     float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2;
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     
-    // // TODO: NEEDS WORK for actual calculation
-    // bool APPS_GRADIENT_FAULT = abs(Car.PEDALS.getAPPS1() < Car.PEDALS.getAPPS2()) > 0.05;
-    // if(APPS_GRADIENT_FAULT) { return OFF; }
-
+    // APPS GRADIENT REDUNDANCY??
 
     // set violation condtion, and return to DRIVE_READY, cutting motor power. 
     if(brake > 0.05 && throttle > 0.25) {
@@ -94,7 +96,7 @@ State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation
 
 
     Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(0);
+    Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0));
     
     return DRIVE;
 }
