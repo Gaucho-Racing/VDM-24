@@ -13,27 +13,24 @@
 
 using namespace std;
 
-// OFF
-// ON // TURN CAR ON, (START PRECHARGE) RUN ERROR CHECKS
-// DRIVE_READY // CAR IS READY TO DRIVE
-// DRIVE // DRIVE
-// ERROR // ERROR
-// TESTING // TESTING
- 
-enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR, TESTING, LAUNCH};
-const int shutdown_pin = 41;
+enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR};
+const int SHUTDOWN_PIN = 41;
 static unordered_map<State, string> stateToString = {
     {OFF, "OFF"},
     {ON, "ON"},
     {DRIVE, "DRIVE"},
     {DRIVE_READY, "DRIVE_READY"},
     {ERROR, "ERROR"},
-    {TESTING, "TESTING"},
-    {LAUNCH, "LAUNCH"}
 };
 static iCANflex Car;
 static vector<int> switches(10);
+// ECU TUNE READS
+static float MAX_MOTOR_CURRENT;
+static float TORQUE_PROFILE_K;
+static float TORQUE_PROFILE_P;
+static float TORQUE_PROFILE_B;
 
+const int REV_LIMIT = 5500;
 
 
 

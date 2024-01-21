@@ -25,5 +25,28 @@ static volatile bool Critical_Systems_Fault(iCANflex& Car) {
 static volatile void Warning_Systems_Fault(iCANflex& Car) {
     Serial.println("NON CRITICAL ERROR CODES");
 }
+const int CAN_MS_THRESHOLD = 100; // msec
+
+
+// // CAN RECIEVE FAILURES
+// volatile bool CRITICAL_CAN_FAILURE(iCANflex& Car) {
+//     return 
+//         Car.DTI.getAge() > CAN_MS_THRESHOLD ||
+//         Car.ECU.getAge() > CAN_MS_THRESHOLD ||
+//         Car.PEDALS.getAge() > CAN_MS_THRESHOLD ||
+//         Car.ACU1.getAge() > CAN_MS_THRESHOLD ||
+//         Car.BCM1.getAge() > CAN_MS_THRESHOLD ||
+//         Car.ENERGY_METER.getAge() > CAN_MS_THRESHOLD;
+// }
+
+// volatile bool NON_CRITICAL_CAN_FAILURE(iCANflex& Car){
+//     return 
+//         Car.WFL.getAge() > CAN_MS_THRESHOLD ||
+//         Car.WFR.getAge() > CAN_MS_THRESHOLD ||
+//         Car.WRL.getAge() > CAN_MS_THRESHOLD ||
+//         Car.WRR.getAge() > CAN_MS_THRESHOLD ||
+//         Car.DASHBOARD.getAge() > CAN_MS_THRESHOLD ||
+//         Car.GPS1.getAge() > CAN_MS_THRESHOLD;
+// }   
 
 #endif

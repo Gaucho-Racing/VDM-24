@@ -14,14 +14,10 @@ State off(iCANflex& Car, const vector<int>& switches) {
     return OFF;
 }  
 
-
-State on(iCANflex& Car, const vector<int>& switches) { // ON is when PRECHARGING BEGINS
+// ON is when PRECHARGING BEGINS
+State on(iCANflex& Car, const vector<int>& switches) { 
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
-    
-
-    //float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
-    //float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
     
     // switch 1 turned off
     if(!switches[0]){
@@ -46,8 +42,8 @@ State on(iCANflex& Car, const vector<int>& switches) { // ON is when PRECHARGING
 
 
 
-
-State drive_ready(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation) { // PRECHARGING MUST BE COMPLETE BEFORE ENTERING THIS STATE
+ // PRECHARGING MUST BE COMPLETE BEFORE ENTERING THIS STATE
+State drive_ready(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation) {
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(0);
     //start cooling system and all that 
@@ -77,18 +73,6 @@ State drive_ready(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_vio
     return DRIVE_READY;
 }
 
-State launch(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation){
-    if(Car.PEDALS.getAPPS1() < 0.90 || Car.PEDALS.getAPPS2() < 0)
-    return LAUNCH;
-}
-
-float motorOut(float throttle, iCANflex& car, const vector<int>& switches) {
-    // const int PWR_R_CURRENT_MAX = 50;
-    // // regen curve is neg on 0 -delta from -const variable on steering angle and battery level
-    // // change these to a continuous power curve later^^^
-    // return PWR_R_CURRENT_MAX*throttle;
-    return 0;
-}
 
 State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation) {
     if(!switches[0]) return OFF;
@@ -97,9 +81,9 @@ State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation
     float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2;
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     
-    // TODO: NEEDS WORK for actual calculation
-    bool APPS_GRADIENT_FAULT = abs(Car.PEDALS.getAPPS1() < Car.PEDALS.getAPPS2()) > 0.05;
-    if(APPS_GRADIENT_FAULT) { return OFF; }
+    // // TODO: NEEDS WORK for actual calculation
+    // bool APPS_GRADIENT_FAULT = abs(Car.PEDALS.getAPPS1() < Car.PEDALS.getAPPS2()) > 0.05;
+    // if(APPS_GRADIENT_FAULT) { return OFF; }
 
 
     // set violation condtion, and return to DRIVE_READY, cutting motor power. 
@@ -110,7 +94,7 @@ State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation
 
 
     Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(motorOut(throttle, Car, switches));
+    Car.DTI.setRCurrent(0);
     
     return DRIVE;
 }
