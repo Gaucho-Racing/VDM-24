@@ -23,6 +23,7 @@ static unordered_map<State, string> stateToString = {
     {ERROR, "ERROR"},
 };
 static iCANflex Car;
+// this is temporary until we get CAN
 static vector<int> switches(10);
 // ECU TUNE READS
 static float MAX_MOTOR_CURRENT;
