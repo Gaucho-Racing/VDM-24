@@ -105,6 +105,7 @@ State glv_on(iCANflex& Car) {
     // return GLV_ON;
 }  
 
+<<<<<<< HEAD
 
 /*
 STARTUP STAGE 3: PRECHARGING
@@ -136,6 +137,39 @@ State precharging(iCANflex& Car){
 // -- PRECHARGING STAGE 3
 State precharge_complete(iCANflex& Car){
     Car.DTI.setDriveEnable(0);
+=======
+// ON is when PRECHARGING BEGINS
+State on(iCANflex& Car, const vector<int>& switches) { 
+    Car.DTI.setDriveEnable(0);
+    Car.DTI.setRCurrent(0);
+    
+    // switch 1 turned off
+    if(!switches[0]){
+        return OFF;
+    }
+    // Stay here if any startup error is detected or switch 2 is not yet on
+    else if (!switches[1] || ECU_Startup_Rejection(Car)) {
+        return ON;
+    }
+    // if switch 2 is on and no startup errors, run more systems checks and go to drive ready
+    // here, switch 2 is implicitly on and ECU_Startup_Rejection is implicitly false, no need to recheck everything
+    else /*if (switches[1] && !ECU_Startup_Rejection(Car))*/ {
+        if(Critical_Systems_Fault(Car)) return ERROR;
+        Warning_Systems_Fault(Car);
+        // start powertrain cooling
+        // WAIT FOR PRECHARGE COMPLETE SIGNAL FROM ACU!!!!!!
+        // play RTD sound
+        return DRIVE_READY;
+    } 
+    return ON;
+}
+
+
+
+ // PRECHARGING MUST BE COMPLETE BEFORE ENTERING THIS STATE
+State drive_ready(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation) {
+    Car.DTI.setDriveEnable(1);
+>>>>>>> 30f8389 (cdr)
     Car.DTI.setRCurrent(0);
 
     // wait for RTD signal
@@ -174,6 +208,7 @@ State drive_null(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     return DRIVE_NULL;
 }
 
+<<<<<<< HEAD
 
 /*
 DRIVE_TORQUE STATE
@@ -238,17 +273,40 @@ float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
     // else return 0;
     return 0;
 }
+=======
+>>>>>>> 30f8389 (cdr)
 
 State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
+<<<<<<< HEAD
     float throttle = Car.PEDALS.getAPPS1();
     if(throttle > 0.05) return DRIVE_TORQUE;
     if(brake < 0.05) return DRIVE_NULL;
+=======
+    
+    // // TODO: NEEDS WORK for actual calculation
+    // bool APPS_GRADIENT_FAULT = abs(Car.PEDALS.getAPPS1() < Car.PEDALS.getAPPS2()) > 0.05;
+    // if(APPS_GRADIENT_FAULT) { return OFF; }
+
+
+    // set violation condtion, and return to DRIVE_READY, cutting motor power. 
+    if(brake > 0.05 && throttle > 0.25) {
+        BSE_APPS_violation = true;
+        return DRIVE_READY;
+    }
+
+>>>>>>> 30f8389 (cdr)
 
     float rpm = Car.DTI.getERPM()/10.0;
     Car.DTI.setDriveEnable(1);
+<<<<<<< HEAD
     Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * REGEN_LEVELS[regen_level]);
     return DRIVE_REGEN;
+=======
+    Car.DTI.setRCurrent(0);
+    
+    return DRIVE;
+>>>>>>> 30f8389 (cdr)
 }
 
 /*

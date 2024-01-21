@@ -6,206 +6,100 @@ volatile Mode mode;
 bool (*errorCheck)(const iCANflex& Car); 
 bool BSE_APPS_violation = false;
 
-State sendToError(bool (*erFunc)(const iCANflex& Car)) {
+// ECU TUNE Reads
+float PWR_REGEN_MAX;
+float BRAKE_BALANCE;
+float MAX_MOTOR_CURRENT;
+vector<unordered_map<int, float>> THROTTLE_MAPPING(100); // index is throttle position, value[rpm] is the % of max current
+unordered_map<float, float> REGEN_TORQUE_MAPPING;
+vector<float> LAUNCH_CONTROL_FUNCTION;
+float LAUNCH_CONTROL_INTERVAL;
+
+const int REV_LIMITER = 5500;
+
+State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex& Car)) {
    errorCheck = erFunc; 
    return ERROR;
 }
 
-FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
-CAN_message_t msg;
-
-void sendPingRequest(std::vector<uint32_t> request_ids, iCANflex& Car){
-    if(millis()-sendTime > 500){
-        for(uint32_t request_id : request_ids){
-
-            unsigned long mills=millis();
-            unsigned long micro=micros();
-            byte data[8] = {0x00};
-            for(int i=0; i<4; i++){
-                data[3-i]=(byte)(mills >> (i*8));
-                data[7-i]=(byte)(micro >> (i*8));
-            }
-
-            CAN_message_t message;
-            message.flags.extended = true;  
-            message.id = request_id;
-            message.len = 8;
-            memcpy(message.buf, data, 8);
-
-            can1.write(message);
-
-            sendTime=millis();
-        
-        }
-  }
+volatile bool motorTempHighExitCondition(iCANflex& Car) {
+    if (Car.DTI.getMotorTemp() < 55) {
+        return false;
+    }
+    return true;
 }
 
-unsigned long ping() {
-    unsigned long newTime = (long)msg.buf[3] + ((long)msg.buf[2] << 8) + ((long)msg.buf[1] << 16) + ((long)msg.buf[0] << 24);
-    unsigned long newTime2 = (long)msg.buf[7] + ((long)msg.buf[6] << 8) + ((long)msg.buf[5] << 16) + ((long)msg.buf[4] << 24);
-    unsigned long roundTripDelay = ((millis() - newTime) * 1000) + ((micros() - newTime2) % 1000);
-    return roundTripDelay;
+volatile bool motorTempHighEntryCondition(iCANflex& Car) {
+    if (Car.DTI.getMotorTemp() >= 60) {
+        return true;
+    }
+    return false;
 }
 
-void handlePingResponses() {
-    // Handle incoming CAN messages
-    if(msg.id == 0x13000){
-        // print the message
-        Serial.print("Received on 0x13000: ");
-        for(int i=0; i<msg.len; i++){
-            Serial.print(msg.buf[i], HEX);
-            Serial.print(" ");
-        }
-        Serial.println();
-    }
-    if(msg.id == 0x13001){
-        // print the message
-        Serial.print("Received on 0x13001: ");
-        for(int i=0; i<msg.len; i++){
-            Serial.print(msg.buf[i], HEX);
-            Serial.print(" ");
-        }
-        Serial.println();
-    }
-    if (msg.id == ACU_Ping_Response) {
-        ACU_Ping = ping();
-        Serial.println("ACU Ping: ");
-        Serial.println(ACU_Ping);
-        msg.buf[0] = 1;
-        // add the ACU_Ping to the next 4 bytes
-        for(int i=0; i<4; i++){
-            msg.buf[4-i]=(byte)(ACU_Ping >> (i*8));
-        }
-        msg.len = 8;
-        msg.id = VDM_Ping_Values;
-        can1.write(msg);
-    }
-    if (msg.id == 0xC9) {
-        Pedals_Ping = ping();
-        Serial.println("Pedals Ping: ");
-        Serial.println(Pedals_Ping);
-        msg.buf[0] = 2;
-        for(int i=0; i<4; i++){
-            msg.buf[4-i]=(byte)(Pedals_Ping >> (i*8));
-        }
-        msg.len = 8;
-        msg.id = VDM_Ping_Values;
-        can1.write(msg);
-    }
-    if (msg.id == 0x10FFF) {
-        SteeringWheel_Ping = ping();    
-        Serial.println("Steering Wheel Ping: ");
-        Serial.println(SteeringWheel_Ping);
-        msg.buf[0] = 3;
-        for(int i=0; i<4; i++){
-            msg.buf[4-i]=(byte)(SteeringWheel_Ping >> (i*8));
-        }
-        msg.len = 8;
-        msg.id = VDM_Ping_Values;
-        can1.write(msg);
-    }
-    if (msg.id == 0x12FFF) {
-        DashPanel_Ping = ping();
-        Serial.println("Dash Panel Ping: ");
-        Serial.println(DashPanel_Ping);
-        msg.buf[0] = 4;
-        for(int i=0; i<4; i++){
-            msg.buf[4-i]=(byte)(DashPanel_Ping >> (i*8));
-        }
-        msg.len = 8;
-        msg.id = VDM_Ping_Values;
-        can1.write(msg);
-    }
-    
-    
+void motorTempHigh_ISR() {
+    Car.sendDashError(5); // send placeholder error byte code to dash
+    state = sendToError(state, motorTempHighExitCondition);
 }
 
-void setupCAN() {
-  can1.begin();
-  can1.setBaudRate(1000000); // Set CAN baud rate to 500 kbps
-//   can1.onReceive(handlePingResponses); // Set callback for received messages
+const int canFailureThreshold = 100; // msec
+
+volatile bool canReceiveFailure(iCANflex& Car) {
+    return 
+        Car.DTI.getAge() > canFailureThreshold ||
+        Car.ECU.getAge() > canFailureThreshold ||
+        Car.WFL.getAge() > canFailureThreshold ||
+        Car.WFR.getAge() > canFailureThreshold ||
+        Car.WRL.getAge() > canFailureThreshold ||
+        Car.WRR.getAge() > canFailureThreshold ||
+        Car.GPS1.getAge() > canFailureThreshold ||
+        Car.PEDALS.getAge() > canFailureThreshold ||
+        Car.ACU1.getAge() > canFailureThreshold ||
+        Car.BCM1.getAge() > canFailureThreshold ||
+        Car.DASHBOARD.getAge() > canFailureThreshold ||
+        Car.ENERGY_METER.getAge() > canFailureThreshold;
 }
 
+void canReceiveFailure_ISR() {
+    Car.sendDashError(100);
+    state = sendToError(state, canReceiveFailure);
+}
 
+volatile bool currentLimitSafe(iCANflex& Car) {
+    return (Car.DTI.getDCCurrent() > 575); // based on below current limit
+}
 
-// string maps for testing purposes
-// -------------------------------------------------------------------------------
-static unordered_map<State, string> state_to_string = {
-    {ECU_FLASH, "ECU_FLASH"},
-    {GLV_ON, "GLV_ON"},
-    {TS_PRECHARGE, "TS_PRECHARGE"},
-    {PRECHARGING, "PRECHARGING"},
-    {PRECHARGE_COMPLETE, "PRECHARGE_COMPLETE"},
-    {DRIVE_NULL, "DRIVE_NULL"},
-    {DRIVE_TORQUE, "DRIVE_TORQUE"},
-    {DRIVE_REGEN, "DRIVE_REGEN"},
-    {ERROR, "ERROR"}
-};
+volatile bool currentLimitExceeded(iCANflex& Car) {
+    return (Car.DTI.getDCCurrent() > 600); // taken from last year's implementation
+}
 
-static unordered_map<Mode, string> mode_to_string = {
-    {TESTING, "TESTING"},
-    {LAUNCH, "LAUNCH"},
-    {ENDURANCE, "ENDURANCE"},
-    {AUTOX, "AUTOX"},
-    {SKIDPAD, "SKIDPAD"},
-    {ACC, "ACC"},
-    {PIT, "PIT"}
-};  
+void currentLimitExceeded_ISR() {
+    Car.sendDashError(106);
+    state = sendToError(state, currentLimitSafe);
+}
 
-// -------------------------------------------------------------------------------
+volatile bool shutdown_pinned(iCANflex& Car) {
+    return (bool)digitalRead(shutdown_pin);
+}
+
+void shutdown_pinned_ISR() {
+    Car.sendDashError(150);
+    state = sendToError(OFF, shutdown_pinned);
+}
+
 void loop(){
-    if(can1.read(msg)) {
-        handlePingResponses();
+
+    if(motorTempHighEntryCondition(Car)) {
+        NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT2);
     }
-    // if(millis() % 1000 == 0){
-    //     Serial.println("-----------------");
-    //     Serial.println(millis());
-    //     State currentState = state;
-    //     Serial.print(state_to_string.find(currentState)->second.c_str());
-    //     Serial.print(" | ");
-    //     Mode currentMode = mode;
-    //     Serial.println(mode_to_string.find(currentMode)->second.c_str());
-    //     Serial.print("Faults: ");
-    //     Serial.println(active_faults->size());
-    //     Serial.print("Limits: ");
-    //     Serial.println(active_warnings->size());
-    //     Serial.print("Warnings: ");
-    //     Serial.println(active_warnings->size());
-    // }
-    
 
-    // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
-    // SystemsCheck::hardware_system_critical(*Car, *active_faults);
-    // SystemsCheck::system_faults(*Car, *active_faults);
-    // SystemsCheck::system_limits(*Car, *active_limits);
-    // SystemsCheck::system_warnings(*Car, *active_warnings);
+    if (canReceiveFailure(Car)) { NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT1); }
 
-    // Get ping values for all systems
+    if (currentLimitExceeded(Car)) { 
+        NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT3);
+    }
 
-    sendPingRequest({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
+    if (shutdown_pinned(Car)) { NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT0); }
 
-
-
-    state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
-
-    digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
-   
-
-    // error severity: warning -> limit -> critical
-
-    // read in settings from Steering Wheel
-    throttle_map = 0;
-    regen_level = 0;
-    power_level = 0;
-
-    power_level = active_limits->size() ? LIMIT : power_level; // limit power in overheat conditions
-
-    
-    mode = ENDURANCE; // TODO: Energy management algorithm for endurance
-
-   
-
-    // STATE MACHINE OPERATION
     switch (state) {
         // ERROR
         case ERROR:
@@ -235,19 +129,15 @@ void loop(){
         case DRIVE_NULL:
             state = drive_null(*Car, BSE_APPS_violation, mode); 
             break;
-        case DRIVE_TORQUE:
-            state = drive_torque(*Car, BSE_APPS_violation, mode);
+        case LAUNCH:
+            state = launch(Car, switches, BSE_APPS_violation);
             break;
-        case DRIVE_REGEN:
-            state = drive_regen(*Car, BSE_APPS_violation, mode);
+        case ERROR:
+            state = error(Car, switches, prevState, errorCheck);
             break;
     }
 }
 
-
-
-
-//GLV STARTUP
 void setup() {
     Car = new iCANflex();
     Serial.begin(9600);
@@ -255,25 +145,59 @@ void setup() {
     while(!Serial) Serial.println("Waiting for Serial Port to connect");
     Serial.println("Connected to Serial Port 9600");
 
-    pinMode(SOFTWARE_OK_CONTROL_PIN, OUTPUT);
-    pinMode(AMS_OK_PIN, INPUT);
-    pinMode(BSPD_OK_PIN, INPUT);
-    pinMode(IMD_OK_PIN, INPUT);
-    pinMode(BRAKE_LIGHT_PIN, INPUT);    
+    Car.begin();
 
-    setupCAN();
+    attachInterruptVector(IRQ_GPIO1_INT2, &motorTempHigh_ISR); //placeholder pin number 3
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT2);
+    attachInterruptVector(IRQ_GPIO1_INT1, &canReceiveFailure_ISR);
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT1);
+    attachInterruptVector(IRQ_GPIO1_INT3, &currentLimitExceeded_ISR); // pin number is filler
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT3);
+    attachInterruptVector(IRQ_GPIO1_INT0, &shutdown_pinned_ISR); 
+    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT0);
 
-    Car->begin();
-    active_faults = new unordered_set<bool (*)(const iCANflex&)>(); 
-    active_warnings = new unordered_set<bool (*)(const iCANflex&)>();
-    active_limits = new unordered_set<bool (*)(const iCANflex&)>();
+     // set state  
+    state = OFF; 
 
-    active_faults->clear();
-    active_warnings->clear();
-    active_limits->clear();
-    for(int i = 0; i < 5; i++) SYS_CHECK_CAN_FRAME[i] = 0x0;
+    // Read the SD CARD Settings for the ECU TUNE
+    Serial.println("Initializing SD Card...");
+    if(!SD.begin(BUILTIN_SDCARD)){
+        Serial.println("CRITICAL FAULT: PLEASE INSERT SD CARD CONTAINING ECU FLASH TUNE");
+        Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
 
-    // set state  
-    // state = ECU_FLASH; 
-    state = GLV_ON;
+        state = ERROR;
+    }
+    else{
+        Serial.println("SD INITIALIZATION SUCCESSFUL");
+        File ecu_tune;
+        ecu_tune = SD.open("GR24_FLASH_TUNE.ecu");
+        if(ecu_tune){
+            Serial.print("Reading ECU FLASH....");
+            string tune;
+            while(ecu_tune.available()){
+                Serial.print(".");
+                tune += (char)ecu_tune.read();
+            }
+            ecu_tune.close();
+            Serial.println("");
+
+
+
+
+            Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
+
+        }
+        else {
+            Serial.println("CRITICAL FAULT: ERROR OPENING GR24 ECU TUNE");
+            Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
+            state = ERROR;
+        }
+    }
+    
+
+
+
+
+   
 }
+
