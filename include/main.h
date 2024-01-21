@@ -30,7 +30,7 @@ static float TORQUE_PROFILE_K;
 static float TORQUE_PROFILE_P;
 static float TORQUE_PROFILE_B;
 
-const int REV_LIMIT = 5500;
+static float REV_LIMIT = 5500.0;
 
 
 

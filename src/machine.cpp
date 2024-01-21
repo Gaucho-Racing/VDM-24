@@ -201,54 +201,25 @@ State drive_null(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
         if(throttle < 0.05) {
             // violation exit condition, reset violation and return to DRIVE_READY
             BSE_APPS_violation = false;
-            return DRIVE_NULL;
-        }  
+            return DRIVE_READY;
+        }
+        // else loop back into DRIVE_READY state with Violation still true
     }
-    // else loop back into RTD state with Violation still true
-    return DRIVE_NULL;
-}
 
-<<<<<<< HEAD
+    // only if no violation, and throttle is pressed, go to DRIVE
+    if(!BSE_APPS_violation && throttle > 0.05) {
+        return DRIVE;
+    }
 
-/*
-DRIVE_TORQUE STATE
-
-THIS STATE IS RESPONSIBLE FOR THE VEHICLE DYNAMICS WHEN THE DRIVER IS REQUESTING TORQUE FROM THE MOTOR.
-THE TORQUE IS CALCULATED THROUGH THE STANDARD EQUATION DEFINED BELOW. 
-Z = X-(1-X)(X+B)(Y^P)K  0 <= Z <= 1 (CLIPPED)
-X IS THROTTLE 0 TO 1
-Y IS RPM LOAD 0 TO 1
-B IS OFFSET 0 TO 1 
-K IS MULTIPLIER 0 TO 1
-P IS STEEPNESS 0 TO 5
-
-THE CONSTANTS B, K, AND P ARE DEFINED THROUGHOUT THE ECU MAP IN THE SD CARD OR THE REFLASH OVER CAN.
-THIS VALUE OF Z IS APPLIED TO THE MAX CURRENT SET AND WILL BE THE DRIVER REQUESTED TORQUE. 
-THIS IS FOR A GENERALLY SMOOTHER TORQUE PROFILE AND DRIVABILITY.
-
-THE DRIVE_TORQUE STATE IS ALSO RESPONSIBLE FOR CHECKING THE APPS AND BSE FOR VIOLATIONS AS WELL AS 
-THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED. 
-*/
-
-
-float requested_torque(iCANflex& Car, float throttle, int rpm) {
-    // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
-    float k = TORQUE_PROFILES[throttle_map].K;
-    float p = TORQUE_PROFILES[throttle_map].P;
-    float b = TORQUE_PROFILES[throttle_map].B;
-    float max_current = POWER_LEVELS[power_level];
-    float tq_percent = (throttle-(1-throttle)*(throttle+b)*pow(rpm/REV_LIMIT, p)*k);
-    if(tq_percent > 1) tq_percent = 1; // clipping
-    if(tq_percent < 0) tq_percent = 0;
-    return tq_percent*max_current;
+    return DRIVE_READY;
 }
 
 
-State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
+State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation) {
+    if(!switches[0]) return OFF;
+    if(!switches[1]) return ON;
 
-    float a1 = Car.PEDALS.getAPPS1();
-    float a2 = Car.PEDALS.getAPPS2();
-    float throttle = a1; // TODO: FIX
+    float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2;
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     
     // APPS GRADIENT VIOLATION
@@ -284,10 +255,7 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
     if(brake < 0.05) return DRIVE_NULL;
 =======
     
-    // // TODO: NEEDS WORK for actual calculation
-    // bool APPS_GRADIENT_FAULT = abs(Car.PEDALS.getAPPS1() < Car.PEDALS.getAPPS2()) > 0.05;
-    // if(APPS_GRADIENT_FAULT) { return OFF; }
-
+    // APPS GRADIENT REDUNDANCY??
 
     // set violation condtion, and return to DRIVE_READY, cutting motor power. 
     if(brake > 0.05 && throttle > 0.25) {
@@ -299,10 +267,6 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
 
     float rpm = Car.DTI.getERPM()/10.0;
     Car.DTI.setDriveEnable(1);
-<<<<<<< HEAD
-    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * REGEN_LEVELS[regen_level]);
-    return DRIVE_REGEN;
-=======
     Car.DTI.setRCurrent(0);
     
     return DRIVE;
