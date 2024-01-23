@@ -13,18 +13,25 @@
 
 using namespace std;
 
-enum State {OFF, ON, DRIVE_READY, DRIVE, ERROR};
-const int SHUTDOWN_PIN = 41;
+// PIN DEFINITIONS
+const int SOFTWARE_OK_CONTROL_PIN = 41;
+const int BRAKE_LIGHT_PIN = 4;
+
+enum State {GLV_ON, TS_PRECHARGE, RTD_0TQ, DRIVE_TORQUE, ERROR};
+
 static unordered_map<State, string> stateToString = {
-    {OFF, "OFF"},
-    {ON, "ON"},
-    {DRIVE, "DRIVE"},
-    {DRIVE_READY, "DRIVE_READY"},
+    {GLV_ON, "ON"},
+    {TS_PRECHARGE, "TS_PRECHARGE"},
+    {RTD_0TQ, "RTD_0TQ"},
+    {DRIVE_TORQUE, "DR  IVE_TOR"},
     {ERROR, "ERROR"},
 };
 static iCANflex Car;
 // this is temporary until we get CAN
-static vector<int> switches(10);
+static unordered_map<string, int> switches = {
+    {"TS_ACTIVE", 0},
+    {"RTD_SWITCH", 0}
+};
 // ECU TUNE READS
 static float MAX_MOTOR_CURRENT;
 static float TORQUE_PROFILE_K;

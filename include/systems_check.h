@@ -17,7 +17,8 @@ static volatile bool ECU_Startup_Rejection(iCANflex& Car) {
 }
 
 static volatile bool Critical_Systems_Fault(iCANflex& Car) {
-    return false; //implement later
+    return false; 
+    //implement later
     Serial.println("CRITICAL SYSTEMS FAULT");
 }
 
@@ -47,5 +48,7 @@ const int CAN_MS_THRESHOLD = 100; // msec
 //         Car.DASHBOARD.getAge() > CAN_MS_THRESHOLD ||
 //         Car.GPS1.getAge() > CAN_MS_THRESHOLD;
 // }   
+
+
 
 #endif

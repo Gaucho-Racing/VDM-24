@@ -15,23 +15,26 @@ State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex&
 }
 
 void loop(){
+    // READ SHUTDOWN PIN
+
+    // Brake Light Operation
 
     // STATE MACHINE OPERATION
     switch (state) {
-        case OFF:
-            state = off(Car, switches);
+        case GLV_ON: // GLV ON
+            state = glv_on(Car);
             break;
-        case ON:
-            state = on(Car, switches);
+        case TS_PRECHARGE:
+            state = ts_precharge(Car);
             break;
-        case DRIVE_READY:
-            state = drive_ready(Car, switches, BSE_APPS_violation); 
+        case RTD_0TQ:
+            state = rtd_0tq(Car, BSE_APPS_violation); 
             break;
-        case DRIVE:
-            state = drive(Car, switches, BSE_APPS_violation);
+        case DRIVE_TORQUE:
+            state = drive_torque(Car, BSE_APPS_violation);
             break;
         case ERROR:
-            state = error(Car, switches, prevState, errorCheck);
+            state = error(Car, errorCheck);
             break;
     }
 }
@@ -42,17 +45,14 @@ void loop(){
 void setup() {
 
     Serial.begin(9600);
-
     Serial.println("Waiting for Serial Port to connect");
-    while(!Serial){
-        Serial.println("Waiting for Serial Port to connect");
-    }
+    while(!Serial) Serial.println("Waiting for Serial Port to connect");
     Serial.println("Connected to Serial Port 9600");
 
     Car.begin();
 
      // set state  
-    state = OFF; 
+    state = GLV_ON; 
 
     // Read the SD CARD Settings for the ECU TUNE
     Serial.println("Initializing SD Card...");
@@ -68,7 +68,7 @@ void setup() {
         ecu_tune = SD.open("GR24_FLASH_TUNE.ecu");
         if(ecu_tune){
             Serial.print("Reading ECU FLASH....");
-            string tune;
+            String tune;
             while(ecu_tune.available()){
                 Serial.print(".");
                 tune += (char)ecu_tune.read();
