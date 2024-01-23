@@ -1,5 +1,5 @@
 #include "machine.h"
-#include "main.h"
+
 
 volatile State state;
 volatile State prevState;
@@ -105,20 +105,20 @@ void loop(){
     if (shutdown_pinned(Car)) { NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT0); }
 
     switch (state) {
-        case OFF:
-            state = off(Car, switches);
+        case GLV_ON: // GLV ON
+            state = glv_on(Car);
             break;
-        case ON:
-            state = on(Car, switches);
+        case TS_PRECHARGE:
+            state = ts_precharge(Car);
             break;
-        case DRIVE_READY:
-            state = drive_ready(Car, switches, BSE_APPS_violation); 
+        case RTD_0TQ:
+            state = rtd_0tq(Car, BSE_APPS_violation); 
             break;
-        case DRIVE:
-            state = drive(Car, switches, BSE_APPS_violation);
+        case DRIVE_TORQUE:
+            state = drive_torque(Car, BSE_APPS_violation);
             break;
         case ERROR:
-            state = error(Car, errorCheck);
+            state = error(*Car, errorCheck);
             break;
     }
 }
@@ -131,15 +131,6 @@ void setup() {
     Serial.println("Connected to Serial Port 9600");
 
     Car.begin();
-
-    attachInterruptVector(IRQ_GPIO1_INT2, &motorTempHigh_ISR); //placeholder pin number 3
-    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT2);
-    attachInterruptVector(IRQ_GPIO1_INT1, &canReceiveFailure_ISR);
-    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT1);
-    attachInterruptVector(IRQ_GPIO1_INT3, &currentLimitExceeded_ISR); // pin number is filler
-    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT3);
-    attachInterruptVector(IRQ_GPIO1_INT0, &shutdown_pinned_ISR); 
-    NVIC_ENABLE_IRQ(IRQ_GPIO1_INT0);
 
      // set state  
     state = GLV_ON; 
