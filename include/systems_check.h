@@ -3,52 +3,25 @@
 
 #include "machine.h"
 
-//BSE and APPS check for input at startup ONLY
-static volatile bool ECU_Startup_Rejection(iCANflex& Car) {
-    if (Car.PEDALS.getAPPS1() > 0.05 || 
-        Car.PEDALS.getAPPS2() > 0.05 ||
-        Car.PEDALS.getBrakePressureF() <= 0.05 || 
-        Car.PEDALS.getBrakePressureR() <= 0.05) {
-        Serial.println("ECU STARTUP REJECTION: HOLD BRAKES");
-        // send error code to dash
-        return true;
-    }
-    return false;
-}
-
-static volatile bool Critical_Systems_Fault(iCANflex& Car) {
-    return false; 
-    //implement later
-    Serial.println("CRITICAL SYSTEMS FAULT");
-}
-
-static volatile void Warning_Systems_Fault(iCANflex& Car) {
-    Serial.println("NON CRITICAL ERROR CODES");
-}
 const int CAN_MS_THRESHOLD = 100; // msec
+
+static volatile bool rtd_brake_fault(const iCANflex& Car); 
+
+static volatile bool critical_sys_fault(const iCANflex& Car);
+static volatile void warn_sys_fault(iCANflex& Car);
 
 
 // CAN RECIEVE FAILURES
-static volatile bool CRITICAL_CAN_FAILURE(iCANflex& Car) {
-    return 
-        Car.DTI.getAge() > CAN_MS_THRESHOLD ||
-        Car.ECU.getAge() > CAN_MS_THRESHOLD ||
-        Car.PEDALS.getAge() > CAN_MS_THRESHOLD ||
-        Car.ACU1.getAge() > CAN_MS_THRESHOLD ||
-        Car.BCM1.getAge() > CAN_MS_THRESHOLD ||
-        Car.ENERGY_METER.getAge() > CAN_MS_THRESHOLD;
-}
+static volatile bool critical_can_failure(const iCANflex& Car); 
+static volatile bool warn_can_failure(const iCANflex& Car);
 
-static volatile bool NON_CRITICAL_CAN_FAILURE(iCANflex& Car){
-    return 
-        Car.WFL.getAge() > CAN_MS_THRESHOLD ||
-        Car.WFR.getAge() > CAN_MS_THRESHOLD ||
-        Car.WRL.getAge() > CAN_MS_THRESHOLD ||
-        Car.WRR.getAge() > CAN_MS_THRESHOLD ||
-        Car.DASHBOARD.getAge() > CAN_MS_THRESHOLD ||
-        Car.GPS1.getAge() > CAN_MS_THRESHOLD;
-}   
-
-
+// read bspd, ams, and imd pins as analog
+// .5v is shit -  ADC: 155
+// 3v when almost ok - ADC: 930
+// 2.4v is ok - ADC: 744
+// 1v = 310
+static volatile bool AMS_fault();
+static volatile bool IMD_fault();
+static volatile bool BSPD_fault();
 
 #endif
