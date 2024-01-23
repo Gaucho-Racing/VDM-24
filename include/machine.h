@@ -3,9 +3,10 @@
 
 #include "main.h"
 
-State off(iCANflex& Car, const vector<int>& switches);
-State on(iCANflex& Car, const vector<int>& switches);
-State drive_ready(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation);
-State drive(iCANflex& Car, const vector<int>& switches, bool& BSE_APPS_violation);
-State error(iCANflex& Car, const vector<int>& switches, State prevState, volatile bool (*errorCheck)(iCANflex& c));
+State glv_on(iCANflex& Car);
+State ts_precharge(iCANflex& Car);
+State rtd_0tq(iCANflex& Car, bool& BSE_APPS_violation);
+State drive_torque(iCANflex& Car, bool& BSE_APPS_violation);
+State error(iCANflex& Car, volatile bool (*errorCheck)(iCANflex& c));
+
 #endif

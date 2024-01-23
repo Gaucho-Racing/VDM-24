@@ -87,6 +87,9 @@ void shutdown_pinned_ISR() {
 }
 
 void loop(){
+    // READ SHUTDOWN PIN
+
+    // Brake Light Operation
 
     if(motorTempHighEntryCondition(Car)) {
         NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT2);
@@ -101,39 +104,20 @@ void loop(){
     if (shutdown_pinned(Car)) { NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT0); }
 
     switch (state) {
-        // ERROR
-        case ERROR:
-            state = error(*Car, errorCheck);
+        case OFF:
+            state = off(Car, switches);
             break;
-
-        // STARTUP 
-        case ECU_FLASH:
-            state = ecu_flash(*Car);
+        case ON:
+            state = on(Car, switches);
             break;
-        case GLV_ON:
-            state = glv_on(*Car);
+        case DRIVE_READY:
+            state = drive_ready(Car, switches, BSE_APPS_violation); 
             break;
-     
-        // PRECHARGE
-        case TS_PRECHARGE:
-            state = ts_precharge(*Car);
-            break;
-        case PRECHARGING:
-            state = precharging(*Car);
-            break;
-        case PRECHARGE_COMPLETE:
-            state = precharge_complete(*Car);
-            break;
-        
-        // DRIVE
-        case DRIVE_NULL:
-            state = drive_null(*Car, BSE_APPS_violation, mode); 
-            break;
-        case LAUNCH:
-            state = launch(Car, switches, BSE_APPS_violation);
+        case DRIVE:
+            state = drive(Car, switches, BSE_APPS_violation);
             break;
         case ERROR:
-            state = error(Car, switches, prevState, errorCheck);
+            state = error(Car, errorCheck);
             break;
     }
 }
@@ -157,7 +141,7 @@ void setup() {
     NVIC_ENABLE_IRQ(IRQ_GPIO1_INT0);
 
      // set state  
-    state = OFF; 
+    state = GLV_ON; 
 
     // Read the SD CARD Settings for the ECU TUNE
     Serial.println("Initializing SD Card...");
@@ -173,7 +157,7 @@ void setup() {
         ecu_tune = SD.open("GR24_FLASH_TUNE.ecu");
         if(ecu_tune){
             Serial.print("Reading ECU FLASH....");
-            string tune;
+            String tune;
             while(ecu_tune.available()){
                 Serial.print(".");
                 tune += (char)ecu_tune.read();
