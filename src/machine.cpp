@@ -60,8 +60,8 @@ State ts_precharge(iCANflex& Car) {
         return TS_PRECHARGE;
     }
     else if(/*can message for rtd button + brake*/ false) {
-        if(critical_sys_fault(Car)) return ERROR;
-        warn_sys_fault(Car);
+        if(SystemsCheck::critical_sys_fault(Car)) return ERROR;
+        SystemsCheck::warn_sys_fault(Car);
         // WAIT FOR PRECHARGE COMPLETE SIGNAL FROM ACU!!!!!!
         // play RTD sound
         return RTD_0TQ;
@@ -175,7 +175,7 @@ THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED
 */
 
 
-State error(iCANflex& Car, volatile bool (*errorCheck)(iCANflex& c)) {
+State error(iCANflex& Car, volatile bool (*errorCheck)(const iCANflex& c)) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
 

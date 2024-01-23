@@ -1,23 +1,19 @@
 #include "machine.h"
 
-
-
-
 volatile State state;
-volatile bool (*errorCheck)(iCANflex& Car); 
+volatile bool (*errorCheck)(const iCANflex& Car); 
 bool BSE_APPS_violation = false;
 
-State sendToError(volatile bool (*erFunc)(iCANflex& Car)) {
+State sendToError(volatile bool (*erFunc)(const iCANflex& Car)) {
    errorCheck = erFunc; 
    return ERROR;
 }
 
 void loop(){
-    // read bspd, ams, and imd pins as analog
+    // read bspd, ams, and imd pins as analog   
 
-
-   
-
+    if(SystemsCheck::AMS_fault(*Car)) state = sendToError(SystemsCheck::AMS_fault);
+    if(SystemsCheck::IMD_fault(*Car)) state = sendToError(SystemsCheck::IMD_fault);
 
     // switchboard CAN stuff for moving from glv_on to ts_precharge from the ts_active switch
     // also the brake + rtd switch to move from ts_precharge to rtd_0tq 
@@ -25,7 +21,7 @@ void loop(){
     // will require changing nodes.h.
 
 
-    // boolean indicating the SDC is open (ex: ESTOP Pressed) 
+    // boolean indicating the SDC is open (example: ESTOP Pressed) 
 
     // STATE MACHINE OPERATION
     switch (state) {
@@ -64,36 +60,36 @@ void setup() {
     state = GLV_ON; 
 
     // Read the SD CARD Settings for the ECU TUNE ON STARTUP
-    // Serial.println("Initializing SD Card...");
-    // if(!SD.begin(BUILTIN_SDCARD)){
-    //     Serial.println("CRITICAL FAULT: PLEASE INSERT SD CARD CONTAINING ECU FLASH TUNE");
-    //     Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
+    Serial.println("Initializing SD Card...");
+    if(!SD.begin(BUILTIN_SDCARD)){
+        Serial.println("CRITICAL FAULT: PLEASE INSERT SD CARD CONTAINING ECU FLASH TUNE");
+        Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
 
-    //     state = ERROR;
-    // }
-    // else{
-    //     Serial.println("SD INITIALIZATION SUCCESSFUL");
-    //     File ecu_tune;
-    //     ecu_tune = SD.open("GR24_FLASH_TUNE.ecu");
-    //     if(ecu_tune){
-    //         Serial.print("Reading ECU FLASH....");
-    //         String tune;
-    //         while(ecu_tune.available()){
-    //             Serial.print(".");
-    //             tune += (char)ecu_tune.read();
-    //         }
-    //         ecu_tune.close();
-    //         Serial.println("");
+        state = ERROR;
+    }
+    else{
+        Serial.println("SD INITIALIZATION SUCCESSFUL");
+        File ecu_tune;
+        ecu_tune = SD.open("GR24_FLASH_TUNE.ecu");
+        if(ecu_tune){
+            Serial.print("Reading ECU FLASH....");
+            String tune;
+            while(ecu_tune.available()){
+                Serial.print(".");
+                tune += (char)ecu_tune.read();
+            }
+            ecu_tune.close();
+            Serial.println("");
 
-    //         Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
+            Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
 
-    //     }
-    //     else {
-    //         Serial.println("CRITICAL FAULT: ERROR OPENING GR24 ECU TUNE");
-    //         Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
-    //         state = ERROR;
-    //     }
-    // }
+        }
+        else {
+            Serial.println("CRITICAL FAULT: ERROR OPENING GR24 ECU TUNE");
+            Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
+            state = ERROR;
+        }
+    }
     
 
 
