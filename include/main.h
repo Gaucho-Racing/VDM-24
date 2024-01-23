@@ -42,7 +42,6 @@ static float MAX_MOTOR_CURRENT;
 static float TORQUE_PROFILE_K;
 static float TORQUE_PROFILE_P;
 static float TORQUE_PROFILE_B;
-
 static float REV_LIMIT = 5500.0;
 
 
