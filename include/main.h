@@ -27,10 +27,11 @@ static unordered_map<State, string> stateToString = {
     {GLV_ON, "ON"},
     {TS_PRECHARGE, "TS_PRECHARGE"},
     {RTD_0TQ, "RTD_0TQ"},
-    {DRIVE_TORQUE, "DR  IVE_TOR"},
+    {DRIVE_TORQUE, "DRIVE_TORQUE"},
     {ERROR, "ERROR"},
 };
 static iCANflex Car;
+
 // this is temporary until we get CAN
 static unordered_map<string, int> switches = {
     {"TS_ACTIVE", 0},
@@ -43,8 +44,6 @@ static float TORQUE_PROFILE_P;
 static float TORQUE_PROFILE_B;
 
 static float REV_LIMIT = 5500.0;
-
-
 
 
 

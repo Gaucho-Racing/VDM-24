@@ -9,4 +9,7 @@ State rtd_0tq(iCANflex& Car, bool& BSE_APPS_violation);
 State drive_torque(iCANflex& Car, bool& BSE_APPS_violation);
 State error(iCANflex& Car, volatile bool (*errorCheck)(iCANflex& c));
 
+float requested_torque(iCANflex& Car, float throttle, int rpm);
+
+
 #endif
