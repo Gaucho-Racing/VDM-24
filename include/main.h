@@ -30,7 +30,7 @@ static unordered_map<State, string> stateToString = {
     {DRIVE_TORQUE, "DRIVE_TORQUE"},
     {ERROR, "ERROR"},
 };
-static iCANflex Car;
+static iCANflex* Car;
 
 // this is temporary until we get CAN
 static unordered_map<string, int> switches = {

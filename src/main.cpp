@@ -1,6 +1,8 @@
 #include "machine.h"
 
 
+
+
 volatile State state;
 volatile bool (*errorCheck)(iCANflex& Car); 
 bool BSE_APPS_violation = false;
@@ -28,19 +30,19 @@ void loop(){
     // STATE MACHINE OPERATION
     switch (state) {
         case GLV_ON: // GLV ON
-            state = glv_on(Car);
+            state = glv_on(*Car);
             break;
         case TS_PRECHARGE:
-            state = ts_precharge(Car);
+            state = ts_precharge(*Car);
             break;
         case RTD_0TQ:
-            state = rtd_0tq(Car, BSE_APPS_violation); 
+            state = rtd_0tq(*Car, BSE_APPS_violation); 
             break;
         case DRIVE_TORQUE:
-            state = drive_torque(Car, BSE_APPS_violation);
+            state = drive_torque(*Car, BSE_APPS_violation);
             break;
         case ERROR:
-            state = error(Car, errorCheck);
+            state = error(*Car, errorCheck);
             break;
     }
 }
@@ -49,13 +51,14 @@ void loop(){
 
 //GLV STARTUP
 void setup() {
-
+    Car = new iCANflex();
     Serial.begin(9600);
     Serial.println("Waiting for Serial Port to connect");
     while(!Serial) Serial.println("Waiting for Serial Port to connect");
     Serial.println("Connected to Serial Port 9600");
 
-    Car.begin();
+
+    Car->begin();
 
      // set state  
     state = GLV_ON; 
