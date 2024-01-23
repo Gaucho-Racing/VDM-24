@@ -2,20 +2,11 @@
 #include "main.h"
 
 volatile State state;
-volatile Mode mode;
-bool (*errorCheck)(const iCANflex& Car); 
+volatile State prevState;
+volatile bool (*errorCheck)(iCANflex& Car); 
 bool BSE_APPS_violation = false;
 
-// ECU TUNE Reads
-float PWR_REGEN_MAX;
-float BRAKE_BALANCE;
-float MAX_MOTOR_CURRENT;
-vector<unordered_map<int, float>> THROTTLE_MAPPING(100); // index is throttle position, value[rpm] is the % of max current
-unordered_map<float, float> REGEN_TORQUE_MAPPING;
-vector<float> LAUNCH_CONTROL_FUNCTION;
-float LAUNCH_CONTROL_INTERVAL;
 
-const int REV_LIMITER = 5500;
 
 State sendToError(volatile State currentState, volatile bool (*erFunc)(iCANflex& Car)) {
    errorCheck = erFunc; 
@@ -87,9 +78,51 @@ void shutdown_pinned_ISR() {
 }
 
 void loop(){
-    // READ SHUTDOWN PIN
+    // read bspd, ams, and imd pins as analog
+    // .5v is shit -  ADC: 155
+    // 3v when almost ok - ADC: 930
+    // 2.4v is ok - ADC: 744
+    // 1v = 310
+    if(analogRead(BSPD_OK_PIN) < 310){
+
+    }
+    if(analogRead(AMS_OK_PIN) < 310){
+        // send can message for light on dash panel
+        state = ERROR;
+    }
+     else if(analogRead(AMS_OK_PIN) > 730 && analogRead(AMS_OK_PIN) < 760) state = GLV_ON;
+
+    if(analogRead(IMD_OK_PIN) < 310){
+        // send can message for light on dash panel
+        state = ERROR;
+    } 
+    else if(analogRead(IMD_OK_PIN) > 730 && analogRead(IMD_OK_PIN) < 760) state = GLV_ON;
+
+    // this coz it exists
+    digitalWrite(SOFTWARE_OK_CONTROL_PIN, HIGH);
 
     // Brake Light Operation
+    if(Car.PEDALS.getBrakePressureF() > 0.05 || Car.PEDALS.getBrakePressureR() > 0.05) {
+        digitalWrite(BRAKE_LIGHT_PIN, HIGH);
+    }
+    else {
+        digitalWrite(BRAKE_LIGHT_PIN, LOW);
+    }
+
+    if(CRITICAL_CAN_FAILURE(Car)) {
+        sendToError(&CRITICAL_CAN_FAILURE);
+    }
+
+    if(NON_CRITICAL_CAN_FAILURE(Car)){
+        // warn on dash
+    }
+
+
+    // switchboard CAN stuff for moving from glv_on to ts_precharge from the ts_active switch
+    // also the brake + rtd switch to move from ts_precharge to rtd_0tq 
+    // wait for a ping, use a callback function and pointer to a function
+    // will require changing nodes.h.
+
 
     if(motorTempHighEntryCondition(Car)) {
         NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT2);
