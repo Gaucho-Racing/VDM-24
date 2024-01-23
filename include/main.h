@@ -16,6 +16,10 @@ using namespace std;
 // PIN DEFINITIONS
 const int SOFTWARE_OK_CONTROL_PIN = 41;
 const int BRAKE_LIGHT_PIN = 4;
+const int BSPD_OK_PIN = 19;
+const int IMD_OK_PIN = 20;
+const int AMS_OK_PIN = 21;
+
 
 enum State {GLV_ON, TS_PRECHARGE, RTD_0TQ, DRIVE_TORQUE, ERROR};
 

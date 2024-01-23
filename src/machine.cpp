@@ -17,10 +17,9 @@ State ts_precharge(iCANflex& Car) {
     if( ECU_Startup_Rejection(Car)) {
         return TS_PRECHARGE;
     }
-    else {
+    else if(/*can message for rtd button*/ false) {
         if(Critical_Systems_Fault(Car)) return ERROR;
         Warning_Systems_Fault(Car);
-        // start powertrain cooling
         // WAIT FOR PRECHARGE COMPLETE SIGNAL FROM ACU!!!!!!
         // play RTD sound
         return RTD_0TQ;
