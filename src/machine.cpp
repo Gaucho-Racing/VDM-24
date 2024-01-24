@@ -178,7 +178,7 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
         return RTD_0TQ;
     } 
     // APPS BSE VIOLATION
-    if(brake > 0.05 && a1 > 0.25) {
+    if((brake > 0.05 && a1 > 0.25) || SystemsCheck::BSPD_fault(Car)) {
         BSE_APPS_violation = true;
         return RTD_0TQ;
     }
@@ -221,3 +221,4 @@ State error(iCANflex& Car, volatile bool (*errorCheck)(iCANflex& c)) {
         return ERROR;
     }
 }
+

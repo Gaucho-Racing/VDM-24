@@ -81,6 +81,7 @@ void loop(){
 
     if(SystemsCheck::AMS_fault(*Car)) state = sendToError(SystemsCheck::AMS_fault);
     if(SystemsCheck::IMD_fault(*Car)) state = sendToError(SystemsCheck::IMD_fault);
+    if(SystemsCheck::SDC_opened(*Car)) state = sendToError(SystemsCheck::SDC_opened);
 
     // switchboard CAN stuff for moving from glv_on to ts_precharge from the ts_active switch
     // also the brake + rtd switch to move from ts_precharge to rtd_0tq 
@@ -90,18 +91,7 @@ void loop(){
 
     // boolean indicating the SDC is open (example: ESTOP Pressed) 
 
-    if(motorTempHighEntryCondition(Car)) {
-        NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT2);
-    }
-
-    if (canReceiveFailure(Car)) { NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT1); }
-
-    if (currentLimitExceeded(Car)) { 
-        NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT3);
-    }
-
-    if (shutdown_pinned(Car)) { NVIC_TRIGGER_IRQ(IRQ_GPIO1_INT0); }
-
+    // STATE MACHINE OPERATION
     switch (state) {
         case GLV_ON: // GLV ON
             state = glv_on(Car);
@@ -128,7 +118,8 @@ void setup() {
     while(!Serial) Serial.println("Waiting for Serial Port to connect");
     Serial.println("Connected to Serial Port 9600");
 
-    Car.begin();
+
+    Car->begin();
 
      // set state  
     state = GLV_ON; 
@@ -163,12 +154,6 @@ void setup() {
             Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
             state = ERROR;
         }
-    }
-    
-
-
-
-
-   
+    }  
 }
 
