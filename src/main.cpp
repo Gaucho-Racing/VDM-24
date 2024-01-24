@@ -14,14 +14,12 @@ void loop(){
 
     if(SystemsCheck::AMS_fault(*Car)) state = sendToError(SystemsCheck::AMS_fault);
     if(SystemsCheck::IMD_fault(*Car)) state = sendToError(SystemsCheck::IMD_fault);
+    if(SystemsCheck::SDC_opened(*Car)) state = sendToError(SystemsCheck::SDC_opened);
 
     // switchboard CAN stuff for moving from glv_on to ts_precharge from the ts_active switch
     // also the brake + rtd switch to move from ts_precharge to rtd_0tq 
     // wait for a ping, use a callback function and pointer to a function
     // will require changing nodes.h.
-
-
-    // boolean indicating the SDC is open (example: ESTOP Pressed) 
 
     // STATE MACHINE OPERATION
     switch (state) {
@@ -52,7 +50,6 @@ void setup() {
     Serial.println("Waiting for Serial Port to connect");
     while(!Serial) Serial.println("Waiting for Serial Port to connect");
     Serial.println("Connected to Serial Port 9600");
-
 
     Car->begin();
 
@@ -89,12 +86,6 @@ void setup() {
             Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
             state = ERROR;
         }
-    }
-    
-
-
-
-
-   
+    }  
 }
 
