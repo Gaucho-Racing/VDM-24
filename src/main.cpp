@@ -79,24 +79,17 @@ void shutdown_pinned_ISR() {
 void loop(){
     // read bspd, ams, and imd pins as analog   
 
-    if(SystemsCheck::AMS_fault(*Car)) {
-        state = sendToError(SystemsCheck::AMS_fault);
-        active_faults.insert(SystemsCheck::AMS_fault);
-    }
-
-    if(SystemsCheck::IMD_fault(*Car)) {
-        state = sendToError(SystemsCheck::IMD_fault);
-        active_faults.insert(SystemsCheck::IMD_fault);
-    }
-    if(SystemsCheck::SDC_opened(*Car)) {
-        state = sendToError(SystemsCheck::SDC_opened);
-        active_faults.insert(SystemsCheck::SDC_opened);
-    }
+    SystemsCheck::run_system_check(*Car);
+    if(active_faults.size()) state = sendToError(*active_faults.begin());
 
     // switchboard CAN stuff for moving from glv_on to ts_precharge from the ts_active switch
     // also the brake + rtd switch to move from ts_precharge to rtd_0tq 
     // wait for a ping, use a callback function and pointer to a function
     // will require changing nodes.h.
+
+
+    // read in settings from Steering Wheel
+
 
 
     // boolean indicating the SDC is open (example: ESTOP Pressed) 
@@ -121,12 +114,17 @@ void loop(){
         case DRIVE_TORQUE:
             state = drive_torque(Car, BSE_APPS_violation);
             break;
+        case REGEN_TORQUE:
+            state = regen_torque(*Car);
+            break;
         case ERROR:
             state = error(*Car, errorCheck);
             break;
         case ERROR_RESOLVED:
             if(active_faults.size() == 0) state = GLV_ON;
             else state = sendToError(*active_faults.begin());
+            break;
+        case INTERRUPT:
             break;
     }
 }

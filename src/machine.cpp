@@ -45,12 +45,12 @@ State ts_precharge(iCANflex& Car) {
     return PRECHARGING;
 }
 
-State precharging(){
+State precharging(iCANflex& Car){
     // wait for precharge complete signal
     return PRECHARGING;
 }
 
-State precharge_complete(){
+State precharge_complete(iCANflex& Car){
     return PRECHARGE_COMPLETE;
     // wait for RTD signal
 }
@@ -171,6 +171,11 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
     return DRIVE;
 }
 
+
+
+State regen_torque(iCANflex& Car){
+    
+}
 
 /*
 ERROR STATE
