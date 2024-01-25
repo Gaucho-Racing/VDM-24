@@ -59,4 +59,7 @@ static volatile bool SystemsCheck::BSPD_fault(const iCANflex& Car){
     else if(analogRead(BSPD_OK_PIN) > 730 && analogRead(BSPD_OK_PIN) < 760) return false;
     return true;
 }
+bool SystemsCheck::SDC_opened(const iCANflex& Car){
+    return false; // TODO: implement
+}
 
