@@ -60,6 +60,6 @@ bool SystemsCheck::BSPD_fault(const iCANflex& Car){
     return true;
 }
 bool SystemsCheck::SDC_opened(const iCANflex& Car){
-    return false; // TODO: implement
+    return false; // TODO: implement based on AIRS from ACU
 }
 

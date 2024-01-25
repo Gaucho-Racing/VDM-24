@@ -24,51 +24,36 @@ State glv_on(iCANflex& Car) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);    
 
+    // wait for the TS ACTIVE button to be pressed
+
     return GLV_ON;
 }  
 
 
 /*
 
-TS_PRECHARGE STATE
+PRECHARGING PROCESS
 
-THIS STATE IS ACTIVE WHEN THE TS ACTIVE SWITCH IS PRESSED. THIS STATE IS ENTERED
-AFTER THE TS ACTIVE BUTTON ON THE DASH PANEL IS PRESSED AND A PING IS RECIEVED BY THE 
-VDM. ONCE THIS HAPPENS THE VEHICLE MUST BEGIN THE PRECHARGING AND WAIT FOR A SIGNAL FROM
-THE ACU THAT THE PRECHARGING IS COMPLETE BEFORE THE RTD BUTTON CAN BE PRESSED. 
-
-THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
-    - SETTING THE DRIVE ENABLE TO 0
-    - SETTING THE MOTOR CURRENT TO 0
-    - ACTING AS AN INTERMEDIARY STATE BETWEEN GLV_ON AND RTD_0TQ
-    - WAITING FOR THE PRECHARGE COMPLETE SIGNAL FROM THE ACU
-    - PLAYING THE RTD SOUND WHEN THE RTD BUTTON IS PRESSED
-    - SENDING A CAN MESSAGE TO THE DASH TO INDICATE THAT THE VEHICLE IS READY TO DRIVE
-    - PERFORMING A COMPLETE SYSTEMS CHECK BEFORE THE VEHICLE IS READY TO DRIVE
 
 */
-
-
-
 
 State ts_precharge(iCANflex& Car) { 
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
-
-    if(/*rtd pressed but rtd_brake_fault*/ false){
-        // can message for dash
-        return TS_PRECHARGE;
-    }
-    else if(/*can message for rtd button + brake*/ false) {
-        if(SystemsCheck::critical_sys_fault(Car)) return ERROR;
-        SystemsCheck::warn_sys_fault(Car);
-        // WAIT FOR PRECHARGE COMPLETE SIGNAL FROM ACU!!!!!!
-        // play RTD sound
-        return RTD_0TQ;
-    } 
-    return TS_PRECHARGE;
+    // run a system check
+    // begin prechargin
+    return PRECHARGING;
 }
 
+State precharging(){
+    // wait for precharge complete signal
+    return PRECHARGING;
+}
+
+State precharge_complete(){
+    return PRECHARGE_COMPLETE;
+    // wait for RTD signal
+}
 
 /*
 
@@ -144,6 +129,7 @@ float requested_torque(iCANflex& Car, float throttle, int rpm) {
 State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
     float a1 = Car.PEDALS.getAPPS1();
     float a2 = Car.PEDALS.getAPPS2();
+    float throttle = Car.PEDALS.getThrottle();
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     
     // APPS GRADIENT VIOLATION
@@ -152,12 +138,12 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
         return RTD_0TQ;
     } 
     // APPS BSE VIOLATION
-    if((brake > 0.05 && a1 > 0.25) || SystemsCheck::BSPD_fault(Car)) {
+    if((brake > 0.05 && a1 > 0.25) /*|| SystemsCheck::BSPD_fault(Car)*/) {
         BSE_APPS_violation = true;
         return RTD_0TQ;
     }
     Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(requested_torque(Car, a1, Car.DTI.getERPM()/10.0));
+    Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0));
     
     return DRIVE_TORQUE;
 }
@@ -175,19 +161,14 @@ THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED
 */
 
 
-State error(iCANflex& Car, volatile bool (*errorCheck)(const iCANflex& c)) {
+State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c)) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
 
-    if(errorCheck(Car)) {
-        return ERROR;
-    }
+    if(errorCheck(Car))  return ERROR;
     else {
-        float throttle = Car.PEDALS.getAPPS1();
-        if(throttle < 0.05) {
-            return GLV_ON;
-        }
-        return ERROR;
+        active_faults.erase(errorCheck);
+        return ERROR_RESOLVED;
     }
+    
 }
-

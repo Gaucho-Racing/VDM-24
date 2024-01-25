@@ -7,6 +7,7 @@
 #include <vector>
 #include <imxrt.h>
 #include <unordered_map>
+#include <set>
 #include "iCANflex.h"
 #include "SD.h"
 #include "systems_check.h" 
@@ -30,7 +31,12 @@ static float TORQUE_PROFILE_P;
 static float TORQUE_PROFILE_B;
 static float REV_LIMIT = 5500.0;
 
-enum State {GLV_ON, TS_PRECHARGE, RTD_0TQ, DRIVE_TORQUE, ERROR};
+// all active detected errors
+PROGMEM static set<bool (*)(const iCANflex& Car)> active_faults;
+
+
+
+enum State {GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, RTD_0TQ, DRIVE_TORQUE, REGEN_TORQUE, ERROR, ERROR_RESOLVED};
 
 static unordered_map<State, string> stateToString = {
     {GLV_ON, "ON"},

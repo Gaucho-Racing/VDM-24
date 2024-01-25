@@ -1,10 +1,10 @@
 #include "machine.h"
 
 volatile State state;
-volatile bool (*errorCheck)(const iCANflex& Car); 
+bool (*errorCheck)(const iCANflex& Car); 
 bool BSE_APPS_violation = false;
 
-State sendToError(volatile bool (*erFunc)(const iCANflex& Car)) {
+State sendToError(bool (*erFunc)(const iCANflex& Car)) {
    errorCheck = erFunc; 
    return ERROR;
 }
@@ -12,9 +12,19 @@ State sendToError(volatile bool (*erFunc)(const iCANflex& Car)) {
 void loop(){
     // read bspd, ams, and imd pins as analog   
 
-    if(SystemsCheck::AMS_fault(*Car)) state = sendToError(SystemsCheck::AMS_fault);
-    if(SystemsCheck::IMD_fault(*Car)) state = sendToError(SystemsCheck::IMD_fault);
-    if(SystemsCheck::SDC_opened(*Car)) state = sendToError(SystemsCheck::SDC_opened);
+    if(SystemsCheck::AMS_fault(*Car)) {
+        state = sendToError(SystemsCheck::AMS_fault);
+        active_faults.insert(SystemsCheck::AMS_fault);
+    }
+
+    if(SystemsCheck::IMD_fault(*Car)) {
+        state = sendToError(SystemsCheck::IMD_fault);
+        active_faults.insert(SystemsCheck::IMD_fault);
+    }
+    if(SystemsCheck::SDC_opened(*Car)) {
+        state = sendToError(SystemsCheck::SDC_opened);
+        active_faults.insert(SystemsCheck::SDC_opened);
+    }
 
     // switchboard CAN stuff for moving from glv_on to ts_precharge from the ts_active switch
     // also the brake + rtd switch to move from ts_precharge to rtd_0tq 
@@ -29,6 +39,12 @@ void loop(){
         case TS_PRECHARGE:
             state = ts_precharge(*Car);
             break;
+        case PRECHARGING:
+            state = precharging(*Car);
+            break;
+        case PRECHARGE_COMPLETE:
+            state = precharge_complete(*Car);
+            break;
         case RTD_0TQ:
             state = rtd_0tq(*Car, BSE_APPS_violation); 
             break;
@@ -37,6 +53,10 @@ void loop(){
             break;
         case ERROR:
             state = error(*Car, errorCheck);
+            break;
+        case ERROR_RESOLVED:
+            if(active_faults.size() == 0) state = GLV_ON;
+            else state = sendToError(*active_faults.begin());
             break;
     }
 }
