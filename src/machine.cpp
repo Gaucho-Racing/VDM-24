@@ -1,7 +1,49 @@
 #include <Arduino.h>
 #include <imxrt.h>
 #include "machine.h"
+#include "sstream"
 
+
+
+
+
+State ecu_flash(iCANflex& Car) {
+    Car.DTI.setDriveEnable(0);
+    Car.DTI.setRCurrent(0);
+    // flash the ecu
+    Serial.println("Initializing SD Card...");
+    if(!SD.begin(BUILTIN_SDCARD)){
+        Serial.println("CRITICAL FAULT: PLEASE INSERT SD CARD CONTAINING ECU FLASH TUNE");
+        Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
+        return ERROR;
+    }
+    else{
+        Serial.println("SD INITIALIZATION SUCCESSFUL");
+        File ecu_tune;
+        ecu_tune = SD.open("gr24.txt");
+        if(ecu_tune){
+            Serial.print("Reading ECU FLASH....");
+            String tune;
+            while(ecu_tune.available()){
+                Serial.print(".");
+                tune += (char)ecu_tune.read();
+            }
+            ecu_tune.close();
+            Serial.println("");
+
+            const stringstream iss(tune.c_str()); // const so put into FLASH MEMORY
+            // read in torque profiles, regen profiles, and traction profiles
+            Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
+
+        }
+        else {
+            Serial.println("CRITICAL FAULT: ERROR OPENING GR24 ECU TUNE");
+            Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
+            return ERROR;
+        }
+    }  
+    return GLV_ON;
+}
 
 /*
 
@@ -23,9 +65,9 @@ THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
 State glv_on(iCANflex& Car) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);    
+    // WRITE TO THE SOFTWARE OK PIN
 
     // wait for the TS ACTIVE button to be pressed
-
     return GLV_ON;
 }  
 
@@ -46,12 +88,15 @@ State ts_precharge(iCANflex& Car) {
 }
 
 State precharging(iCANflex& Car){
+   
     // wait for precharge complete signal
     return PRECHARGING;
 }
 
 State precharge_complete(iCANflex& Car){
     return PRECHARGE_COMPLETE;
+    
+    
     // wait for RTD signal
 }
 
@@ -120,10 +165,14 @@ THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED
 
 float requested_torque(iCANflex& Car, float throttle, int rpm) {
     // z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
-    float tq_percent = (throttle-(1-throttle)*(throttle+TORQUE_PROFILE_B)*pow(rpm/REV_LIMIT, TORQUE_PROFILE_P)*TORQUE_PROFILE_K);
+    float k = TORQUE_PROFILES[THROTTLE_MAPPING].K;
+    float p = TORQUE_PROFILES[THROTTLE_MAPPING].P;
+    float b = TORQUE_PROFILES[THROTTLE_MAPPING].B;
+    float current = TORQUE_PROFILES[THROTTLE_MAPPING].MAX_CURRENT;
+    float tq_percent = (throttle-(1-throttle)*(throttle+b)*pow(rpm/REV_LIMIT, p)*k);
     if(tq_percent > 1) tq_percent = 1;
     if(tq_percent < 0) tq_percent = 0;
-    return tq_percent*MAX_MOTOR_CURRENT;
+    return tq_percent*current;
 }
 
 State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
@@ -138,7 +187,7 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
         return RTD_0TQ;
     } 
     // APPS BSE VIOLATION
-    if((brake > 0.05 && a1 > 0.25) /*|| SystemsCheck::BSPD_fault(Car)*/) {
+    if((brake > 0.05 && a1 > 0.25)) {
         BSE_APPS_violation = true;
         return RTD_0TQ;
     }
@@ -151,7 +200,7 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
 
 
 State regen_torque(iCANflex& Car){
-    
+    return REGEN_TORQUE;
 }
 
 /*

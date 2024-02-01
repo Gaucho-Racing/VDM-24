@@ -1,4 +1,5 @@
 #include "machine.h"
+#include "sstream"
 
 volatile State state;
 bool (*errorCheck)(const iCANflex& Car); 
@@ -15,17 +16,17 @@ void loop(){
     SystemsCheck::run_system_check(*Car);
     if(active_faults.size()) state = sendToError(*active_faults.begin());
 
-    // switchboard CAN stuff for moving from glv_on to ts_precharge from the ts_active switch
-    // also the brake + rtd switch to move from ts_precharge to rtd_0tq 
-    // wait for a ping, use a callback function and pointer to a function
-    // will require changing nodes.h.
-
-
     // read in settings from Steering Wheel
+    THROTTLE_MAPPING = 0; // read from can
+    REGEN_LEVEL = 0;
+    TRACTION_MODE = 0;
 
 
     // STATE MACHINE OPERATION
     switch (state) {
+        case ECU_FLASH:
+            state = ecu_flash(*Car);
+            break;
         case GLV_ON: // GLV ON
             state = glv_on(*Car);
             break;
@@ -54,8 +55,6 @@ void loop(){
             if(active_faults.size() == 0) state = GLV_ON;
             else state = sendToError(*active_faults.begin());
             break;
-        case INTERRUPT:
-            break;
     }
 }
 
@@ -75,35 +74,6 @@ void setup() {
     state = GLV_ON; 
 
     // Read the SD CARD Settings for the ECU TUNE ON STARTUP
-    Serial.println("Initializing SD Card...");
-    if(!SD.begin(BUILTIN_SDCARD)){
-        Serial.println("CRITICAL FAULT: PLEASE INSERT SD CARD CONTAINING ECU FLASH TUNE");
-        Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
-
-        state = ERROR;
-    }
-    else{
-        Serial.println("SD INITIALIZATION SUCCESSFUL");
-        File ecu_tune;
-        ecu_tune = SD.open("GR24_FLASH_TUNE.ecu");
-        if(ecu_tune){
-            Serial.print("Reading ECU FLASH....");
-            String tune;
-            while(ecu_tune.available()){
-                Serial.print(".");
-                tune += (char)ecu_tune.read();
-            }
-            ecu_tune.close();
-            Serial.println("");
-
-            Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
-
-        }
-        else {
-            Serial.println("CRITICAL FAULT: ERROR OPENING GR24 ECU TUNE");
-            Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
-            state = ERROR;
-        }
-    }  
+    ecu_flash(*Car);
 }
 

@@ -2,9 +2,14 @@
 
 
 void SystemsCheck::run_system_check(const iCANflex& Car){
-    
+
 }
 
+// NOTE: OPEN THE SOFTWARE LATCH IF the Inverter is not responding or the ERROR is not properly handled. 
+
+
+// CRITICAL FAULTS: VERY BAD
+// EITHER SDC IS OPENED 
 bool SystemsCheck::AMS_fault(const iCANflex& Car){
     if(analogRead(AMS_OK_PIN) < 310) return true; // and send a can light thing
     else if(analogRead(AMS_OK_PIN) > 730 && analogRead(AMS_OK_PIN) < 760) return false;
@@ -22,20 +27,11 @@ bool SystemsCheck::BSPD_fault(const iCANflex& Car){
 }
 bool SystemsCheck::SDC_opened(const iCANflex& Car){
     return false; // TODO: implement based on AIRS from ACU
+    // read voltage on SDC just before AIRS
 }
 
 
-bool SystemsCheck::rtd_brake_fault(const iCANflex& Car) {
-    // if (Car.PEDALS.getAPPS1() > 0.05 || 
-    //     Car.PEDALS.getAPPS2() > 0.05 ||
-    //     Car.PEDALS.getBrakePressureF() <= 0.05 || 
-    //     Car.PEDALS.getBrakePressureR() <= 0.05) {
-    //     Serial.println("ECU STARTUP REJECTION: HOLD BRAKES");
-    //     // send error code to dash
-    //     return true;
-    // }
-    return false;
-}
+
 
 bool SystemsCheck::critical_sys_fault(const iCANflex& Car){
     return false; 
@@ -51,7 +47,7 @@ bool SystemsCheck::warn_sys_fault(const iCANflex& Car){
 
 bool SystemsCheck::critical_motor_temp(const iCANflex& Car){
     return false;
-    //implement later
+    // send a can message for status
 }
 bool SystemsCheck::limit_motor_temp(const iCANflex& Car){
     return false;
@@ -86,8 +82,8 @@ bool SystemsCheck::warn_water_temp(const iCANflex& Car){
     //implement later
 }
 bool SystemsCheck::rev_limit_exceeded(const iCANflex& Car){
-    return false;
-    //implement later
+    return Car.DTI.getERPM()/10.0 >= REV_LIMIT;
+    // send ok signal on can
 }
 
 
