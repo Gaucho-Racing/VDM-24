@@ -24,7 +24,6 @@ class SystemsCheck{
 
     static bool SDC_opened(const iCANflex& Car);
 
-    static bool rtd_brake_fault(const iCANflex& Car); 
 
     static bool critical_sys_fault(const iCANflex& Car);
     static bool warn_sys_fault(const iCANflex& Car);
@@ -41,9 +40,11 @@ class SystemsCheck{
     static bool limit_water_temp(const iCANflex& Car);
     static bool warn_water_temp(const iCANflex& Car);
 
-    static bool rev_limit_exceeded(const iCANflex& Car);    
-    
+    static bool rev_limit_exceeded(const iCANflex& Car);  
 
+
+
+    
 
     // CAN RECIEVE FAILURES
     static bool critical_can_failure(const iCANflex& Car); 

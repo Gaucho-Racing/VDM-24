@@ -24,25 +24,42 @@ const int BSPD_OK_PIN = 19;
 const int IMD_OK_PIN = 20;
 const int AMS_OK_PIN = 21;
 
+
+struct TorqueProfile{
+    float MAX_CURRENT;
+    float K;
+    float P;
+    float B;
+    TorqueProfile(float k, float p, float b): K(k), P(p), B(b){}
+    TorqueProfile(){}
+};
+
+
 // ECU TUNE READS
-static float MAX_MOTOR_CURRENT;
-static float TORQUE_PROFILE_K;
-static float TORQUE_PROFILE_P;
-static float TORQUE_PROFILE_B;
+static vector<TorqueProfile> TORQUE_PROFILES(4);
 static float REV_LIMIT = 5500.0;
+
+// STEERING WHEEL SETTINGS
+static int THROTTLE_MAPPING;
+static int REGEN_LEVEL;
+static int TRACTION_MODE;
+
 
 // all active detected errors
 static unordered_set<bool (*)(const iCANflex&)> active_faults;
 
 
-enum State {GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, RTD_0TQ, DRIVE_TORQUE, REGEN_TORQUE, ERROR, ERROR_RESOLVED, INTERRUPT};
+enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, RTD_0TQ, DRIVE_TORQUE, REGEN_TORQUE, ERROR, ERROR_RESOLVED};
 
 static unordered_map<State, string> stateToString = {
+    {ECU_FLASH, "ECU_FLASH"},
     {GLV_ON, "ON"},
     {TS_PRECHARGE, "TS_PRECHARGE"},
     {RTD_0TQ, "RTD_0TQ"},
     {DRIVE_TORQUE, "DRIVE_TORQUE"},
+    {REGEN_TORQUE, "REGEN_TORQUE"},
     {ERROR, "ERROR"},
+    {ERROR_RESOLVED, "ERROR_RESOLVED"}
 };
 
 

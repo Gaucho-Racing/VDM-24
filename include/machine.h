@@ -4,7 +4,7 @@
 #include "main.h"
 #include "systems_check.h"
 
-
+State ecu_flash(iCANflex& Car);
 State glv_on(iCANflex& Car);
 State ts_precharge(iCANflex& Car);
 State precharging(iCANflex& Car);
