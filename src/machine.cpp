@@ -175,6 +175,7 @@ float requested_torque(iCANflex& Car, float throttle, int rpm) {
     return tq_percent*current;
 }
 
+
 State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
     float a1 = Car.PEDALS.getAPPS1();
     float a2 = Car.PEDALS.getAPPS2();
