@@ -10,17 +10,17 @@ class SystemsCheck{
     private:
     static const int CAN_MS_THRESHOLD = 100; // msec
     static const int MOTOR_TEMP_WARN = 60; // celsius
-    static const int MOTOR_TEMP_LIMIT = 80; // celsius
-    static const int MOTOR_TEMP_CRITICAL = 100; // celsius
-    static const int BATTERY_TEMP_WARN = 40; // celsius
-    static const int BATTERY_TEMP_LIMIT = 50; // celsius
-    static const int BATTERY_TEMP_CRITICAL = 60; // celsius
-    static const int WATER_TEMP_WARN = 45; // celsius
-    static const int WATER_TEMP_LIMIT = 60; // celsius
-    static const int WATER_TEMP_CRITICAL = 100; // celsius
+    static const int MOTOR_TEMP_LIMIT = 65; // celsius
+    static const int MOTOR_TEMP_CRITICAL = 70; // celsius
+    static const int BATTERY_TEMP_WARN = 60; // celsius
+    static const int BATTERY_TEMP_LIMIT = 65; // celsius
+    static const int BATTERY_TEMP_CRITICAL = 70; // celsius
+    static const int WATER_TEMP_WARN = 60; // celsius
+    static const int WATER_TEMP_LIMIT = 65; // celsius
+    static const int WATER_TEMP_CRITICAL = 70; // celsius
     static const int MCU_TEMP_WARN = 60; // celsius
-    static const int MCU_TEMP_LIMIT = 80; // celsius
-    static const int MCU_TEMP_CRITICAL = 100; // celsius
+    static const int MCU_TEMP_LIMIT = 65; // celsius
+    static const int MCU_TEMP_CRITICAL = 70; // celsius
 
 
     public:
