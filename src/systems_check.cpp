@@ -58,46 +58,154 @@ static volatile bool SystemsCheck::warn_sys_fault(const iCANflex& Car){
 }
 
 
-bool SystemsCheck::critical_motor_temp(const iCANflex& Car){
-    return false;
-    // send a can message for status
-}
-bool SystemsCheck::limit_motor_temp(const iCANflex& Car){
-    return false;
-    //implement later
-}
+// byte 1
 bool SystemsCheck::warn_motor_temp(const iCANflex& Car){
-    return false;
-    //implement later
+   if(Car.DTI.getMotorTemp() > MOTOR_TEMP_WARN){
+        system_check_can_packet[0] = (system_check_can_packet[0] | 0b10000000);
+        return true;
+   }
+   else {
+        system_check_can_packet[0] = (system_check_can_packet[0] & 0b01111111);
+        return false;
+   }
 }
-bool SystemsCheck::critical_battery_temp(const iCANflex& Car){
-    return false;
-    //implement later
+
+bool SystemsCheck::limit_motor_temp(const iCANflex& Car){
+   if(Car.DTI.getMotorTemp() > MOTOR_TEMP_LIMIT){
+        system_check_can_packet[0] = (system_check_can_packet[0] | 0b01000000);
+        return true;
+   }
+   else {
+        system_check_can_packet[0] = (system_check_can_packet[0] & 0b10111111);
+        return false;
+   }
 }
-bool SystemsCheck::limit_battery_temp(const iCANflex& Car){
-    return false;
-    //implement later
+bool SystemsCheck::critical_motor_temp(const iCANflex& Car){
+    if(Car.DTI.getMotorTemp() > MOTOR_TEMP_CRITICAL){
+          system_check_can_packet[0] = (system_check_can_packet[0] | 0b00100000);
+          return true;
+    }
+    else {
+          system_check_can_packet[0] = (system_check_can_packet[0] & 0b11011111);
+          return false;
+    }
 }
+
+
 bool SystemsCheck::warn_battery_temp(const iCANflex& Car){
-    return false;
-    //implement later
+    if(Car.ACU1.getMaxCellTemp() > BATTERY_TEMP_WARN){
+        system_check_can_packet[0] = (system_check_can_packet[0] | 0b00010000);
+        return true;
+    }
+    else {
+        system_check_can_packet[0] = (system_check_can_packet[0] & 0b11101111);
+        return false;
+    }
 }
-bool SystemsCheck::critical_water_temp(const iCANflex& Car){
-    return false;
-    //implement later
+
+bool SystemsCheck::limit_battery_temp(const iCANflex& Car){
+    if(Car.ACU1.getMaxCellTemp() > BATTERY_TEMP_LIMIT){
+        system_check_can_packet[0] = (system_check_can_packet[0] | 0b00001000);
+        return true;
+    }
+    else {
+        system_check_can_packet[0] = (system_check_can_packet[0] & 0b11110111);
+        return false;
+    }
 }
-bool SystemsCheck::limit_water_temp(const iCANflex& Car){
-    return false;
-    //implement later
+
+bool SystemsCheck::critical_battery_temp(const iCANflex& Car){
+    if(Car.ACU1.getMaxCellTemp() > BATTERY_TEMP_CRITICAL){
+        system_check_can_packet[0] = (system_check_can_packet[0] | 0b00000100);
+        return true;
+    }
+    else {
+        system_check_can_packet[0] = (system_check_can_packet[0] & 0b11111011);
+        return false;
+    }
 }
-bool SystemsCheck::warn_water_temp(const iCANflex& Car){
-    return false;
-    //implement later
-}
+
 bool SystemsCheck::rev_limit_exceeded(const iCANflex& Car){
-    return Car.DTI.getERPM()/10.0 >= REV_LIMIT;
-    // send ok signal on can
+    if(Car.DTI.getERPM()/10.0 > REV_LIMIT){
+        system_check_can_packet[0] = (system_check_can_packet[0] | 0b00000010);
+        return true;
+    }
+    else {
+        system_check_can_packet[0] = (system_check_can_packet[0] & 0b11111101);
+        return false;
+    }
 }
+
+//byte 2
+
+bool SystemsCheck::warn_water_temp(const iCANflex& Car){
+    if(Car.ACU1.getWaterTemp() > WATER_TEMP_WARN){
+        system_check_can_packet[1] = (system_check_can_packet[1] | 0b10000000);
+        return true;
+    }
+    else {
+        system_check_can_packet[1] = (system_check_can_packet[1] & 0b01111111);
+        return false;
+    }
+}
+
+bool SystemsCheck::limit_water_temp(const iCANflex& Car){
+    if(Car.ACU1.getWaterTemp() > WATER_TEMP_LIMIT){
+        system_check_can_packet[1] = (system_check_can_packet[1] | 0b01000000);
+        return true;
+    }
+    else {
+        system_check_can_packet[1] = (system_check_can_packet[1] & 0b10111111);
+        return false;
+    }
+}
+
+bool SystemsCheck::critical_water_temp(const iCANflex& Car){
+   if(Car.ACU1.getWaterTemp() > WATER_TEMP_CRITICAL){
+        system_check_can_packet[1] = (system_check_can_packet[1] | 0b00100000);
+        return true;
+   }
+   else {
+        system_check_can_packet[1] = (system_check_can_packet[1] & 0b11011111);
+        return false;
+   }
+}
+
+bool SystemsCheck::warn_mcu_temp(const iCANflex& Car){
+    if(Car.DTI.getInvTemp() > MCU_TEMP_WARN){
+        system_check_can_packet[1] = (system_check_can_packet[1] | 0b00010000);
+        return true;
+    }
+    else {
+        system_check_can_packet[1] = (system_check_can_packet[1] & 0b11101111);
+        return false;
+    }
+}
+
+bool SystemsCheck::limit_mcu_temp(const iCANflex& Car){
+    if(Car.DTI.getInvTemp() > MCU_TEMP_LIMIT){
+        system_check_can_packet[1] = (system_check_can_packet[1] | 0b00001000);
+        return true;
+    }
+    else {
+        system_check_can_packet[1] = (system_check_can_packet[1] & 0b11110111);
+        return false;
+    }
+}
+
+bool SystemsCheck::critical_mcu_temp(const iCANflex& Car){
+    if(Car.DTI.getInvTemp() > MCU_TEMP_CRITICAL){
+        system_check_can_packet[1] = (system_check_can_packet[1] | 0b00000100);
+        return true;
+    }
+    else {
+        system_check_can_packet[1] = (system_check_can_packet[1] & 0b11111011);
+        return false;
+    }
+}
+
+
+
 
 
 
