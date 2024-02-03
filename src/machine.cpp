@@ -105,8 +105,24 @@ State precharge_complete(iCANflex& Car){
     // wait for RTD signal
 }
 
+/*
 
- // PRECHARGING MUST BE COMPLETE BEFORE ENTERING THIS STATE
+RTD_0TQ STATE 
+
+PRECHARGING MUST BE COMPLETE BEFORE THIS STATE IS ENTERED. THIS STATE IS RESPONSIBLE FOR
+THE VEHICLE DYNAMICS IN IDLE SITUATIONS WHERE EITHER NO TORQUE IS REQUESTED BY THE DRIVER OR 
+THERE IS A VIOLATION THAT LIMITS TORQUE REQUESTS.
+
+THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
+    - SETTING THE DRIVE ENABLE TO 0
+    - SETTING THE MOTOR CURRENT TO 0
+    - ENSURING THE APPS AND BSE ARE NOT INTERFERING
+
+
+*/
+
+
+
 State rtd_0tq(iCANflex& Car, bool& BSE_APPS_violation) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
@@ -128,11 +144,11 @@ State rtd_0tq(iCANflex& Car, bool& BSE_APPS_violation) {
         if(throttle < 0.05) {
             // violation exit condition, reset violation and return to DRIVE_READY
             BSE_APPS_violation = false;
-            return RTD_0TQ;
+            return DRIVE_NULL;
         }  
     }
     // else loop back into RTD state with Violation still true
-    return RTD_0TQ;
+    return DRIVE_NULL;
 }
 
 
@@ -218,12 +234,12 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
     // APPS GRADIENT VIOLATION
     if(abs(a1 - (2*a2)) > 0.1){
         // send an error message on the dash
-        return RTD_0TQ;
+        return DRIVE_NULL;
     } 
     // APPS BSE VIOLATION
     if((brake > 0.05 && a1 > 0.25)) {
         BSE_APPS_violation = true;
-        return RTD_0TQ;
+        return DRIVE_NULL;
     }
 
 
@@ -235,8 +251,8 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
 
 
 
-State regen_torque(iCANflex& Car){
-    return REGEN_TORQUE;
+State drive_regen(iCANflex& Car){
+    return DRIVE_REGEN;
 }
 
 /*
@@ -260,11 +276,8 @@ State error(iCANflex& Car, volatile bool (*errorCheck)(const iCANflex& c)) {
 
     if(errorCheck(Car))  return ERROR;
     else {
-        float throttle = Car.PEDALS.getAPPS1();
-        if(throttle < 0.05) {
-            return GLV_ON;
-        }
-        return ERROR;
+        active_faults.erase(errorCheck);
+        return ERROR_RESOLVED;
     }
     
 }

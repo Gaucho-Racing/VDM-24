@@ -23,7 +23,7 @@ void SystemsCheck::hardware_system_critical(const iCANflex& Car){
 // NOTE: OPEN THE SOFTWARE LATCH IF the Inverter is not responding or the ERROR is not properly handled. 
 
 
-// CRITICAL FAULTS: VERY BAD
+// HARDWARE FAULTS: VERY BAD
 // EITHER SDC IS OPENED 
 bool SystemsCheck::AMS_fault(const iCANflex& Car){
     if(analogRead(AMS_OK_PIN) < 310) return true; // and send a can light thing
@@ -47,17 +47,6 @@ bool SystemsCheck::SDC_opened(const iCANflex& Car){
 
 
 
-
-bool SystemsCheck::critical_sys_fault(const iCANflex& Car){
-    return false; 
-    //implement later
-    Serial.println("CRITICAL SYSTEMS FAULT");
-}
-
-bool SystemsCheck::warn_sys_fault(const iCANflex& Car){
-    Serial.println("NON CRITICAL ERROR CODES");
-    return false;
-}
 
 
 // byte 1

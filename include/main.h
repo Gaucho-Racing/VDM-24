@@ -18,11 +18,11 @@ using namespace std;
 static iCANflex* Car;
 
 // PIN DEFINITIONS
-const int SOFTWARE_OK_CONTROL_PIN = 41;
-const int BRAKE_LIGHT_PIN = 4;
-const int BSPD_OK_PIN = 19;
-const int IMD_OK_PIN = 20;
-const int AMS_OK_PIN = 21;
+const uint8_t SOFTWARE_OK_CONTROL_PIN = 41;
+const uint8_t BRAKE_LIGHT_PIN = 4;
+const uint8_t BSPD_OK_PIN = 19;
+const uint8_t IMD_OK_PIN = 20;
+const uint8_t AMS_OK_PIN = 21;
 
 
 struct TorqueProfile{
@@ -40,28 +40,19 @@ static vector<TorqueProfile> TORQUE_PROFILES(4);
 static float REV_LIMIT = 5500.0;
 
 // STEERING WHEEL SETTINGS
-static int THROTTLE_MAPPING;
-static int REGEN_LEVEL;
-static int TRACTION_MODE;
+static uint8_t THROTTLE_MAPPING; // 0-3
+static uint8_t REGEN_LEVEL; // 0-3
+static uint8_t PWR_LEVEL; // 0 - 3
 
 
 // all active detected errors
 static unordered_set<bool (*)(const iCANflex&)> active_faults;
 
 
-enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, RTD_0TQ, DRIVE_TORQUE, REGEN_TORQUE, ERROR, ERROR_RESOLVED};
+enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_NULL, DRIVE_TORQUE, DRIVE_REGEN, ERROR};
 enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT}l;
 
-static unordered_map<State, string> stateToString = {
-    {ECU_FLASH, "ECU_FLASH"},
-    {GLV_ON, "ON"},
-    {TS_PRECHARGE, "TS_PRECHARGE"},
-    {RTD_0TQ, "RTD_0TQ"},
-    {DRIVE_TORQUE, "DRIVE_TORQUE"},
-    {REGEN_TORQUE, "REGEN_TORQUE"},
-    {ERROR, "ERROR"},
-    {ERROR_RESOLVED, "ERROR_RESOLVED"}
-};
+
 
 
 #endif
