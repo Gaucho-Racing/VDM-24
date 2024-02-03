@@ -71,8 +71,5 @@ void setup() {
 
      // set state  
     state = ECU_FLASH; 
-
-    // Read the SD CARD Settings for the ECU TUNE ON STARTUP
-    ecu_flash(*Car);
 }
 
