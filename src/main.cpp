@@ -11,18 +11,18 @@ State sendToError(bool (*erFunc)(const iCANflex& Car)) {
 }
 
 void loop(){
-    // read bspd, ams, and imd pins as analog   
-
+    // reads bspd, ams, and imd pins as analog   
     SystemsCheck::hardware_system_critical(*Car);
 
-    if(active_faults.size()) state = sendToError(*active_faults.begin());
-    
+
+    state = active_faults.size() ?  sendToError(*active_faults.begin()) : GLV_ON;
+
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
 
     // read in settings from Steering Wheel
-    THROTTLE_MAPPING = 0; // read from can
+    THROTTLE_MAPPING = 0; 
     REGEN_LEVEL = 0;
-    TRACTION_MODE = 0;
+    PWR_LEVEL = 0;
 
 
     // STATE MACHINE OPERATION
@@ -42,21 +42,17 @@ void loop(){
         case PRECHARGE_COMPLETE:
             state = precharge_complete(*Car);
             break;
-        case RTD_0TQ:
-            state = rtd_0tq(*Car, BSE_APPS_violation); 
+        case DRIVE_NULL:
+            state = drive_null(*Car, BSE_APPS_violation); 
             break;
         case DRIVE_TORQUE:
             state = drive_torque(*Car, BSE_APPS_violation);
             break;
-        case REGEN_TORQUE:
-            state = regen_torque(*Car);
+        case DRIVE_REGEN:
+            state = drive_regen(*Car);
             break;
         case ERROR:
             state = error(*Car, errorCheck);
-            break;
-        case ERROR_RESOLVED:
-            if(active_faults.size() == 0) state = GLV_ON;
-            else state = sendToError(*active_faults.begin());
             break;
     }
 }
@@ -74,7 +70,7 @@ void setup() {
     Car->begin();
 
      // set state  
-    state = GLV_ON; 
+    state = ECU_FLASH; 
 
     // Read the SD CARD Settings for the ECU TUNE ON STARTUP
     ecu_flash(*Car);

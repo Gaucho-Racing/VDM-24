@@ -118,7 +118,7 @@ THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
 
 
 
-State rtd_0tq(iCANflex& Car, bool& BSE_APPS_violation) {
+State drive_null(iCANflex& Car, bool& BSE_APPS_violation) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
 
@@ -133,11 +133,11 @@ State rtd_0tq(iCANflex& Car, bool& BSE_APPS_violation) {
         if(throttle < 0.05) {
             // violation exit condition, reset violation and return to DRIVE_READY
             BSE_APPS_violation = false;
-            return RTD_0TQ;
+            return DRIVE_NULL;
         }  
     }
     // else loop back into RTD state with Violation still true
-    return RTD_0TQ;
+    return DRIVE_NULL;
 }
 
 
@@ -185,12 +185,12 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
     // APPS GRADIENT VIOLATION
     if(abs(a1 - (2*a2)) > 0.1){
         // send an error message on the dash
-        return RTD_0TQ;
+        return DRIVE_NULL;
     } 
     // APPS BSE VIOLATION
     if((brake > 0.05 && a1 > 0.25)) {
         BSE_APPS_violation = true;
-        return RTD_0TQ;
+        return DRIVE_NULL;
     }
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0));
@@ -200,8 +200,8 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
 
 
 
-State regen_torque(iCANflex& Car){
-    return REGEN_TORQUE;
+State drive_regen(iCANflex& Car){
+    return DRIVE_REGEN;
 }
 
 /*
@@ -223,7 +223,7 @@ State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c)) {
     if(errorCheck(Car))  return ERROR;
     else {
         active_faults.erase(errorCheck);
-        return ERROR_RESOLVED;
+        return GLV_ON;// gets sent to error regardless if there are more in the hashset from main
     }
     
 }
