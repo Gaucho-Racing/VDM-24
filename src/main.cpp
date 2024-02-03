@@ -80,8 +80,11 @@ void shutdown_pinned_ISR() {
 void loop(){
     // read bspd, ams, and imd pins as analog   
 
-    SystemsCheck::run_system_check(*Car);
+    SystemsCheck::hardware_system_critical(*Car);
+
     if(active_faults.size()) state = sendToError(*active_faults.begin());
+    
+    digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
 
     // read in settings from Steering Wheel
     THROTTLE_MAPPING = 0; // read from can

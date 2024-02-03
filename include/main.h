@@ -50,6 +50,7 @@ static unordered_set<bool (*)(const iCANflex&)> active_faults;
 
 
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, RTD_0TQ, DRIVE_TORQUE, REGEN_TORQUE, ERROR, ERROR_RESOLVED};
+enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT}l;
 
 static unordered_map<State, string> stateToString = {
     {ECU_FLASH, "ECU_FLASH"},

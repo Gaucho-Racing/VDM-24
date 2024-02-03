@@ -14,10 +14,12 @@ bool SystemsCheck::rtd_brake_fault(const iCANflex& Car) {
 }
 =======
 
-void SystemsCheck::run_system_check(const iCANflex& Car){
-
+void SystemsCheck::hardware_system_critical(const iCANflex& Car){
+    if(SDC_opened(Car)) active_faults.insert(SDC_opened);   
+    if(AMS_fault(Car)) active_faults.insert(AMS_fault);
+    if(IMD_fault(Car)) active_faults.insert(IMD_fault);
+    if(BSPD_fault(Car)) active_faults.insert(BSPD_fault);
 }
-
 // NOTE: OPEN THE SOFTWARE LATCH IF the Inverter is not responding or the ERROR is not properly handled. 
 
 
@@ -45,16 +47,16 @@ bool SystemsCheck::SDC_opened(const iCANflex& Car){
 
 
 
->>>>>>> 49bd2fd (rebase)
 
-static volatile bool SystemsCheck::critical_sys_fault(const iCANflex& Car){
+bool SystemsCheck::critical_sys_fault(const iCANflex& Car){
     return false; 
     //implement later
     Serial.println("CRITICAL SYSTEMS FAULT");
 }
 
-static volatile bool SystemsCheck::warn_sys_fault(const iCANflex& Car){
+bool SystemsCheck::warn_sys_fault(const iCANflex& Car){
     Serial.println("NON CRITICAL ERROR CODES");
+    return false;
 }
 
 

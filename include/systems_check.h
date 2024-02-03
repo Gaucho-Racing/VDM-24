@@ -28,8 +28,8 @@ class SystemsCheck{
     static byte system_check_can_packet[8];
     /*
     8 bytes of 8 bits:
-    [warn motor][limit motor][crit motor][warn batt][limit batt][crit batt][rev limit][] temps motor and battery
-    [warn water][limit water][crit water][warn mcu][limit mcu][crit mcu][][] // water temp DTI temp
+    [warn motor][limit motor][crit motor][warn batt][limit batt][crit batt][rev limit][] temps motor and battery, Revs
+    [warn water][limit water][crit water][warn mcu][limit mcu][crit mcu][TCM Status][] // water temp DTI temp, TCM
     [][][][][][][][]
     [][][][][][][][]
     [][][][][][][][]
@@ -38,7 +38,9 @@ class SystemsCheck{
     [][][][][][][][]
     */
 
-    static void run_system_check(const iCANflex& Car);
+    static void hardware_system_critical(const iCANflex& Car);
+
+
 
     // read bspd, ams, and imd pins as analog
     // .5v is shit -  ADC: 155
@@ -50,9 +52,6 @@ class SystemsCheck{
     static bool BSPD_fault(const iCANflex& Car);
 
     static bool SDC_opened(const iCANflex& Car);
-
-    static bool critical_sys_fault(const iCANflex& Car);
-    static bool warn_sys_fault(const iCANflex& Car);
 
     static bool critical_motor_temp(const iCANflex& Car);
     static bool limit_motor_temp(const iCANflex& Car);
