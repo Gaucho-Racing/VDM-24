@@ -182,10 +182,6 @@ bool SystemsCheck::critical_mcu_temp(const iCANflex& Car){
 }
 
 
-
-
-
-
 bool SystemsCheck::critical_can_failure(const iCANflex& Car){
     return 
         Car.DTI.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||

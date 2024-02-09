@@ -14,6 +14,7 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation);
 State drive_regen(iCANflex& Car);
 State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c));
 
+float requested_regenerative_torque(iCANflex& Car, float brake, int rpm);
 float requested_torque(iCANflex& Car, float throttle, int rpm);
 
 #endif                              
