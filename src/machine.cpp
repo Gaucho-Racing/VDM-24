@@ -249,9 +249,13 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
     return DRIVE;
 }
 
-
+float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
+    
+}
 
 State drive_regen(iCANflex& Car){
+    Car.DTI.setDriveEnable(1);
+    Car.DTI.setRCurrent(-40);
     return DRIVE_REGEN;
 }
 
