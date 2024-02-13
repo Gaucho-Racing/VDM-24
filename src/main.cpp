@@ -49,7 +49,7 @@ void loop(){
             state = drive_torque(*Car, BSE_APPS_violation);
             break;
         case DRIVE_REGEN:
-            state = drive_regen(*Car);
+            state = drive_regen(*Car, BSE_APPS_violation);
             break;
         case ERROR:
             state = error(*Car, errorCheck);

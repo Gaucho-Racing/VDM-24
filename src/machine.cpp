@@ -65,9 +65,9 @@ THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
 State glv_on(iCANflex& Car) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);    
-    // WRITE TO THE SOFTWARE OK PIN
 
     // wait for the TS ACTIVE button to be pressed
+    if(true)  return TS_PRECHARGE;
     return GLV_ON;
 }  
 
@@ -83,7 +83,9 @@ State ts_precharge(iCANflex& Car) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
     // run a system check
-    // begin prechargin
+    // begin precharging by sendign signal to ACU
+    // wait for signal back
+    // if dont get signal back 
     return PRECHARGING;
 }
 
@@ -123,10 +125,11 @@ State drive_null(iCANflex& Car, bool& BSE_APPS_violation) {
     Car.DTI.setRCurrent(0);
 
     float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
-    // float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
     
     // only if no violation, and throttle is pressed, go to DRIVE
     if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_TORQUE;
+    if(!BSE_APPS_violation && brake > 0.05) return DRIVE_REGEN;
 
     if(BSE_APPS_violation) {
         // SEND CAN WARNING TO DASH
@@ -199,12 +202,20 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
 }
 
 float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
-    
+    // if(rpm > 500 && brake > 0.05) return Car.ACU1.getMaxChargeCurrent();
+    // else return 0;
+    return 0;
 }
 
-State drive_regen(iCANflex& Car){
+State drive_regen(iCANflex& Car, bool& BSE_APPS_violation){
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
+    float throttle = Car.PEDALS.getThrottle();
+    if(throttle > 0.05) return DRIVE_TORQUE;
+    if(brake < 0.05) return DRIVE_NULL;
+
+    float rpm = Car.DTI.getERPM()/10.0;
     Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(-40);
+    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm));
     return DRIVE_REGEN;
 }
 

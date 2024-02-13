@@ -11,7 +11,7 @@ State precharging(iCANflex& Car);
 State precharge_complete(iCANflex& Car);
 State drive_null(iCANflex& Car, bool& BSE_APPS_violation);
 State drive_torque(iCANflex& Car, bool& BSE_APPS_violation);
-State drive_regen(iCANflex& Car);
+State drive_regen(iCANflex& Car, bool& BSE_APPS_violation);
 State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c));
 
 float requested_regenerative_torque(iCANflex& Car, float brake, int rpm);
