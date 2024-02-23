@@ -43,14 +43,14 @@ static float REV_LIMIT = 5500.0;
 static uint8_t THROTTLE_MAPPING; // 0-3
 static uint8_t REGEN_LEVEL; // 0-3
 static uint8_t PWR_LEVEL; // 0 - 3
-
+static uint8_t tc_level; // 0 - 3
 
 // all active detected errors
 static unordered_set<bool (*)(const iCANflex&)> active_faults;
 
 
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_NULL, DRIVE_TORQUE, DRIVE_REGEN, ERROR};
-enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT}l;
+enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
 
 
 

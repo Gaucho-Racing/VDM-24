@@ -2,6 +2,7 @@
 #include "sstream"
 
 volatile State state;
+volatile Mode mode;
 bool (*errorCheck)(const iCANflex& Car); 
 bool BSE_APPS_violation = false;
 
@@ -11,8 +12,12 @@ State sendToError(bool (*erFunc)(const iCANflex& Car)) {
 }
 
 void loop(){
-    // reads bspd, ams, and imd pins as analog   
+    // reads bspd, ams, nd imd pins as analog   
     SystemsCheck::hardware_system_critical(*Car);
+
+
+    //check AMS fault
+    
 
 
     state = active_faults.size() ?  sendToError(*active_faults.begin()) : GLV_ON;
@@ -23,7 +28,10 @@ void loop(){
     THROTTLE_MAPPING = 0; 
     REGEN_LEVEL = 0;
     PWR_LEVEL = 0;
+    
+    mode = ENDURANCE;
 
+    
 
     // STATE MACHINE OPERATION
     switch (state) {
@@ -43,13 +51,13 @@ void loop(){
             state = precharge_complete(*Car);
             break;
         case DRIVE_NULL:
-            state = drive_null(*Car, BSE_APPS_violation); 
+            state = drive_null(*Car, BSE_APPS_violation, mode); 
             break;
         case DRIVE_TORQUE:
-            state = drive_torque(*Car, BSE_APPS_violation);
+            state = drive_torque(*Car, BSE_APPS_violation, mode);
             break;
         case DRIVE_REGEN:
-            state = drive_regen(*Car, BSE_APPS_violation);
+            state = drive_regen(*Car, BSE_APPS_violation, mode);
             break;
         case ERROR:
             state = error(*Car, errorCheck);
