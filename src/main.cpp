@@ -5,7 +5,7 @@
 
 
 volatile State state;
-volatile bool (*errorCheck)(const iCANflex& Car); 
+bool (*errorCheck)(const iCANflex& Car); 
 bool BSE_APPS_violation = false;
 
 State sendToError(volatile bool (*erFunc)(const iCANflex& Car)) {
@@ -78,8 +78,12 @@ void shutdown_pinned_ISR() {
 }
 
 void loop(){
-    // reads bspd, ams, and imd pins as analog   
+    // reads bspd, ams, nd imd pins as analog   
     SystemsCheck::hardware_system_critical(*Car);
+
+
+    //check AMS fault
+    
 
 
     state = active_faults.size() ?  sendToError(*active_faults.begin()) : GLV_ON;
@@ -91,9 +95,6 @@ void loop(){
     REGEN_LEVEL = 0;
     PWR_LEVEL = 0;
 
-
-
-    // boolean indicating the SDC is open (example: ESTOP Pressed) 
 
     // STATE MACHINE OPERATION
     switch (state) {
@@ -112,14 +113,14 @@ void loop(){
         case PRECHARGE_COMPLETE:
             state = precharge_complete(*Car);
             break;
-        case RTD_0TQ:
-            state = rtd_0tq(*Car, BSE_APPS_violation); 
+        case DRIVE_NULL:
+            state = drive_null(*Car, BSE_APPS_violation); 
             break;
         case DRIVE_TORQUE:
-            state = drive_torque(Car, BSE_APPS_violation);
+            state = drive_torque(*Car, BSE_APPS_violation);
             break;
         case DRIVE_REGEN:
-            state = drive_regen(*Car, BSE_APPS_violation);
+            state = drive_regen(*Car, BSE_APPS_violation, mode);
             break;
         case ERROR:
             state = error(*Car, errorCheck);

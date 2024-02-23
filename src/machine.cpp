@@ -123,7 +123,7 @@ THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
 
 
 
-State rtd_0tq(iCANflex& Car, bool& BSE_APPS_violation) {
+State drive_null(iCANflex& Car, bool& BSE_APPS_violation) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
     //start cooling system and all that 
@@ -193,7 +193,8 @@ float requested_torque(iCANflex& Car, float throttle, int rpm) {
 }
 
 
-State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
+State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
+
     float a1 = Car.PEDALS.getAPPS1();
     float a2 = Car.PEDALS.getAPPS2();
     float throttle = Car.PEDALS.getThrottle();
@@ -211,8 +212,7 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation) {
     }
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0));
-    float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
-
+    
     return DRIVE_TORQUE;
 }
 
@@ -256,7 +256,7 @@ float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
     return 0;
 }
 
-State drive_regen(iCANflex& Car, bool& BSE_APPS_violation){
+State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     float throttle = Car.PEDALS.getThrottle();
     if(throttle > 0.05) return DRIVE_TORQUE;
