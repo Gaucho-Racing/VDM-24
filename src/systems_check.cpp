@@ -29,9 +29,9 @@ bool SystemsCheck::BSPD_fault(const iCANflex& Car){
 }
 bool SystemsCheck::SDC_opened(const iCANflex& Car){
     return false; // TODO: implement based on AIRS from ACU
-    // read voltage on SDC just before AIRS
+    // get this from CAN from ACU
+    //read voltage on SDC just before AIRS
 }
-
 
 
 // FAULTS DETECTED THROUGH PREPROCESSED DATA ON CAN
@@ -183,23 +183,29 @@ bool SystemsCheck::critical_mcu_temp(const iCANflex& Car){
 
 
 bool SystemsCheck::critical_can_failure(const iCANflex& Car){
-    return 
+    bool fail =  
         Car.DTI.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.ECU.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.PEDALS.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.ACU1.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.BCM1.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.ENERGY_METER.getAge() > SystemsCheck::CAN_MS_THRESHOLD;
+    if(fail) system_check_can_packet[2] = (system_check_can_packet[2] | 0b10000000);
+    else system_check_can_packet[2] = (system_check_can_packet[2] & 0b01111111);
 }
 
 bool SystemsCheck::warn_can_failure(const iCANflex& Car){
-    return 
+    bool fail =  
         Car.WFL.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.WFR.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.WRL.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.WRR.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.DASHBOARD.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.GPS1.getAge() > SystemsCheck::CAN_MS_THRESHOLD;
+    if(fail) system_check_can_packet[2] = (system_check_can_packet[2] | 0b01000000);
+    else system_check_can_packet[2] = (system_check_can_packet[2] & 0b10111111);
 }   
+
+
 
 

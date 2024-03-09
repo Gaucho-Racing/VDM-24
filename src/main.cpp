@@ -11,16 +11,38 @@ State sendToError(bool (*erFunc)(const iCANflex& Car)) {
    return ERROR;
 }
 
+
+// testing purposes for printing state and mode
+// -------------------------------------------------------------------------------
+static unordered_map<State, string> state_to_string = {
+    {ECU_FLASH, "ECU_FLASH"},
+    {GLV_ON, "GLV_ON"},
+    {TS_PRECHARGE, "TS_PRECHARGE"},
+    {PRECHARGING, "PRECHARGING"},
+    {PRECHARGE_COMPLETE, "PRECHARGE_COMPLETE"},
+    {DRIVE_NULL, "DRIVE_NULL"},
+    {DRIVE_TORQUE, "DRIVE_TORQUE"},
+    {DRIVE_REGEN, "DRIVE_REGEN"},
+    {ERROR, "ERROR"}
+};
+
+// static unordered_map<Mode, string> mode_to_string = {
+//     {TESTING, "TESTING"},
+//     {LAUNCH, "LAUNCH"},
+//     {ENDURANCE, "ENDURANCE"},
+//     {AUTOX, "AUTOX"},
+//     {SKIDPAD, "SKIDPAD"},
+//     {ACC, "ACC"},
+//     {PIT, "PIT"}
+// };  
+
+// -------------------------------------------------------------------------------
+
 void loop(){
-    // reads bspd, ams, nd imd pins as analog   
+    // reads bspd, ams, and imd pins as analog   
     SystemsCheck::hardware_system_critical(*Car);
 
-
-    //check AMS fault
-    
-
-
-    state = active_faults.size() ?  sendToError(*active_faults.begin()) : GLV_ON;
+    state = active_faults.size() ?  sendToError(*active_faults.begin()) : state;
 
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
 
@@ -28,10 +50,16 @@ void loop(){
     THROTTLE_MAPPING = 0; 
     REGEN_LEVEL = 0;
     PWR_LEVEL = 0;
+    TC_LEVEL = 0;
     
     mode = ENDURANCE;
 
     
+    State currentState = state;
+    Serial.print(state_to_string.find(currentState)->second.c_str());
+    Serial.print(" | ");
+    Serial.println(/*mode_to_string.find(mode)->second.c_str()*/ " ");
+
 
     // STATE MACHINE OPERATION
     switch (state) {
@@ -77,7 +105,8 @@ void setup() {
 
     Car->begin();
 
-     // set state  
-    state = ECU_FLASH; 
+    // set state  
+    // state = ECU_FLASH; 
+    state = GLV_ON;
 }
 

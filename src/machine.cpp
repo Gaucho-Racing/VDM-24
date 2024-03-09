@@ -5,8 +5,15 @@
 
 
 
+/*
 
-
+STARTUP STAGE 1:
+ECU FLASH
+When the Car is turned on, the Main ECU will read in the ECU flash from the SD card.
+This will be the first state that the car will enter.
+This is essential for the car to operate as the ECU flash contains the 
+torque profiles, regen profiles, and traction control profiles.
+*/
 State ecu_flash(iCANflex& Car) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
@@ -46,39 +53,32 @@ State ecu_flash(iCANflex& Car) {
 }
 
 /*
-
-GLV_ON STATE
-
-THIS STATE IS ACTIVE WHEN THE MICROCONTROLLER IS POWERED DUE TO THE 
-GLV MASTER SWITCH BEING TURNED. THIS STATE IS RESPONSIBLE FOR THE IDLE 
-STATE OF THE VEHICLE DYNAMICS MODULE. 
-
-THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
-    - SETTING THE DRIVE ENABLE TO 0
-    - SETTING THE MOTOR CURRENT TO 0
-    - WAITING FOR THE TS ACTIVE SWITCH TO BE PRESSED
-    - RECONFIGURING THE TUNE PARAMETERS THROUGH THE CAN DEVICE
+STARTUP STAGE 2:    
+GLV ON
+When the grounded low voltage system is turned on, the microcontroller has power, 
+but the motor controller is not enabled. This is the second state that the car will enter
+after the ECU Flash is complete. Here it waits for the TS ACTIVE button to be pressed.
 */
-
-
-
 State glv_on(iCANflex& Car) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);    
 
     // wait for the TS ACTIVE button to be pressed
-    if(true)  return TS_PRECHARGE;
-    return GLV_ON;
+    return TS_PRECHARGE;
+    // return GLV_ON;
 }  
 
 
 /*
-
-PRECHARGING PROCESS
-
-
+STARTUP STAGE 3: PRECHARGING
+When the TS ACTIVE button is pressed, the car will enter the precharging state.
+This is the third state that the car will enter after the GLV_ON state.
+The precharging is essential for the car to operate as it allows the voltage to build up
+in the motor controller before the car can be driven.
+PRECHARGING is broken into 3 stages for ACU responses and communication
 */
 
+// -- PRECHARGING STAGE 1 
 State ts_precharge(iCANflex& Car) { 
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
@@ -88,13 +88,14 @@ State ts_precharge(iCANflex& Car) {
     // if dont get signal back 
     return PRECHARGING;
 }
-
+// -- PRECHARGING STAGE 2
 State precharging(iCANflex& Car){
    
     // wait for precharge complete signal
     return PRECHARGING;
 }
 
+// -- PRECHARGING STAGE 3
 State precharge_complete(iCANflex& Car){
     return PRECHARGE_COMPLETE;
     
@@ -103,23 +104,14 @@ State precharge_complete(iCANflex& Car){
 }
 
 /*
+STARTUP STAGE 4:  READY TO DRIVE
 
-RTD_0TQ STATE 
-
-PRECHARGING MUST BE COMPLETE BEFORE THIS STATE IS ENTERED. THIS STATE IS RESPONSIBLE FOR
-THE VEHICLE DYNAMICS IN IDLE SITUATIONS WHERE EITHER NO TORQUE IS REQUESTED BY THE DRIVER OR 
-THERE IS A VIOLATION THAT LIMITS TORQUE REQUESTS.
-
-THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
-    - SETTING THE DRIVE ENABLE TO 0
-    - SETTING THE MOTOR CURRENT TO 0
-    - ENSURING THE APPS AND BSE ARE NOT INTERFERING
-
+READY TO DRIVE SUB STATES
+- DRIVE_NULL
+- DRIVE_TORQUE
+- DRIVE_REGEN
 
 */
-
-
-
 State drive_null(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
@@ -160,20 +152,19 @@ THE CONSTANTS B, K, AND P ARE DEFINED THROUGHT THE ECU MAP IN THE SD CARD OR THE
 THIS VALUE OF Z IS APPLIED TO THE MAX CURRENT SET AND WILL BE THE DRIVER REQUESTED TORQUE. 
 THIS IS FOR A GENERALLY SMOOTHER TORQUE PROFILE AND DRIVABILITY.
 
-
 THE DRIVE_TORQUE STATE IS ALSO RESPONSIBLE FOR CHECKING THE APPS AND BSE FOR VIOLATIONS AS WELL AS 
 THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED. 
 */
 
 
 float requested_torque(iCANflex& Car, float throttle, int rpm) {
-    // z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
+    // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
     float k = TORQUE_PROFILES[THROTTLE_MAPPING].K;
     float p = TORQUE_PROFILES[THROTTLE_MAPPING].P;
     float b = TORQUE_PROFILES[THROTTLE_MAPPING].B;
     float current = TORQUE_PROFILES[THROTTLE_MAPPING].MAX_CURRENT;
     float tq_percent = (throttle-(1-throttle)*(throttle+b)*pow(rpm/REV_LIMIT, p)*k);
-    if(tq_percent > 1) tq_percent = 1;
+    if(tq_percent > 1) tq_percent = 1; // clipping
     if(tq_percent < 0) tq_percent = 0;
     return tq_percent*current;
 }
@@ -188,7 +179,7 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     
     // APPS GRADIENT VIOLATION
     if(abs(a1 - (2*a2)) > 0.1){
-        // send an error message on the dash
+        // send an error message on the dash that APPS blew up
         return DRIVE_NULL;
     } 
     // APPS BSE VIOLATION
@@ -199,7 +190,7 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0));
     float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
-    
+
     return DRIVE_TORQUE;
 }
 
@@ -240,7 +231,7 @@ State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c)) {
     if(errorCheck(Car))  return ERROR;
     else {
         active_faults.erase(errorCheck);
-        return GLV_ON;// gets sent to error regardless if there are more in the hashset from main
+        return GLV_ON;// gets sent back to error from main() if there are more in the hashset from main
     }
     
 }
