@@ -49,13 +49,10 @@ static uint8_t TC_LEVEL; // 0 - 3
 // all active detected errors
 // TODO: maybe make this a heap to prioritize errors
 static unordered_set<bool (*)(const iCANflex&)> active_faults;
-
-
+static unordered_set<bool (*)(const iCANflex&)> active_warnings;
+static unordered_set<bool (*)(const iCANflex&)> active_limits;
 
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_NULL, DRIVE_TORQUE, DRIVE_REGEN, ERROR};
 enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
-
-
-
 
 #endif

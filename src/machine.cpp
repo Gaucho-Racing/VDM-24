@@ -83,6 +83,7 @@ State ts_precharge(iCANflex& Car) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
     // run a system check
+    // if(active_faults.size() > 0) return GLV_ON;
     // begin precharging by sendign signal to ACU
     // wait for signal back
     // if dont get signal back 
@@ -148,7 +149,7 @@ B IS OFFSET 0 TO 1
 K IS MULTIPLIER 0 TO 1
 P IS STEEPNESS 0 TO 5
 
-THE CONSTANTS B, K, AND P ARE DEFINED THROUGHT THE ECU MAP IN THE SD CARD OR THE REFLASH OVER CAN.
+THE CONSTANTS B, K, AND P ARE DEFINED THROUGHOUT THE ECU MAP IN THE SD CARD OR THE REFLASH OVER CAN.
 THIS VALUE OF Z IS APPLIED TO THE MAX CURRENT SET AND WILL BE THE DRIVER REQUESTED TORQUE. 
 THIS IS FOR A GENERALLY SMOOTHER TORQUE PROFILE AND DRIVABILITY.
 
