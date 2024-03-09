@@ -13,80 +13,11 @@ State sendToError(volatile bool (*erFunc)(const iCANflex& Car)) {
    return ERROR;
 }
 
-volatile bool motorTempHighExitCondition(iCANflex& Car) {
-    if (Car.DTI.getMotorTemp() < 55) {
-        return false;
-    }
-    return true;
-}
-
-volatile bool motorTempHighEntryCondition(iCANflex& Car) {
-    if (Car.DTI.getMotorTemp() >= 60) {
-        return true;
-    }
-    return false;
-}
-
-void motorTempHigh_ISR() {
-    Car.sendDashError(5); // send placeholder error byte code to dash
-    state = sendToError(state, motorTempHighExitCondition);
-}
-
-const int canFailureThreshold = 100; // msec
-
-volatile bool canReceiveFailure(iCANflex& Car) {
-    return 
-        Car.DTI.getAge() > canFailureThreshold ||
-        Car.ECU.getAge() > canFailureThreshold ||
-        Car.WFL.getAge() > canFailureThreshold ||
-        Car.WFR.getAge() > canFailureThreshold ||
-        Car.WRL.getAge() > canFailureThreshold ||
-        Car.WRR.getAge() > canFailureThreshold ||
-        Car.GPS1.getAge() > canFailureThreshold ||
-        Car.PEDALS.getAge() > canFailureThreshold ||
-        Car.ACU1.getAge() > canFailureThreshold ||
-        Car.BCM1.getAge() > canFailureThreshold ||
-        Car.DASHBOARD.getAge() > canFailureThreshold ||
-        Car.ENERGY_METER.getAge() > canFailureThreshold;
-}
-
-void canReceiveFailure_ISR() {
-    Car.sendDashError(100);
-    state = sendToError(state, canReceiveFailure);
-}
-
-volatile bool currentLimitSafe(iCANflex& Car) {
-    return (Car.DTI.getDCCurrent() > 575); // based on below current limit
-}
-
-volatile bool currentLimitExceeded(iCANflex& Car) {
-    return (Car.DTI.getDCCurrent() > 600); // taken from last year's implementation
-}
-
-void currentLimitExceeded_ISR() {
-    Car.sendDashError(106);
-    state = sendToError(state, currentLimitSafe);
-}
-
-volatile bool shutdown_pinned(iCANflex& Car) {
-    return (bool)digitalRead(shutdown_pin);
-}
-
-void shutdown_pinned_ISR() {
-    Car.sendDashError(150);
-    state = sendToError(OFF, shutdown_pinned);
-}
-
 void loop(){
-    // reads bspd, ams, nd imd pins as analog   
+    // reads bspd, ams, and imd pins as analog   
     SystemsCheck::hardware_system_critical(*Car);
 
-
-    //check AMS fault
-    
-
-
-    state = active_faults.size() ?  sendToError(*active_faults.begin()) : GLV_ON;
+    state = active_faults.size() ?  sendToError(*active_faults.begin()) : state;
 
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
 
@@ -94,7 +25,10 @@ void loop(){
     THROTTLE_MAPPING = 0; 
     REGEN_LEVEL = 0;
     PWR_LEVEL = 0;
+    
+    mode = ENDURANCE;
 
+    
 
     // STATE MACHINE OPERATION
     switch (state) {
@@ -138,7 +72,8 @@ void setup() {
 
     Car->begin();
 
-     // set state  
-    state = ECU_FLASH; 
+    // set state  
+    // state = ECU_FLASH; 
+    state = GLV_ON;
 }
 

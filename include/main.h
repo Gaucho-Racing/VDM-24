@@ -36,17 +36,20 @@ struct TorqueProfile{
 
 
 // ECU TUNE READS
+// Read in Torque profiles from the SD card
 static vector<TorqueProfile> TORQUE_PROFILES(4);
-static float REV_LIMIT = 5500.0;
+static const float REV_LIMIT = 5500.0;
 
 // STEERING WHEEL SETTINGS
 static uint8_t THROTTLE_MAPPING; // 0-3
 static uint8_t REGEN_LEVEL; // 0-3
 static uint8_t PWR_LEVEL; // 0 - 3
-static uint8_t tc_level; // 0 - 3
+static uint8_t TC_LEVEL; // 0 - 3
 
 // all active detected errors
+// TODO: maybe make this a heap to prioritize errors
 static unordered_set<bool (*)(const iCANflex&)> active_faults;
+
 
 
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_NULL, DRIVE_TORQUE, DRIVE_REGEN, ERROR};

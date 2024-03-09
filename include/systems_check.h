@@ -8,19 +8,19 @@
 
 class SystemsCheck{
     private:
-    static const int CAN_MS_THRESHOLD = 100; // msec
-    static const int MOTOR_TEMP_WARN = 60; // celsius
-    static const int MOTOR_TEMP_LIMIT = 65; // celsius
-    static const int MOTOR_TEMP_CRITICAL = 70; // celsius
-    static const int BATTERY_TEMP_WARN = 60; // celsius
-    static const int BATTERY_TEMP_LIMIT = 65; // celsius
-    static const int BATTERY_TEMP_CRITICAL = 70; // celsius
-    static const int WATER_TEMP_WARN = 60; // celsius
-    static const int WATER_TEMP_LIMIT = 65; // celsius
-    static const int WATER_TEMP_CRITICAL = 70; // celsius
-    static const int MCU_TEMP_WARN = 60; // celsius
-    static const int MCU_TEMP_LIMIT = 65; // celsius
-    static const int MCU_TEMP_CRITICAL = 70; // celsius
+    static const uint8_t CAN_MS_THRESHOLD = 100; // msec
+    static const uint8_t MOTOR_TEMP_WARN = 60; // celsius
+    static const uint8_t MOTOR_TEMP_LIMIT = 65; // celsius
+    static const uint8_t MOTOR_TEMP_CRITICAL = 70; // celsius
+    static const uint8_t BATTERY_TEMP_WARN = 60; // celsius
+    static const uint8_t BATTERY_TEMP_LIMIT = 65; // celsius
+    static const uint8_t BATTERY_TEMP_CRITICAL = 70; // celsius
+    static const uint8_t WATER_TEMP_WARN = 60; // celsius
+    static const uint8_t WATER_TEMP_LIMIT = 65; // celsius
+    static const uint8_t WATER_TEMP_CRITICAL = 70; // celsius
+    static const uint8_t MCU_TEMP_WARN = 60; // celsius
+    static const uint8_t MCU_TEMP_LIMIT = 65; // celsius
+    static const uint8_t MCU_TEMP_CRITICAL = 70; // celsius
 
 
     public:
@@ -30,13 +30,15 @@ class SystemsCheck{
     8 bytes of 8 bits:
     [warn motor][limit motor][crit motor][warn batt][limit batt][crit batt][rev limit][] temps motor and battery, Revs
     [warn water][limit water][crit water][warn mcu][limit mcu][crit mcu][TCM Status][] // water temp DTI temp, TCM
-    [][][][][][][][]
+    [can warn][can failure][][][][][][]
     [][][][][][][][]
     [][][][][][][][]
     [][][][][][][][]
     [][][][][][][][]
     [][][][][][][][]
     */
+
+
 
     static void hardware_system_critical(const iCANflex& Car);
 
