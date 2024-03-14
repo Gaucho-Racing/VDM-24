@@ -1,46 +1,50 @@
 #include "systems_check.h"
 
-<<<<<<< HEAD
-bool SystemsCheck::rtd_brake_fault(const iCANflex& Car) {
-    if (Car.PEDALS.getAPPS1() > 0.05 || 
-        Car.PEDALS.getAPPS2() > 0.05 ||
-        Car.PEDALS.getBrakePressureF() <= 0.05 || 
-        Car.PEDALS.getBrakePressureR() <= 0.05) {
-        Serial.println("ECU STARTUP REJECTION: HOLD BRAKES");
-        // send error code to dash
-        return true;
-    }
-    return false;
-}
-=======
 
 void SystemsCheck::hardware_system_critical(const iCANflex& Car){
-    if(SDC_opened(Car)) active_faults.insert(SDC_opened);   
+
+    if(SDC_opened(Car)) active_faults.insert(SDC_opened);  
+    SYS_CHECK_CAN_FRAME[0] = SDC_opened(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000100) : (SYS_CHECK_CAN_FRAME[0] & 0b11111011);
     if(AMS_fault(Car)) active_faults.insert(AMS_fault);
+    SYS_CHECK_CAN_FRAME[0] = AMS_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00100000) : (SYS_CHECK_CAN_FRAME[0] & 0b11011111);
     if(IMD_fault(Car)) active_faults.insert(IMD_fault);
+    SYS_CHECK_CAN_FRAME[0] = IMD_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00010000) : (SYS_CHECK_CAN_FRAME[0] & 0b11101111);
     if(BSPD_fault(Car)) active_faults.insert(BSPD_fault);
+    SYS_CHECK_CAN_FRAME[0] = BSPD_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000100) : (SYS_CHECK_CAN_FRAME[0] & 0b11111011);
 }
 
-// NOTE: OPEN THE SOFTWARE LATCH IF the Inverter is not responding or the ERROR is not properly handled. 
+// NOTE: OPEN THE SOFTWARE LATCH IF the Inverter is not responding or there are critical system faults. 
 void SystemsCheck::system_faults(const iCANflex& Car){
     if(critical_motor_temp(Car)) active_faults.insert(critical_motor_temp);
+    SYS_CHECK_CAN_FRAME[1] = critical_motor_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b00100000) : (SYS_CHECK_CAN_FRAME[1] & 0b11011111);
     if(critical_battery_temp(Car)) active_faults.insert(critical_battery_temp);
+    SYS_CHECK_CAN_FRAME[1] = critical_battery_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b00000100) : (SYS_CHECK_CAN_FRAME[1] & 0b11111011);
     if(critical_water_temp(Car)) active_faults.insert(critical_water_temp);
+    SYS_CHECK_CAN_FRAME[2] = critical_water_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b00100000) : (SYS_CHECK_CAN_FRAME[2] & 0b11011111);
     if(critical_mcu_temp(Car)) active_faults.insert(critical_mcu_temp);
+    SYS_CHECK_CAN_FRAME[2] = critical_mcu_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b00000100) : (SYS_CHECK_CAN_FRAME[2] & 0b11111011);
     if(critical_can_failure(Car)) active_faults.insert(critical_can_failure);
+    SYS_CHECK_CAN_FRAME[0] = critical_can_failure(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b01000000) : (SYS_CHECK_CAN_FRAME[0] & 0b10111111);
 }
 
 void SystemsCheck::system_limits(const iCANflex& Car){
     if(limit_motor_temp(Car)) active_limits.insert(limit_motor_temp);
+    SYS_CHECK_CAN_FRAME[1] = limit_motor_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b01000000) : (SYS_CHECK_CAN_FRAME[1] & 0b10111111);
     if(limit_battery_temp(Car)) active_limits.insert(limit_battery_temp);
+    SYS_CHECK_CAN_FRAME[1] = limit_battery_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b00001000) : (SYS_CHECK_CAN_FRAME[1] & 0b11110111);
     if(limit_water_temp(Car)) active_limits.insert(limit_water_temp);
+    SYS_CHECK_CAN_FRAME[2] = limit_water_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b01000000) : (SYS_CHECK_CAN_FRAME[2] & 0b10111111);
     if(limit_mcu_temp(Car)) active_limits.insert(limit_mcu_temp);
+    SYS_CHECK_CAN_FRAME[2] = limit_mcu_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b00001000) : (SYS_CHECK_CAN_FRAME[2] & 0b11110111);
 }
 
 void SystemsCheck::system_warnings(const iCANflex& Car){
     if(warn_motor_temp(Car)) active_warnings.insert(warn_motor_temp);
+    SYS_CHECK_CAN_FRAME[1] = warn_motor_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b10000000) : (SYS_CHECK_CAN_FRAME[1] & 0b01111111);
     if(warn_battery_temp(Car)) active_warnings.insert(warn_battery_temp);
+    SYS_CHECK_CAN_FRAME[1] = warn_battery_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b00010000) : (SYS_CHECK_CAN_FRAME[1] & 0b11101111);
     if(warn_water_temp(Car)) active_warnings.insert(warn_water_temp);
+    SYS_CHECK_CAN_FRAME[2] = warn_water_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b10000000) : (SYS_CHECK_CAN_FRAME[2] & 0b01111111);
     if(warn_mcu_temp(Car)) active_warnings.insert(warn_mcu_temp);
 }
 
@@ -94,8 +98,7 @@ bool SystemsCheck::SDC_opened(const iCANflex& Car){
 }
 
 
-
-
+// FAULTS DETECTED THROUGH PREPROCESSED DATA ON CAN
 // byte 1
 bool SystemsCheck::warn_motor_temp(const iCANflex& Car){
    if(Car.DTI.getMotorTemp() > MOTOR_TEMP_WARN){
@@ -244,15 +247,14 @@ bool SystemsCheck::critical_mcu_temp(const iCANflex& Car){
 
 
 bool SystemsCheck::critical_can_failure(const iCANflex& Car){
-    bool fail =  
-        Car.DTI.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
+    return (Car.DTI.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.ECU.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.PEDALS.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.ACU1.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.BCM1.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.ENERGY_METER.getAge() > SystemsCheck::CAN_MS_THRESHOLD;
-    if(fail) system_check_can_packet[2] = (system_check_can_packet[2] | 0b10000000);
-    else system_check_can_packet[2] = (system_check_can_packet[2] & 0b01111111);
+        Car.ENERGY_METER.getAge() > SystemsCheck::CAN_MS_THRESHOLD);
+    // if(fail) system_check_can_packet[2] = (system_check_can_packet[2] | 0b10000000);
+    // else system_check_can_packet[2] = (system_check_can_packet[2] & 0b01111111);
 }
 
 bool SystemsCheck::warn_can_failure(const iCANflex& Car){
@@ -262,9 +264,11 @@ bool SystemsCheck::warn_can_failure(const iCANflex& Car){
         Car.WRL.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.WRR.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.DASHBOARD.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.GPS1.getAge() > SystemsCheck::CAN_MS_THRESHOLD;
-    if(fail) system_check_can_packet[2] = (system_check_can_packet[2] | 0b01000000);
-    else system_check_can_packet[2] = (system_check_can_packet[2] & 0b10111111);
+        Car.GPS1.getAge() > SystemsCheck::CAN_MS_THRESHOLD);
+    // if(fail) system_check_can_packet[2] = (system_check_can_packet[2] | 0b01000000);
+    // else system_check_can_packet[2] = (system_check_can_packet[2] & 0b10111111);
 }   
+
+
 
 

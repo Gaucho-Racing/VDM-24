@@ -19,19 +19,23 @@ void loop(){
     SystemsCheck::system_faults(*Car);
     SystemsCheck::system_limits(*Car);
     SystemsCheck::system_warnings(*Car);
+
+    SEND_SYS_CHECK_FRAMES();
     
     state = active_faults.size() ?  sendToError(*active_faults.begin()) : state;
+
 
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
 
     // read in settings from Steering Wheel
     THROTTLE_MAPPING = 0; 
     REGEN_LEVEL = 0;
+
     PWR_LEVEL = 0;
+    TC_LEVEL = 0;
     
     mode = ENDURANCE;
 
-    
     State currentState = state;
     Serial.print(state_to_string.find(currentState)->second.c_str());
     Serial.print(" | ");

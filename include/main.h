@@ -46,6 +46,22 @@ static uint8_t REGEN_LEVEL; // 0-3
 static uint8_t PWR_LEVEL; // 0 - 3
 static uint8_t TC_LEVEL; // 0 - 3
 
+static byte SYS_CHECK_CAN_FRAME[5];   
+/*
+5 bytes of 8 bits:
+[can warn][can failure][AMS][IMD][BSPD][SDC][][]
+[warn motor][limit motor][crit motor][warn batt][limit batt][crit batt][rev limit][] temps motor and battery, Revs
+[warn water][limit water][crit water][warn mcu][limit mcu][crit mcu][TCM Status][] // water temp DTI temp, TCM
+[][][][][][][][] 
+[][][][][][][][] 
+*/
+static void SEND_SYS_CHECK_FRAMES(){ // TODO:
+    Serial.println("SENDING SYS CHECK FRAMES");
+    for(int i = 0; i < 5; i++){
+        Serial.println(SYS_CHECK_CAN_FRAME[i]);
+    }
+}
+
 // all active detected errors
 // TODO: maybe make this a heap to prioritize errors
 static unordered_set<bool (*)(const iCANflex&)> active_faults;
