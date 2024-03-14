@@ -231,7 +231,7 @@ State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c)) {
 
     if(errorCheck(Car))  return ERROR;
     else {
-        active_faults.erase(errorCheck);
+        fault_heap.pop();
         return GLV_ON;// gets sent back to error from main() if there are more in the hashset from main
     }
     

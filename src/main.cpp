@@ -47,17 +47,19 @@ void loop(){
 
     SEND_SYS_CHECK_FRAMES();
     
-    state = active_faults.size() ?  sendToError(*active_faults.begin()) : state;
+    state = fault_heap.size() ?  sendToError(*fault_heap.top()) : state;
 
 
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
+
+    // error severity: warning -> limit -> critical
 
     // read in settings from Steering Wheel
     THROTTLE_MAPPING = 0; 
     REGEN_LEVEL = 0;
 
     PWR_LEVEL = 0;
-    PWR_LEVEL = active_limits.size() ? 0 : PWR_LEVEL; // limit power in overheat conditions
+    PWR_LEVEL = limit_heap.size() ? 0 : PWR_LEVEL; // limit power in overheat limit conditions
 
     TC_LEVEL = 0;
     
@@ -125,5 +127,30 @@ void setup() {
     // set state  
     state = ECU_FLASH; 
     // state = GLV_ON;
+    fault_heap_priority = { // lower priority is processed first
+        {SystemsCheck::SDC_opened, 0}, // TODO: create an ordering for all error function prioirty
+        {SystemsCheck::critical_motor_temp, 1},
+        {SystemsCheck::critical_battery_temp, 1},
+        {SystemsCheck::critical_water_temp, 1},
+        {SystemsCheck::critical_mcu_temp, 1},
+        {SystemsCheck::critical_can_failure, 1}
+    };
+    warning_heap_priority = {
+        {SystemsCheck::warn_motor_temp, 1},
+        {SystemsCheck::warn_battery_temp, 1},
+        {SystemsCheck::warn_water_temp, 1},
+        {SystemsCheck::warn_mcu_temp, 1}
+    };
+    limit_heap_priority = {
+        {SystemsCheck::limit_motor_temp, 1},
+        {SystemsCheck::limit_battery_temp, 1},
+        {SystemsCheck::limit_water_temp, 1},
+        {SystemsCheck::limit_mcu_temp, 1}
+    };
+
+
+
 }
+
+
 
