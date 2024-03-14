@@ -26,8 +26,19 @@ const uint8_t IMD_OK_PIN = 20;
 const uint8_t AMS_OK_PIN = 21;
 
 
+// TORQUE MAP PROFILES 
+const uint8_t LINEAR = 0;
+const uint8_t TQ_MAP_1 = 1;
+const uint8_t TQ_MAP_2 = 2;
+const uint8_t TQ_MAP_3 = 3;
+
+// POWER LEVELS
+const uint8_t LIMIT = 0;
+const uint8_t LOW_PWR = 1;
+const uint8_t MEDIUM_PWR = 2;
+const uint8_t HIGH_PWR = 3;
+
 struct TorqueProfile{
-    float MAX_CURRENT;
     float K;
     float P;
     float B;
@@ -36,16 +47,17 @@ struct TorqueProfile{
 };
 
 
-// ECU TUNE READS
-// Read in Torque profiles from the SD card
-static vector<TorqueProfile> TORQUE_PROFILES(4);
+// ECU TUNE READS TODO: Initialize in SD card read
+static vector<TorqueProfile> TORQUE_PROFILES(4); // see above
+static vector<float> REGEN_LEVELS(4); // percentile value 0 to 100
+static vector<float> POWER_LEVELS(4); // max current value in Amperes
+
 static const float REV_LIMIT = 5500.0;
 
 // STEERING WHEEL SETTINGS
-static uint8_t THROTTLE_MAPPING; // 0-3
-static uint8_t REGEN_LEVEL; // 0-3
-static uint8_t PWR_LEVEL; // 0 - 3
-static uint8_t TC_LEVEL; // 0 - 3
+static uint8_t throttle_map; // 0-3
+static uint8_t regen_level; // 0-3
+static uint8_t power_level; // 0 - 3
 
 static byte SYS_CHECK_CAN_FRAME[5];   
 /*
@@ -61,12 +73,10 @@ static void SEND_SYS_CHECK_FRAMES(){ // TODO:
     for(int i = 0; i < 5; i++){
         Serial.println(SYS_CHECK_CAN_FRAME[i]);
     }
-}
+} 
 
 // all active detected errors
-// TODO: maybe make this a heap to prioritize errors
-
-// create a hash function for function pointer
+// function pointer hash function
 namespace std {
     template <>
     struct hash<bool (*)(const iCANflex&)> {
@@ -75,7 +85,6 @@ namespace std {
         }
     };
 }
-
 
 static unordered_map<bool (*)(const iCANflex&), int> warning_heap_priority;
 struct warning_heap_compare {
