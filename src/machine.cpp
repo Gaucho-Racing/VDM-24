@@ -297,7 +297,7 @@ State error(iCANflex& Car, volatile bool (*errorCheck)(const iCANflex& c)) {
     if(errorCheck(Car))  return ERROR;
     else {
         active_faults.erase(errorCheck);
-        return GLV_ON;// gets sent to error regardless if there are more in the hashset from main
+        return GLV_ON;// gets sent back to error from main() if there are more in the hashset from main
     }
     
 }

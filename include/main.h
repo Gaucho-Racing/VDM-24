@@ -7,6 +7,7 @@
 #include <vector>
 #include <imxrt.h>
 #include <unordered_map>
+#include <queue>
 #include <unordered_set>
 #include "iCANflex.h"
 #include "SD.h"
@@ -64,9 +65,50 @@ static void SEND_SYS_CHECK_FRAMES(){ // TODO:
 
 // all active detected errors
 // TODO: maybe make this a heap to prioritize errors
-static unordered_set<bool (*)(const iCANflex&)> active_faults;
-static unordered_set<bool (*)(const iCANflex&)> active_warnings;
-static unordered_set<bool (*)(const iCANflex&)> active_limits;
+
+// create a hash function for function pointer
+namespace std {
+    template <>
+    struct hash<bool (*)(const iCANflex&)> {
+        size_t operator()(bool (*f)(const iCANflex&)) const {
+            return reinterpret_cast<size_t>(f);
+        }
+    };
+}
+
+
+static unordered_map<bool (*)(const iCANflex&), int> warning_heap_priority;
+struct warning_heap_compare {
+    bool operator()(bool (*a)(const iCANflex&), bool (*b)(const iCANflex&)) const {
+        return warning_heap_priority[a] > warning_heap_priority[b];
+    }
+};
+static priority_queue<bool (*)(const iCANflex&), vector<bool (*)(const iCANflex&)>, warning_heap_compare> warning_heap; 
+
+static unordered_map<bool (*)(const iCANflex&), int> limit_heap_priority;
+struct limit_heap_compare {
+    bool operator()(bool (*a)(const iCANflex&), bool (*b)(const iCANflex&)) const {
+        return limit_heap_priority[a] > limit_heap_priority[b];
+    }
+};
+static priority_queue<bool (*)(const iCANflex&), vector<bool (*)(const iCANflex&)>, limit_heap_compare> limit_heap;
+
+
+static unordered_map<bool (*)(const iCANflex&), int> fault_heap_priority;
+struct fault_heap_compare {
+    bool operator()(bool (*a)(const iCANflex&), bool (*b)(const iCANflex&)) const {
+        return fault_heap_priority[a] > fault_heap_priority[b];
+    }
+};
+static priority_queue<bool (*)(const iCANflex&), vector<bool (*)(const iCANflex&)>, fault_heap_compare> fault_heap;
+
+
+// static unordered_set<bool (*)(const iCANflex&)> active_faults;
+// static unordered_set<bool (*)(const iCANflex&)> active_warnings;
+// static unordered_set<bool (*)(const iCANflex&)> active_limits;
+
+
+
 
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_NULL, DRIVE_TORQUE, DRIVE_REGEN, ERROR};
 enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
