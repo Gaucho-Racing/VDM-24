@@ -33,7 +33,8 @@ State ecu_flash(iCANflex& Car) {
             String tune;
             while(ecu_tune.available()){
                 Serial.print(".");
-                tune += (char)ecu_tune.read();
+                tune += (char)ecu_tune.read(); // TODO: Initialize TORQUE_PROFILES vector with the data
+                                                // TODO: Initialize REGEN
             }
             ecu_tune.close();
             Serial.println("");
@@ -160,10 +161,10 @@ THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED
 
 float requested_torque(iCANflex& Car, float throttle, int rpm) {
     // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
-    float k = TORQUE_PROFILES[THROTTLE_MAPPING].K;
-    float p = TORQUE_PROFILES[THROTTLE_MAPPING].P;
-    float b = TORQUE_PROFILES[THROTTLE_MAPPING].B;
-    float current = TORQUE_PROFILES[THROTTLE_MAPPING].MAX_CURRENT;
+    float k = TORQUE_PROFILES[throttle_map].K;
+    float p = TORQUE_PROFILES[throttle_map].P;
+    float b = TORQUE_PROFILES[throttle_map].B;
+    float current = POWER_LEVELS[power_level];
     float tq_percent = (throttle-(1-throttle)*(throttle+b)*pow(rpm/REV_LIMIT, p)*k);
     if(tq_percent > 1) tq_percent = 1; // clipping
     if(tq_percent < 0) tq_percent = 0;
@@ -209,7 +210,7 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
 
     float rpm = Car.DTI.getERPM()/10.0;
     Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm));
+    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * REGEN_LEVELS[regen_level]);
     return DRIVE_REGEN;
 }
 

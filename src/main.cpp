@@ -47,7 +47,7 @@ void loop(){
 
     SEND_SYS_CHECK_FRAMES();
     
-    state = fault_heap.size() ?  sendToError(*fault_heap.top()) : state;
+    state = !fault_heap.empty() ?  sendToError(*fault_heap.top()) : state;
 
 
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
@@ -55,15 +55,14 @@ void loop(){
     // error severity: warning -> limit -> critical
 
     // read in settings from Steering Wheel
-    THROTTLE_MAPPING = 0; 
-    REGEN_LEVEL = 0;
+    throttle_map = 0; 
+    regen_level = 0;
 
-    PWR_LEVEL = 0;
-    PWR_LEVEL = limit_heap.size() ? 0 : PWR_LEVEL; // limit power in overheat limit conditions
+    power_level = 0;
+    power_level = !limit_heap.empty() ? LIMIT : power_level; // limit power in overheat limit conditions
 
-    TC_LEVEL = 0;
     
-    mode = ENDURANCE;
+    mode = ENDURANCE; // TODO: Energy management algorithm for endurance
 
 
     State currentState = state;
