@@ -2,7 +2,6 @@
 #define SYSTEMS_CHECK
 
 #include "machine.h"
-#include <unordered_set>
 #include "main.h"
 using namespace std;
 
@@ -30,10 +29,10 @@ class SystemsCheck{
 
 
     // actual calls
-    static void hardware_system_critical(const iCANflex& Car);
-    static void system_faults(const iCANflex& Car);
-    static void system_limits(const iCANflex& Car);
-    static void system_warnings(const iCANflex& Car);
+    static void hardware_system_critical(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&)>&af);
+    static void system_faults(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&)>& af);
+    static void system_limits(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&)>& al);
+    static void system_warnings(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&)>& aw);
 
     /*
     5 bytes of 8 bits:

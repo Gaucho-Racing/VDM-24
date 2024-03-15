@@ -1,58 +1,58 @@
 #include "systems_check.h"
+#include "main.h"
 
+void SystemsCheck::hardware_system_critical(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&)> &af){
 
-void SystemsCheck::hardware_system_critical(const iCANflex& Car){
-
-    if(SDC_opened(Car)) active_faults.insert(SDC_opened);  
+    if(SDC_opened(Car)) af.insert(SDC_opened);  
     SYS_CHECK_CAN_FRAME[0] = SDC_opened(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000100) : (SYS_CHECK_CAN_FRAME[0] & 0b11111011);
     if(AMS_fault(Car)) {
         Serial.println("AMS FAULT");
-        active_faults.insert(AMS_fault);
+        af.insert(AMS_fault);
         Serial.print("New size of set: ");
-        Serial.println(active_faults.size());
+        Serial.println(af.size());
 
     }
     SYS_CHECK_CAN_FRAME[0] = AMS_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00100000) : (SYS_CHECK_CAN_FRAME[0] & 0b11011111);
-    if(IMD_fault(Car)) active_faults.insert(IMD_fault);
+    if(IMD_fault(Car)) af.insert(IMD_fault);
     SYS_CHECK_CAN_FRAME[0] = IMD_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00010000) : (SYS_CHECK_CAN_FRAME[0] & 0b11101111);
-    if(BSPD_fault(Car)) active_faults.insert(BSPD_fault);
+    if(BSPD_fault(Car)) af.insert(BSPD_fault);
     SYS_CHECK_CAN_FRAME[0] = BSPD_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000100) : (SYS_CHECK_CAN_FRAME[0] & 0b11111011);
 }
 
 // NOTE: OPEN THE SOFTWARE LATCH IF the Inverter is not responding or there are critical system faults. 
-void SystemsCheck::system_faults(const iCANflex& Car){
-    if(critical_motor_temp(Car)) active_faults.insert(critical_motor_temp);
+void SystemsCheck::system_faults(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&)> &af){
+    if(critical_motor_temp(Car)) af.insert(critical_motor_temp);
     SYS_CHECK_CAN_FRAME[1] = critical_motor_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b00100000) : (SYS_CHECK_CAN_FRAME[1] & 0b11011111);
-    if(critical_battery_temp(Car)) active_faults.insert(critical_battery_temp);
+    if(critical_battery_temp(Car)) af.insert(critical_battery_temp);
     SYS_CHECK_CAN_FRAME[1] = critical_battery_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b00000100) : (SYS_CHECK_CAN_FRAME[1] & 0b11111011);
-    if(critical_water_temp(Car)) active_faults.insert(critical_water_temp);
+    if(critical_water_temp(Car)) af.insert(critical_water_temp);
     SYS_CHECK_CAN_FRAME[2] = critical_water_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b00100000) : (SYS_CHECK_CAN_FRAME[2] & 0b11011111);
-    if(critical_mcu_temp(Car)) active_faults.insert(critical_mcu_temp);
+    if(critical_mcu_temp(Car)) af.insert(critical_mcu_temp);
     SYS_CHECK_CAN_FRAME[2] = critical_mcu_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b00000100) : (SYS_CHECK_CAN_FRAME[2] & 0b11111011);
-    if(critical_can_failure(Car)) active_faults.insert(critical_can_failure);
+    if(critical_can_failure(Car)) af.insert(critical_can_failure);
     SYS_CHECK_CAN_FRAME[0] = critical_can_failure(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b01000000) : (SYS_CHECK_CAN_FRAME[0] & 0b10111111);
     
 }
 
-void SystemsCheck::system_limits(const iCANflex& Car){
-    if(limit_motor_temp(Car)) active_limits.insert(limit_motor_temp);
+void SystemsCheck::system_limits(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&)> &al){
+    if(limit_motor_temp(Car)) al.insert(limit_motor_temp);
     SYS_CHECK_CAN_FRAME[1] = limit_motor_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b01000000) : (SYS_CHECK_CAN_FRAME[1] & 0b10111111);
-    if(limit_battery_temp(Car)) active_limits.insert(limit_battery_temp);
+    if(limit_battery_temp(Car)) al.insert(limit_battery_temp);
     SYS_CHECK_CAN_FRAME[1] = limit_battery_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b00001000) : (SYS_CHECK_CAN_FRAME[1] & 0b11110111);
-    if(limit_water_temp(Car)) active_limits.insert(limit_water_temp);
+    if(limit_water_temp(Car)) al.insert(limit_water_temp);
     SYS_CHECK_CAN_FRAME[2] = limit_water_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b01000000) : (SYS_CHECK_CAN_FRAME[2] & 0b10111111);
-    if(limit_mcu_temp(Car)) active_limits.insert(limit_mcu_temp);
+    if(limit_mcu_temp(Car)) al.insert(limit_mcu_temp);
     SYS_CHECK_CAN_FRAME[2] = limit_mcu_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b00001000) : (SYS_CHECK_CAN_FRAME[2] & 0b11110111);
 }
 
-void SystemsCheck::system_warnings(const iCANflex& Car){
-    if(warn_motor_temp(Car)) active_warnings.insert(warn_motor_temp);
+void SystemsCheck::system_warnings(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&)> &aw){
+    if(warn_motor_temp(Car)) aw.insert(warn_motor_temp);
     SYS_CHECK_CAN_FRAME[1] = warn_motor_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b10000000) : (SYS_CHECK_CAN_FRAME[1] & 0b01111111);
-    if(warn_battery_temp(Car)) active_warnings.insert(warn_battery_temp);
+    if(warn_battery_temp(Car)) aw.insert(warn_battery_temp);
     SYS_CHECK_CAN_FRAME[1] = warn_battery_temp(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b00010000) : (SYS_CHECK_CAN_FRAME[1] & 0b11101111);
-    if(warn_water_temp(Car)) active_warnings.insert(warn_water_temp);
+    if(warn_water_temp(Car)) aw.insert(warn_water_temp);
     SYS_CHECK_CAN_FRAME[2] = warn_water_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b10000000) : (SYS_CHECK_CAN_FRAME[2] & 0b01111111);
-    if(warn_mcu_temp(Car)) active_warnings.insert(warn_mcu_temp);
+    if(warn_mcu_temp(Car)) aw.insert(warn_mcu_temp);
     SYS_CHECK_CAN_FRAME[2] = warn_mcu_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b00010000) : (SYS_CHECK_CAN_FRAME[2] & 0b11101111);
 }
 

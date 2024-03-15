@@ -78,14 +78,14 @@ static void SEND_SYS_CHECK_FRAMES(){ // TODO:
 
 // all active detected errors
 // // function pointer hash function
-// namespace std {
-//     template <>
-//     struct hash<bool (*)(const iCANflex&)> {
-//         size_t operator()(bool (*f)(const iCANflex&)) const {
-//             return reinterpret_cast<size_t>(f);
-//         }
-//     };
-// }
+namespace std {
+    template <>
+    struct hash<bool (*)(const iCANflex&)> {
+        size_t operator()(bool (*f)(const iCANflex&)) const {
+            return reinterpret_cast<size_t>(f);
+        }
+    };
+}
 
 // static unordered_map<bool (*)(const iCANflex&), int> warning_heap_priority;
 // struct warning_heap_compare {
@@ -114,9 +114,9 @@ static void SEND_SYS_CHECK_FRAMES(){ // TODO:
 
 
 
-static unordered_set<bool (*)(const iCANflex&)> active_faults;
-static unordered_set<bool (*)(const iCANflex&)> active_warnings;
-static unordered_set<bool (*)(const iCANflex&)> active_limits;
+static unordered_set<bool (*)(const iCANflex&)> *active_faults;
+static unordered_set<bool (*)(const iCANflex&)> *active_warnings;
+static unordered_set<bool (*)(const iCANflex&)> *active_limits;
 
 
 
