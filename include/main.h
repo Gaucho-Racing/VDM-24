@@ -49,8 +49,8 @@ struct TorqueProfile{
 
 // ECU TUNE READS TODO: Initialize in SD card read
 static vector<TorqueProfile> TORQUE_PROFILES(4); // see above
-static vector<float> REGEN_LEVELS(4); // percentile value 0 to 100
 static vector<float> POWER_LEVELS(4); // max current value in Amperes
+static vector<float> REGEN_LEVELS(4); // percentile value 0 to 100
 
 static const float REV_LIMIT = 5500.0;
 
@@ -59,7 +59,6 @@ static uint8_t throttle_map; // 0-3
 static uint8_t regen_level; // 0-3
 static uint8_t power_level; // 0 - 3
 
-static byte SYS_CHECK_CAN_FRAME[5];   
 /*
 5 bytes of 8 bits:
 [can warn][can failure][AMS][IMD][BSPD][SDC][][]
@@ -68,13 +67,8 @@ static byte SYS_CHECK_CAN_FRAME[5];
 [][][][][][][][] 
 [][][][][][][][] 
 */
-static void SEND_SYS_CHECK_FRAMES(){ // TODO:
-    Serial.println("SENDING SYS CHECK FRAMES");
-    for(int i = 0; i < 5; i++){
-        Serial.print(millis());
-        Serial.println(SYS_CHECK_CAN_FRAME[i]);
-    }
-} 
+static byte SYS_CHECK_CAN_FRAME[5];   
+static void SEND_SYS_CHECK_FRAMES();
 
 // all active detected errors
 // // function pointer hash function
@@ -86,33 +80,6 @@ namespace std {
         }
     };
 }
-
-// static unordered_map<bool (*)(const iCANflex&), int> warning_heap_priority;
-// struct warning_heap_compare {
-//     bool operator()(bool (*a)(const iCANflex&), bool (*b)(const iCANflex&)) const {
-//         return warning_heap_priority[a] > warning_heap_priority[b];
-//     }
-// };
-// static priority_queue<bool (*)(const iCANflex&), vector<bool (*)(const iCANflex&)>, warning_heap_compare> warning_heap; 
-
-// static unordered_map<bool (*)(const iCANflex&), int> limit_heap_priority;
-// struct limit_heap_compare {
-//     bool operator()(bool (*a)(const iCANflex&), bool (*b)(const iCANflex&)) const {
-//         return limit_heap_priority[a] > limit_heap_priority[b];
-//     }
-// };
-// static priority_queue<bool (*)(const iCANflex&), vector<bool (*)(const iCANflex&)>, limit_heap_compare> limit_heap;
-
-
-// static unordered_map<bool (*)(const iCANflex&), int> fault_heap_priority;
-// struct fault_heap_compare {
-//     bool operator()(bool (*a)(const iCANflex&), bool (*b)(const iCANflex&)) const {
-//         return fault_heap_priority[a] > fault_heap_priority[b];
-//     }
-// };
-// static priority_queue<bool (*)(const iCANflex&), vector<bool (*)(const iCANflex&)>, fault_heap_compare> fault_heap;
-
-
 
 static unordered_set<bool (*)(const iCANflex&)> *active_faults;
 static unordered_set<bool (*)(const iCANflex&)> *active_warnings;

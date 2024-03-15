@@ -4,13 +4,7 @@ void SystemsCheck::hardware_system_critical(const iCANflex& Car, unordered_set<b
 
     if(SDC_opened(Car)) af.insert(SDC_opened);  
     SYS_CHECK_CAN_FRAME[0] = SDC_opened(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000100) : (SYS_CHECK_CAN_FRAME[0] & 0b11111011);
-    if(AMS_fault(Car)) {
-        Serial.println("AMS FAULT");
-        af.insert(AMS_fault);
-        Serial.print("New size of set: ");
-        Serial.println(af.size());
-
-    }
+    if(AMS_fault(Car)) af.insert(AMS_fault);
     SYS_CHECK_CAN_FRAME[0] = AMS_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00100000) : (SYS_CHECK_CAN_FRAME[0] & 0b11011111);
     if(IMD_fault(Car)) af.insert(IMD_fault);
     SYS_CHECK_CAN_FRAME[0] = IMD_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00010000) : (SYS_CHECK_CAN_FRAME[0] & 0b11101111);
@@ -85,8 +79,7 @@ bool SystemsCheck::critical_can_failure(const iCANflex& Car){
 // 2.4v is ok - ADC: 744
 // 1v = 310
 // bits 3, 4, 5, 6
-bool SystemsCheck::AMS_fault(const iCANflex& Car){ return true;}
-// bool SystemsCheck::AMS_fault(const iCANflex& Car){ return analogRead(AMS_OK_PIN) < 700 || analogRead(AMS_OK_PIN) > 790; }
+bool SystemsCheck::AMS_fault(const iCANflex& Car){ return analogRead(AMS_OK_PIN) < 700 || analogRead(AMS_OK_PIN) > 790; }
 bool SystemsCheck::IMD_fault(const iCANflex& Car){ return analogRead(IMD_OK_PIN) < 700 || analogRead(IMD_OK_PIN) > 790; }
 bool SystemsCheck::BSPD_fault(const iCANflex& Car){ return analogRead(BSPD_OK_PIN) < 700 || analogRead(BSPD_OK_PIN) > 790; }
 bool SystemsCheck::SDC_opened(const iCANflex& Car){ return false;} // TODO: READ VOLTAGE JUST BEFORE THE AIRS
