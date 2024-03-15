@@ -1,9 +1,6 @@
 #include "machine.h"
 #include "sstream"
 
-
-
-
 volatile State state;
 bool (*errorCheck)(const iCANflex& Car); 
 bool BSE_APPS_violation = false;
@@ -13,20 +10,54 @@ State sendToError(volatile bool (*erFunc)(const iCANflex& Car)) {
    return ERROR;
 }
 
+
+// testing purposes for printing state and mode
+// -------------------------------------------------------------------------------
+static unordered_map<State, string> state_to_string = {
+    {ECU_FLASH, "ECU_FLASH"},
+    {GLV_ON, "GLV_ON"},
+    {TS_PRECHARGE, "TS_PRECHARGE"},
+    {PRECHARGING, "PRECHARGING"},
+    {PRECHARGE_COMPLETE, "PRECHARGE_COMPLETE"},
+    {DRIVE_NULL, "DRIVE_NULL"},
+    {DRIVE_TORQUE, "DRIVE_TORQUE"},
+    {DRIVE_REGEN, "DRIVE_REGEN"},
+    {ERROR, "ERROR"}
+};
+
+// static unordered_map<Mode, string> mode_to_string = {
+//     {TESTING, "TESTING"},
+//     {LAUNCH, "LAUNCH"},
+//     {ENDURANCE, "ENDURANCE"},
+//     {AUTOX, "AUTOX"},
+//     {SKIDPAD, "SKIDPAD"},
+//     {ACC, "ACC"},
+//     {PIT, "PIT"}
+// };  
+
+// -------------------------------------------------------------------------------
+
 void loop(){
+
+    Serial.println("-----------------");
     State currentState = state;
     Serial.print(state_to_string.find(currentState)->second.c_str());
     Serial.print(" | ");
-    Serial.println(/*mode_to_string.find(mode)->second.c_str()*/ " ");
-    // reads bspd, ams, and imd pins as analog   
-    SystemsCheck::hardware_system_critical(*Car, *active_faults);
-    SystemsCheck::system_faults(*Car, *active_faults);
-    SystemsCheck::system_limits(*Car, *active_limits);
-    SystemsCheck::system_warnings(*Car, *active_warnings);
+    Mode currentMode = mode;
+    Serial.println(mode_to_string.find(currentMode)->second.c_str());
+    Serial.print("Faults: ");
+    Serial.println(active_faults->size());
+    Serial.print("Limits: ");
+    Serial.println(active_warnings->size());
+    Serial.print("Warnings: ");
+    Serial.println(active_warnings->size());
 
-    if(active_faults->size() > 0) {
-        Serial.println("FAULTS DETECTED");  
-    }
+    // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
+    // SystemsCheck::hardware_system_critical(*Car, *active_faults);
+    // SystemsCheck::system_faults(*Car, *active_faults);
+    // SystemsCheck::system_limits(*Car, *active_limits);
+    // SystemsCheck::system_warnings(*Car, *active_warnings);
+
 
     // SEND_SYS_CHECK_FRAMES();
     
@@ -34,14 +65,8 @@ void loop(){
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
     Serial.println(millis());
 
-    // digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
-    // print size of all heaps
-    Serial.print("Faults: ");
-    Serial.println(active_faults->size());
-    Serial.print("Warnings: ");
-    Serial.println(active_warnings->size());
-    Serial.print("Limits: ");
-    Serial.println(active_warnings->size());
+    digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
+   
 
     // error severity: warning -> limit -> critical
 
@@ -50,16 +75,13 @@ void loop(){
     regen_level = 0;
 
     power_level = 0;
-    power_level = active_limits.size() ? LIMIT : power_level; // limit power in overheat limit conditions
+    power_level = active_limits->size() ? LIMIT : power_level; // limit power in overheat limit conditions
 
     
-    mode = ENDURANCE;
+    mode = ENDURANCE; // TODO: Energy management algorithm for endurance
 
 
-    State currentState = state;
-    Serial.print(state_to_string.find(currentState)->second.c_str());
-    Serial.print(" | ");
-    Serial.println(/*mode_to_string.find(mode)->second.c_str()*/ " ");
+   
 
     // STATE MACHINE OPERATION
     switch (state) {
@@ -116,13 +138,11 @@ void setup() {
     active_faults->clear();
     active_warnings->clear();
     active_limits->clear();
+    for(int i = 0; i < 5; i++) SYS_CHECK_CAN_FRAME[i] = 0x0;
 
     // set state  
-    // state = ECU_FLASH; 
-    state = GLV_ON;
-
-
-
+    state = ECU_FLASH; 
+    // state = GLV_ON;
 }
 
 

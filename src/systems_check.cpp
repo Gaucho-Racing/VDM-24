@@ -5,13 +5,7 @@ void SystemsCheck::hardware_system_critical(const iCANflex& Car, unordered_set<b
 
     if(SDC_opened(Car)) af.insert(SDC_opened);  
     SYS_CHECK_CAN_FRAME[0] = SDC_opened(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000100) : (SYS_CHECK_CAN_FRAME[0] & 0b11111011);
-    if(AMS_fault(Car)) {
-        Serial.println("AMS FAULT");
-        af.insert(AMS_fault);
-        Serial.print("New size of set: ");
-        Serial.println(af.size());
-
-    }
+    if(AMS_fault(Car)) af.insert(AMS_fault);
     SYS_CHECK_CAN_FRAME[0] = AMS_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00100000) : (SYS_CHECK_CAN_FRAME[0] & 0b11011111);
     if(IMD_fault(Car)) af.insert(IMD_fault);
     SYS_CHECK_CAN_FRAME[0] = IMD_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00010000) : (SYS_CHECK_CAN_FRAME[0] & 0b11101111);

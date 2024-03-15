@@ -1,7 +1,9 @@
 #include <Arduino.h>
 #include <imxrt.h>
 #include "machine.h"
-#include "sstream"
+#include <sstream>
+#include <iostream>
+using namespace std;
 
 
 
@@ -19,37 +21,71 @@ State ecu_flash(iCANflex& Car) {
     Car.DTI.setRCurrent(0);
     // flash the ecu
     Serial.println("Initializing SD Card...");
-    if(!SD.begin(BUILTIN_SDCARD)){
-        Serial.println("CRITICAL FAULT: PLEASE INSERT SD CARD CONTAINING ECU FLASH TUNE");
-        Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
-        return ERROR;
+    while(!SD.begin(BUILTIN_SDCARD)){
+        Serial.println("Waiting for SD Card to initialize...");
     }
-    else{
-        Serial.println("SD INITIALIZATION SUCCESSFUL");
-        File ecu_tune;
-        ecu_tune = SD.open("gr24.txt");
-        if(ecu_tune){
-            Serial.print("Reading ECU FLASH....");
-            String tune;
-            while(ecu_tune.available()){
-                Serial.print(".");
-                tune += (char)ecu_tune.read(); // TODO: Initialize TORQUE_PROFILES vector with the data
-                                                // TODO: Initialize REGEN
-            }
-            ecu_tune.close();
-            Serial.println("");
+    
+    Serial.println("SD INITIALIZATION SUCCESSFUL");
+    File ecu_tune;
+    ecu_tune = SD.open("gr24.txt");
+    Serial.print("Reading ECU FLASH....");
+    String tune;
+    while(ecu_tune.available()){
+        Serial.print("..");
+        tune += (char)ecu_tune.read(); 
+    }
+    Serial.println(tune.length());
+    ecu_tune.close();
+    Serial.println("");
 
-            const stringstream iss(tune.c_str()); // const so put into FLASH MEMORY
-            // read in torque profiles, regen profiles, and traction profiles
-            Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
-
-        }
-        else {
-            Serial.println("CRITICAL FAULT: ERROR OPENING GR24 ECU TUNE");
-            Serial.println("MOVING STATE TO ERROR: ECU RESTART REQUIRED");
-            return ERROR;
-        }
-    }  
+    stringstream iss(tune.c_str()); // const so put into FLASH MEMORY
+    // read in torque profiles, regen profiles, and traction profiles
+    for(int i = 0; i < 4; i++){
+        float k, p, b;
+        iss >> k >> p >> b;
+        TORQUE_PROFILES[i] = TorqueProfile(k, p, b);
+    }   
+    delay(250);
+    Serial.println("TORQUE PROFILES INITIALIZED");
+    for(int i = 0; i < 4; i++){
+        float cmax;
+        iss >> cmax;
+        POWER_LEVELS[i] = cmax;
+    }   
+    delay(250);
+    Serial.println("CURRENT LIMITS INITIALIZED");
+    for(int i = 0; i < 4; i++){
+        float r;
+        iss >> r;
+        REGEN_LEVELS[i] = r;
+    }
+    delay(250);
+    Serial.println("REGEN LEVELS INITIALIZED");
+    delay(250);
+    Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
+    Serial.println("STARTING CAR WITH SETTINGS: ");
+    Serial.print("THROTTLE MAP: ");
+    for (int i = 0; i < 4; i++) {
+        Serial.print(TORQUE_PROFILES[i].K); 
+        Serial.print(" ");
+        Serial.print(TORQUE_PROFILES[i].P);
+        Serial.print(" ");
+        Serial.println(TORQUE_PROFILES[i].B);
+    }
+    Serial.print("POWER LEVELS: ");
+    for (int i = 0; i < 4; i++) {
+        Serial.print(POWER_LEVELS[i]); 
+        Serial.print(" ");
+    }
+    Serial.println("");
+    Serial.print("REGEN LEVELS: ");
+    for (int i = 0; i < 4; i++) {
+        Serial.print(REGEN_LEVELS[i]); 
+        Serial.print(" ");
+    }
+    Serial.println("");
+    Serial.println("--------------------------");
+     
     return GLV_ON;
 }
 
@@ -93,12 +129,9 @@ PRECHARGING is broken into 3 stages for ACU responses and communication
 State ts_precharge(iCANflex& Car) { 
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
-    // run a system check
-    // if(active_faults.size() > 0) return GLV_ON;
     // begin precharging by sendign signal to ACU
     // wait for signal back
     // if dont get signal back 
-    delay(1000);
     return PRECHARGING;
 }
 // -- PRECHARGING STAGE 2
@@ -107,16 +140,16 @@ State precharging(iCANflex& Car){
     // wait for precharge complete signal
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
-    delay(1000);
     return PRECHARGE_COMPLETE;
 }
 
 // -- PRECHARGING STAGE 3
 State precharge_complete(iCANflex& Car){
-    return PRECHARGE_COMPLETE;
-    
-    
+    Car.DTI.setDriveEnable(0);
+    Car.DTI.setRCurrent(0);
+
     // wait for RTD signal
+    return DRIVE_NULL;  
 }
 
 /*
@@ -293,11 +326,11 @@ THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED
 State error(iCANflex& Car, volatile bool (*errorCheck)(const iCANflex& c)) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
-
+    Serial.println("HANDLING ERROR");
     if(errorCheck(Car))  return ERROR;
     else {
         active_faults->erase(errorCheck);
-        return GLV_ON;// gets sent back to error from main() if there are more in the hashset from main
+        return GLV_ON; // gets sent back to error from main() if there are more in the hashset from main
     }
     
 }
