@@ -44,29 +44,29 @@ void loop(){
     Serial.print(" | ");
     Serial.println(/*mode_to_string.find(mode)->second.c_str()*/ " ");
     // reads bspd, ams, and imd pins as analog   
-    SystemsCheck::hardware_system_critical(*Car);
-    SystemsCheck::system_faults(*Car);
-    SystemsCheck::system_limits(*Car);
-    SystemsCheck::system_warnings(*Car);
+    SystemsCheck::hardware_system_critical(*Car, *active_faults);
+    SystemsCheck::system_faults(*Car, *active_faults);
+    SystemsCheck::system_limits(*Car, *active_limits);
+    SystemsCheck::system_warnings(*Car, *active_warnings);
 
-    if(active_faults.size() > 0) {
+    if(active_faults->size() > 0) {
         Serial.println("FAULTS DETECTED");  
     }
 
     // SEND_SYS_CHECK_FRAMES();
     
     delay(500);
-    state = active_faults.size() ?  sendToError(*active_faults.begin()) : state;
+    state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
     Serial.println(millis());
 
     // digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
     // print size of all heaps
     Serial.print("Faults: ");
-    Serial.println(active_faults.size());
+    Serial.println(active_faults->size());
     Serial.print("Warnings: ");
-    Serial.println(active_warnings.size());
+    Serial.println(active_warnings->size());
     Serial.print("Limits: ");
-    Serial.println(active_warnings.size());
+    Serial.println(active_warnings->size());
 
     // error severity: warning -> limit -> critical
 
@@ -74,7 +74,7 @@ void loop(){
     throttle_map = 0; 
     regen_level = 0;
     power_level = 0;
-    power_level = active_limits.size() ? LIMIT : power_level; // limit power in overheat limit conditions
+    power_level = active_limits->size() ? LIMIT : power_level; // limit power in overheat limit conditions
 
     
     mode = ENDURANCE; // TODO: Energy management algorithm for endurance
@@ -132,6 +132,13 @@ void setup() {
     Serial.println("Connected to Serial Port 9600");
 
     Car->begin();
+    active_faults = new unordered_set<bool (*)(const iCANflex&)>(); 
+    active_warnings = new unordered_set<bool (*)(const iCANflex&)>();
+    active_limits = new unordered_set<bool (*)(const iCANflex&)>();
+
+    active_faults->clear();
+    active_warnings->clear();
+    active_limits->clear();
 
     // set state  
     // state = ECU_FLASH; 
