@@ -2,7 +2,9 @@
 #define SYSTEMS_CHECK
 
 #include "machine.h"
+#include <unordered_set>
 #include "main.h"
+using namespace std;
 
 
 class SystemsCheck{
@@ -68,8 +70,7 @@ class SystemsCheck{
     static bool critical_mcu_temp(const iCANflex& Car);
     static bool TCM_fault(const iCANflex& Car);
 
-
-
+    // TODO: add more system checks
 
 
 };  

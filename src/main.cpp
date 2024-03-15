@@ -39,36 +39,48 @@ static unordered_map<State, string> state_to_string = {
 // -------------------------------------------------------------------------------
 
 void loop(){
+    State currentState = state;
+    Serial.print(state_to_string.find(currentState)->second.c_str());
+    Serial.print(" | ");
+    Serial.println(/*mode_to_string.find(mode)->second.c_str()*/ " ");
     // reads bspd, ams, and imd pins as analog   
     SystemsCheck::hardware_system_critical(*Car);
     SystemsCheck::system_faults(*Car);
     SystemsCheck::system_limits(*Car);
     SystemsCheck::system_warnings(*Car);
 
-    SEND_SYS_CHECK_FRAMES();
+    if(active_faults.size() > 0) {
+        Serial.println("FAULTS DETECTED");  
+    }
+
+    // SEND_SYS_CHECK_FRAMES();
     
-    state = !fault_heap.empty() ?  sendToError(*fault_heap.top()) : state;
+    delay(500);
+    state = active_faults.size() ?  sendToError(*active_faults.begin()) : state;
+    Serial.println(millis());
 
-
-    digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
+    // digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
+    // print size of all heaps
+    Serial.print("Faults: ");
+    Serial.println(active_faults.size());
+    Serial.print("Warnings: ");
+    Serial.println(active_warnings.size());
+    Serial.print("Limits: ");
+    Serial.println(active_warnings.size());
 
     // error severity: warning -> limit -> critical
 
     // read in settings from Steering Wheel
     throttle_map = 0; 
     regen_level = 0;
-
     power_level = 0;
-    power_level = !limit_heap.empty() ? LIMIT : power_level; // limit power in overheat limit conditions
+    power_level = active_limits.size() ? LIMIT : power_level; // limit power in overheat limit conditions
 
     
     mode = ENDURANCE; // TODO: Energy management algorithm for endurance
 
 
-    State currentState = state;
-    Serial.print(state_to_string.find(currentState)->second.c_str());
-    Serial.print(" | ");
-    Serial.println(/*mode_to_string.find(mode)->second.c_str()*/ " ");
+   
 
     // STATE MACHINE OPERATION
     switch (state) {
@@ -106,8 +118,6 @@ void loop(){
         case DRIVE_REGEN:
             state = drive_regen(*Car, BSE_APPS_violation, mode);
             break;
-
-        
     }
 }
 
@@ -124,28 +134,8 @@ void setup() {
     Car->begin();
 
     // set state  
-    state = ECU_FLASH; 
-    // state = GLV_ON;
-    fault_heap_priority = { // lower priority is processed first
-        {SystemsCheck::SDC_opened, 0}, // TODO: create an ordering for all error function prioirty
-        {SystemsCheck::critical_motor_temp, 1},
-        {SystemsCheck::critical_battery_temp, 1},
-        {SystemsCheck::critical_water_temp, 1},
-        {SystemsCheck::critical_mcu_temp, 1},
-        {SystemsCheck::critical_can_failure, 1}
-    };
-    warning_heap_priority = {
-        {SystemsCheck::warn_motor_temp, 1},
-        {SystemsCheck::warn_battery_temp, 1},
-        {SystemsCheck::warn_water_temp, 1},
-        {SystemsCheck::warn_mcu_temp, 1}
-    };
-    limit_heap_priority = {
-        {SystemsCheck::limit_motor_temp, 1},
-        {SystemsCheck::limit_battery_temp, 1},
-        {SystemsCheck::limit_water_temp, 1},
-        {SystemsCheck::limit_mcu_temp, 1}
-    };
+    // state = ECU_FLASH; 
+    state = GLV_ON;
 
 
 

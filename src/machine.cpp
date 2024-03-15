@@ -64,6 +64,7 @@ State glv_on(iCANflex& Car) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);    
 
+    delay(1000);
     // wait for the TS ACTIVE button to be pressed
     return TS_PRECHARGE;
     // return GLV_ON;
@@ -88,13 +89,17 @@ State ts_precharge(iCANflex& Car) {
     // begin precharging by sendign signal to ACU
     // wait for signal back
     // if dont get signal back 
+    delay(1000);
     return PRECHARGING;
 }
 // -- PRECHARGING STAGE 2
 State precharging(iCANflex& Car){
    
     // wait for precharge complete signal
-    return PRECHARGING;
+    Car.DTI.setDriveEnable(0);
+    Car.DTI.setRCurrent(0);
+    delay(1000);
+    return PRECHARGE_COMPLETE;
 }
 
 // -- PRECHARGING STAGE 3
@@ -229,10 +234,10 @@ THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED
 State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c)) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
-
+    Serial.println("HANDLING ERROR");
     if(errorCheck(Car))  return ERROR;
     else {
-        fault_heap.pop();
+        active_faults.erase(errorCheck);
         return GLV_ON;// gets sent back to error from main() if there are more in the hashset from main
     }
     
