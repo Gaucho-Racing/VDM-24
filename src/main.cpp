@@ -62,9 +62,9 @@ void loop(){
     // SEND_SYS_CHECK_FRAMES();
     
     delay(500);
+    
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
-    Serial.println(millis());
-
+    // Serial.println(millis());
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
    
 
@@ -144,6 +144,3 @@ void setup() {
     state = ECU_FLASH; 
     // state = GLV_ON;
 }
-
-
-

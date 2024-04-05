@@ -11,6 +11,8 @@ void SystemsCheck::hardware_system_critical(const iCANflex& Car, unordered_set<b
     SYS_CHECK_CAN_FRAME[0] = IMD_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00010000) : (SYS_CHECK_CAN_FRAME[0] & 0b11101111);
     if(BSPD_fault(Car)) af.insert(BSPD_fault);
     SYS_CHECK_CAN_FRAME[0] = BSPD_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000100) : (SYS_CHECK_CAN_FRAME[0] & 0b11111011);
+    if(max_current(Car)) af.insert(max_current);
+    SYS_CHECK_CAN_FRAME[0] = max_current(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000010) : (SYS_CHECK_CAN_FRAME[0] & 0b11111101);
 }
 
 // NOTE: OPEN THE SOFTWARE LATCH IF the Inverter is not responding or there are critical system faults. 
@@ -84,8 +86,10 @@ bool SystemsCheck::critical_can_failure(const iCANflex& Car){
 bool SystemsCheck::AMS_fault(const iCANflex& Car){ return analogRead(AMS_OK_PIN) < 700 || analogRead(AMS_OK_PIN) > 790; }
 bool SystemsCheck::IMD_fault(const iCANflex& Car){ return analogRead(IMD_OK_PIN) < 700 || analogRead(IMD_OK_PIN) > 790; }
 bool SystemsCheck::BSPD_fault(const iCANflex& Car){ return analogRead(BSPD_OK_PIN) < 700 || analogRead(BSPD_OK_PIN) > 790; }
-bool SystemsCheck::SDC_opened(const iCANflex& Car){ return false;} // TODO: READ VOLTAGE JUST BEFORE THE AIRS
-
+// check voltage < 7V (this one is 12V 8 bit ADC)
+bool SystemsCheck::SDC_opened(const iCANflex& Car){ return Car.ACU1.getSDCVoltage() < 149; } 
+// bit 7
+bool SystemsCheck::max_current(const iCANflex& Car){return Car.DTI.getDCCurrent() > Car.DTI.getDCCurrentLim();}
 
 // BYTE 1 ---------------------------------------------------------------------------
 // bit 0, 1, 2
@@ -98,7 +102,7 @@ bool SystemsCheck::limit_battery_temp(const iCANflex& Car) {return Car.ACU1.getM
 bool SystemsCheck::critical_battery_temp(const iCANflex& Car) {return Car.ACU1.getMaxCellTemp() > BATTERY_TEMP_CRITICAL;}
 // bit 6
 bool SystemsCheck::rev_limit_exceeded(const iCANflex& Car) {return Car.DTI.getERPM()/10 > REV_LIMIT;}
-// bit 7 empty for now
+// bit 7 
 
 // BYTE 2 ---------------------------------------------------------------------------
 // bit 0, 1, 2

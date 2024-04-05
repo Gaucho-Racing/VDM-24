@@ -50,6 +50,7 @@ class SystemsCheck{
     static bool IMD_fault(const iCANflex& Car); // byte 0, bit 3
     static bool BSPD_fault(const iCANflex& Car); // byte 0, bit 4
     static bool SDC_opened(const iCANflex& Car); // byte 0, bit 5
+    static bool max_current(const iCANflex& Car); // byte 0, bit 6
 
     // SYS_CHECK_CAN_FRAME[1]
     static bool warn_motor_temp(const iCANflex& Car); // byte 1, bit 0
