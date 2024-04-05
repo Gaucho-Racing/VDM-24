@@ -233,23 +233,23 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     return DRIVE_TORQUE;
 }
 
-float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
-    // if(rpm > 500 && brake > 0.05) return Car.ACU1.getMaxChargeCurrent();
-    // else return 0;
-    return 0;
-}
+// float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
+//     // if(rpm > 500 && brake > 0.05) return Car.ACU1.getMaxChargeCurrent();
+//     // else return 0;
+//     return 0;
+// }
 
-State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
-    float throttle = Car.PEDALS.getThrottle();
-    if(throttle > 0.05) return DRIVE_TORQUE;
-    if(brake < 0.05) return DRIVE_NULL;
+// State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
+//     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
+//     float throttle = Car.PEDALS.getThrottle();
+//     if(throttle > 0.05) return DRIVE_TORQUE;
+//     if(brake < 0.05) return DRIVE_NULL;
 
-    float rpm = Car.DTI.getERPM()/10.0;
-    Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * REGEN_LEVELS[regen_level]);
-    return DRIVE_REGEN;
-}
+//     float rpm = Car.DTI.getERPM()/10.0;
+//     Car.DTI.setDriveEnable(1);
+//     Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * REGEN_LEVELS[regen_level]);
+//     return DRIVE_REGEN;
+// }
 
 /*
 ERROR STATE
