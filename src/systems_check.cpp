@@ -86,8 +86,8 @@ bool SystemsCheck::critical_can_failure(const iCANflex& Car){
 bool SystemsCheck::AMS_fault(const iCANflex& Car){ return analogRead(AMS_OK_PIN) < 700 || analogRead(AMS_OK_PIN) > 790; }
 bool SystemsCheck::IMD_fault(const iCANflex& Car){ return analogRead(IMD_OK_PIN) < 700 || analogRead(IMD_OK_PIN) > 790; }
 bool SystemsCheck::BSPD_fault(const iCANflex& Car){ return analogRead(BSPD_OK_PIN) < 700 || analogRead(BSPD_OK_PIN) > 790; }
-// check voltage < 7V (this one is 12V 8 bit ADC)
-bool SystemsCheck::SDC_opened(const iCANflex& Car){ return Car.ACU1.getSDCVoltage() < 149; } 
+// check voltage < 7V (this one is 16V 8 bit ADC)
+bool SystemsCheck::SDC_opened(const iCANflex& Car){ return Car.ACU1.getSDCVoltage() < 112; } 
 // bit 7
 bool SystemsCheck::max_current(const iCANflex& Car){return Car.DTI.getDCCurrent() > Car.DTI.getDCCurrentLim();}
 
