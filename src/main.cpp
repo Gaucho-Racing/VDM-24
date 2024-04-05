@@ -61,10 +61,10 @@ void loop(){
     Serial.println(active_warnings->size());
 
     // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
-    // SystemsCheck::hardware_system_critical(*Car, *active_faults);
-    // SystemsCheck::system_faults(*Car, *active_faults);
-    // SystemsCheck::system_limits(*Car, *active_limits);
-    // SystemsCheck::system_warnings(*Car, *active_warnings);
+    SystemsCheck::hardware_system_critical(*Car, *active_faults);
+    SystemsCheck::system_faults(*Car, *active_faults);
+    SystemsCheck::system_limits(*Car, *active_limits);
+    SystemsCheck::system_warnings(*Car, *active_warnings);
 
 
     // SEND_SYS_CHECK_FRAMES();
