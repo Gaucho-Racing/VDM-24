@@ -11,8 +11,9 @@ State sendToError(bool (*erFunc)(const iCANflex& Car)) {
    return ERROR;
 }
 
-static void SEND_SYS_CHECK_FRAMES(){ // TODO:
+static void SEND_SYS_CHECK_FRAMES(iCANflex& Car){ // TODO:
     Serial.println("SENDING SYS CHECK FRAMES");
+    
     for(int i = 0; i < 5; i++){
         Serial.print(millis());
         Serial.println(SYS_CHECK_CAN_FRAME[i]);
@@ -61,10 +62,10 @@ void loop(){
     Serial.println(active_warnings->size());
 
     // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
-    // SystemsCheck::hardware_system_critical(*Car, *active_faults);
-    // SystemsCheck::system_faults(*Car, *active_faults);
-    // SystemsCheck::system_limits(*Car, *active_limits);
-    // SystemsCheck::system_warnings(*Car, *active_warnings);
+    SystemsCheck::hardware_system_critical(*Car, *active_faults);
+    SystemsCheck::system_faults(*Car, *active_faults);
+    SystemsCheck::system_limits(*Car, *active_limits);
+    SystemsCheck::system_warnings(*Car, *active_warnings);
 
 
     // SEND_SYS_CHECK_FRAMES();
@@ -79,7 +80,7 @@ void loop(){
     // error severity: warning -> limit -> critical
 
     // read in settings from Steering Wheel
-    throttle_map = 0; 
+    throttle_map = 
     regen_level = 0;
     power_level = 0;
 

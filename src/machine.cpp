@@ -213,7 +213,7 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
 
     float a1 = Car.PEDALS.getAPPS1();
     float a2 = Car.PEDALS.getAPPS2();
-    float throttle = Car.PEDALS.getThrottle();
+    float throttle = a1; // TODO: FIX
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     
     // APPS GRADIENT VIOLATION
