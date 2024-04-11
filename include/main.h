@@ -68,7 +68,7 @@ static uint8_t power_level; // 0 - 3
 [][][][][][][][] 
 */
 static byte SYS_CHECK_CAN_FRAME[5];   
-static void SEND_SYS_CHECK_FRAMES();
+static void SEND_SYS_CHECK_FRAMES(iCANflex& Car);
 
 // all active detected errors
 // // function pointer hash function

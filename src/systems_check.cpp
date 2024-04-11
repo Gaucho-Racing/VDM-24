@@ -89,7 +89,7 @@ bool SystemsCheck::BSPD_fault(const iCANflex& Car){ return analogRead(BSPD_OK_PI
 // check voltage < 7V (this one is 16V 8 bit ADC)
 bool SystemsCheck::SDC_opened(const iCANflex& Car){ return Car.ACU1.getSDCVoltage() < 112; } 
 // bit 7
-bool SystemsCheck::max_current(const iCANflex& Car){return Car.DTI.getDCCurrent() > Car.DTI.getDCCurrentLim();}
+// bool SystemsCheck::max_current(const iCANflex& Car){return Car.DTI.getDCCurrent() > Car.DTI.getDCCurrentLim();}
 
 // BYTE 1 ---------------------------------------------------------------------------
 // bit 0, 1, 2
