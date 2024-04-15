@@ -171,6 +171,7 @@ THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
 
 
 State drive_null(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
+<<<<<<< HEAD
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
     //start cooling system and all that 
@@ -179,6 +180,10 @@ State drive_null(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     if(!switches[0]) { return OFF;}
     // switch 2 turned off while 1 is on
     else if(!switches[1]) { return ON;}
+=======
+    // Car.DTI.setDriveEnable(0); // TODO: Make this frequency lower to 100hz
+    // Car.DTI.setRCurrent(0);
+>>>>>>> 49f6609 (fixed CAN from Controls Jail)
 
     float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
@@ -223,6 +228,7 @@ THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED
 
 float requested_torque(iCANflex& Car, float throttle, int rpm) {
     // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
+<<<<<<< HEAD
     float k = TORQUE_PROFILES[THROTTLE_MAPPING].K;
     float p = TORQUE_PROFILES[THROTTLE_MAPPING].P;
     float b = TORQUE_PROFILES[THROTTLE_MAPPING].B;
@@ -232,6 +238,16 @@ float requested_torque(iCANflex& Car, float throttle, int rpm) {
     if(tq_percent < 0) tq_percent = 0;
     return tq_percent*current;
 >>>>>>> 49bd2fd (rebase)
+=======
+    float k = TORQUE_PROFILES[throttle_map].K;
+    float p = TORQUE_PROFILES[throttle_map].P;
+    float b = TORQUE_PROFILES[throttle_map].B;
+    float max_current = POWER_LEVELS[power_level];
+    float tq_percent = (throttle-(1-throttle)*(throttle+b)*pow(rpm/REV_LIMIT, p)*k);
+    if(tq_percent > 1) tq_percent = 1; // clipping
+    if(tq_percent < 0) tq_percent = 0;
+    return tq_percent*max_current;
+>>>>>>> 49f6609 (fixed CAN from Controls Jail)
 }
 
 
@@ -264,6 +280,7 @@ float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
     // else return 0;
     return 0;
 }
+<<<<<<< HEAD
 =======
 >>>>>>> 30f8389 (cdr)
 
@@ -298,18 +315,20 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
 //     // else return 0;
 //     return 0;
 // }
+=======
+>>>>>>> 49f6609 (fixed CAN from Controls Jail)
 
-// State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
-//     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
-//     float throttle = Car.PEDALS.getThrottle();
-//     if(throttle > 0.05) return DRIVE_TORQUE;
-//     if(brake < 0.05) return DRIVE_NULL;
+State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
+    float throttle = Car.PEDALS.getAPPS1();
+    if(throttle > 0.05) return DRIVE_TORQUE;
+    if(brake < 0.05) return DRIVE_NULL;
 
-//     float rpm = Car.DTI.getERPM()/10.0;
-//     Car.DTI.setDriveEnable(1);
-//     Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * REGEN_LEVELS[regen_level]);
-//     return DRIVE_REGEN;
-// }
+    float rpm = Car.DTI.getERPM()/10.0;
+    Car.DTI.setDriveEnable(1);
+    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * REGEN_LEVELS[regen_level]);
+    return DRIVE_REGEN;
+}
 
 /*
 ERROR STATE

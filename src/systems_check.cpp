@@ -11,8 +11,8 @@ void SystemsCheck::hardware_system_critical(const iCANflex& Car, unordered_set<b
     SYS_CHECK_CAN_FRAME[0] = IMD_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00010000) : (SYS_CHECK_CAN_FRAME[0] & 0b11101111);
     if(BSPD_fault(Car)) af.insert(BSPD_fault);
     SYS_CHECK_CAN_FRAME[0] = BSPD_fault(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000100) : (SYS_CHECK_CAN_FRAME[0] & 0b11111011);
-    if(max_current(Car)) af.insert(max_current);
-    SYS_CHECK_CAN_FRAME[0] = max_current(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000010) : (SYS_CHECK_CAN_FRAME[0] & 0b11111101);
+    // if(max_current(Car)) af.insert(max_current);
+    // SYS_CHECK_CAN_FRAME[0] = max_current(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000010) : (SYS_CHECK_CAN_FRAME[0] & 0b11111101);
 }
 
 // NOTE: OPEN THE SOFTWARE LATCH IF the Inverter is not responding or there are critical system faults. 
@@ -25,8 +25,8 @@ void SystemsCheck::system_faults(const iCANflex& Car, unordered_set<bool (*)(con
     SYS_CHECK_CAN_FRAME[2] = critical_water_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b00100000) : (SYS_CHECK_CAN_FRAME[2] & 0b11011111);
     if(critical_mcu_temp(Car)) af.insert(critical_mcu_temp);
     SYS_CHECK_CAN_FRAME[2] = critical_mcu_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b00000100) : (SYS_CHECK_CAN_FRAME[2] & 0b11111011);
-    if(critical_can_failure(Car)) af.insert(critical_can_failure);
-    SYS_CHECK_CAN_FRAME[0] = critical_can_failure(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b01000000) : (SYS_CHECK_CAN_FRAME[0] & 0b10111111);
+    // if(critical_can_failure(Car)) af.insert(critical_can_failure);
+    // SYS_CHECK_CAN_FRAME[0] = critical_can_failure(Car) ? (SYS_CHECK_CAN_FRAME[0] | 0b01000000) : (SYS_CHECK_CAN_FRAME[0] & 0b10111111);
     
 }
 
@@ -50,6 +50,8 @@ void SystemsCheck::system_warnings(const iCANflex& Car, unordered_set<bool (*)(c
     SYS_CHECK_CAN_FRAME[2] = warn_water_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b10000000) : (SYS_CHECK_CAN_FRAME[2] & 0b01111111);
     if(warn_mcu_temp(Car)) aw.insert(warn_mcu_temp);
     SYS_CHECK_CAN_FRAME[2] = warn_mcu_temp(Car) ? (SYS_CHECK_CAN_FRAME[2] | 0b00010000) : (SYS_CHECK_CAN_FRAME[2] & 0b11101111);
+    if(rev_limit_exceeded(Car)) aw.insert(rev_limit_exceeded);
+    SYS_CHECK_CAN_FRAME[1] = rev_limit_exceeded(Car) ? (SYS_CHECK_CAN_FRAME[1] | 0b00000010) : (SYS_CHECK_CAN_FRAME[1] & 0b11111101);
 }
 
 
@@ -57,6 +59,7 @@ void SystemsCheck::system_warnings(const iCANflex& Car, unordered_set<bool (*)(c
 
 // BYTE 0 ---------------------------------------------------------------------------
 // bit 0
+<<<<<<< HEAD
 bool SystemsCheck::warn_can_failure(const iCANflex& Car){
     bool fail =  
         Car.WFL.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
@@ -65,16 +68,17 @@ bool SystemsCheck::warn_can_failure(const iCANflex& Car){
         Car.WRR.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.DASHBOARD.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
         Car.GPS1.getAge() > SystemsCheck::CAN_MS_THRESHOLD);
+=======
+
+bool SystemsCheck::warn_can_failure(const iCANflex& Car){ // TODO: Fix
+    return Pedals_Ping > 1000000 || ACU_Ping > 1000000 || BCM_Age > 1000000 || DashPanel_Ping > 1000000 || SteeringWheel_Ping > 1000000 || DTI_Age > 1000000;
+>>>>>>> 49f6609 (fixed CAN from Controls Jail)
 }   
 // bit 1
 bool SystemsCheck::critical_can_failure(const iCANflex& Car){
-    return (Car.DTI.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        // Car.ECU.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.PEDALS.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.ACU1.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.BCM1.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.ENERGY_METER.getAge() > SystemsCheck::CAN_MS_THRESHOLD);
+    return false;
 }
+
 
 
 // HARDWARE FAULTS: VERY BAD
@@ -82,13 +86,13 @@ bool SystemsCheck::critical_can_failure(const iCANflex& Car){
 // 3v when almost ok - ADC: 930
 // 2.4v is ok - ADC: 744
 // 1v = 310
-// bits 3, 4, 5, 6
+// bits 2, 3, 4, 5, 
 bool SystemsCheck::AMS_fault(const iCANflex& Car){ return analogRead(AMS_OK_PIN) < 700 || analogRead(AMS_OK_PIN) > 790; }
 bool SystemsCheck::IMD_fault(const iCANflex& Car){ return analogRead(IMD_OK_PIN) < 700 || analogRead(IMD_OK_PIN) > 790; }
 bool SystemsCheck::BSPD_fault(const iCANflex& Car){ return analogRead(BSPD_OK_PIN) < 700 || analogRead(BSPD_OK_PIN) > 790; }
 // check voltage < 7V (this one is 16V 8 bit ADC)
 bool SystemsCheck::SDC_opened(const iCANflex& Car){ return Car.ACU1.getSDCVoltage() < 112; } 
-// bit 7
+// bit 6
 // bool SystemsCheck::max_current(const iCANflex& Car){return Car.DTI.getDCCurrent() > Car.DTI.getDCCurrentLim();}
 
 // BYTE 1 ---------------------------------------------------------------------------
