@@ -1,5 +1,4 @@
 #include "systems_check.h"
-#include "main.h"
 
 void SystemsCheck::hardware_system_critical(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&)> &af){
 
@@ -59,20 +58,9 @@ void SystemsCheck::system_warnings(const iCANflex& Car, unordered_set<bool (*)(c
 
 // BYTE 0 ---------------------------------------------------------------------------
 // bit 0
-<<<<<<< HEAD
-bool SystemsCheck::warn_can_failure(const iCANflex& Car){
-    bool fail =  
-        Car.WFL.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.WFR.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.WRL.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.WRR.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.DASHBOARD.getAge() > SystemsCheck::CAN_MS_THRESHOLD ||
-        Car.GPS1.getAge() > SystemsCheck::CAN_MS_THRESHOLD);
-=======
 
 bool SystemsCheck::warn_can_failure(const iCANflex& Car){ // TODO: Fix
     return Pedals_Ping > 1000000 || ACU_Ping > 1000000 || BCM_Age > 1000000 || DashPanel_Ping > 1000000 || SteeringWheel_Ping > 1000000 || DTI_Age > 1000000;
->>>>>>> 49f6609 (fixed CAN from Controls Jail)
 }   
 // bit 1
 bool SystemsCheck::critical_can_failure(const iCANflex& Car){

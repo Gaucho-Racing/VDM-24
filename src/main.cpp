@@ -1,22 +1,16 @@
 #include "machine.h"
-#include "sstream"
+#include "main.h"
 
 volatile State state;
+volatile Mode mode;
 bool (*errorCheck)(const iCANflex& Car); 
 bool BSE_APPS_violation = false;
 
-State sendToError(volatile bool (*erFunc)(const iCANflex& Car)) {
+State sendToError(bool (*erFunc)(const iCANflex& Car)) {
    errorCheck = erFunc; 
    return ERROR;
 }
 
-<<<<<<< HEAD
-static void SEND_SYS_CHECK_FRAMES(){ // TODO:
-    Serial.println("SENDING SYS CHECK FRAMES");
-    for(int i = 0; i < 5; i++){
-        Serial.print(millis());
-        Serial.println(SYS_CHECK_CAN_FRAME[i]);
-=======
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
 CAN_message_t msg;
 
@@ -63,7 +57,6 @@ void handlePingResponses() {
             Serial.print(" ");
         }
         Serial.println();
->>>>>>> 49f6609 (fixed CAN from Controls Jail)
     }
     if(msg.id == 0x13001){
         // print the message
@@ -135,7 +128,7 @@ void setupCAN() {
 
 
 
-// testing purposes for printing state and mode
+// string maps for testing purposes
 // -------------------------------------------------------------------------------
 static unordered_map<State, string> state_to_string = {
     {ECU_FLASH, "ECU_FLASH"},
@@ -149,15 +142,15 @@ static unordered_map<State, string> state_to_string = {
     {ERROR, "ERROR"}
 };
 
-// static unordered_map<Mode, string> mode_to_string = {
-//     {TESTING, "TESTING"},
-//     {LAUNCH, "LAUNCH"},
-//     {ENDURANCE, "ENDURANCE"},
-//     {AUTOX, "AUTOX"},
-//     {SKIDPAD, "SKIDPAD"},
-//     {ACC, "ACC"},
-//     {PIT, "PIT"}
-// };  
+static unordered_map<Mode, string> mode_to_string = {
+    {TESTING, "TESTING"},
+    {LAUNCH, "LAUNCH"},
+    {ENDURANCE, "ENDURANCE"},
+    {AUTOX, "AUTOX"},
+    {SKIDPAD, "SKIDPAD"},
+    {ACC, "ACC"},
+    {PIT, "PIT"}
+};  
 
 // -------------------------------------------------------------------------------
 void loop(){
@@ -203,13 +196,12 @@ void loop(){
     // read in settings from Steering Wheel
     throttle_map = 0;
     regen_level = 0;
-
     power_level = 0;
-    power_level = active_limits->size() ? LIMIT : power_level; // limit power in overheat limit conditions
+
+    power_level = active_limits->size() ? LIMIT : power_level; // limit power in overheat conditions
 
     
     mode = ENDURANCE; // TODO: Energy management algorithm for endurance
-
 
    
 
@@ -224,13 +216,13 @@ void loop(){
         case ECU_FLASH:
             state = ecu_flash(*Car);
             break;
-        case GLV_ON: // GLV ON
+        case GLV_ON:
             state = glv_on(*Car);
             break;
      
         // PRECHARGE
         case TS_PRECHARGE:
-            state = ts_precharge(Car);
+            state = ts_precharge(*Car);
             break;
         case PRECHARGING:
             state = precharging(*Car);
@@ -241,10 +233,10 @@ void loop(){
         
         // DRIVE
         case DRIVE_NULL:
-            state = drive_null(*Car, BSE_APPS_violation); 
+            state = drive_null(*Car, BSE_APPS_violation, mode); 
             break;
         case DRIVE_TORQUE:
-            state = drive_torque(*Car, BSE_APPS_violation);
+            state = drive_torque(*Car, BSE_APPS_violation, mode);
             break;
         case DRIVE_REGEN:
             state = drive_regen(*Car, BSE_APPS_violation, mode);
@@ -252,13 +244,10 @@ void loop(){
     }
 }
 
-<<<<<<< HEAD
-=======
 
 
 
 //GLV STARTUP
->>>>>>> 49f6609 (fixed CAN from Controls Jail)
 void setup() {
     Car = new iCANflex();
     Serial.begin(9600);
@@ -266,8 +255,6 @@ void setup() {
     while(!Serial) Serial.println("Waiting for Serial Port to connect");
     Serial.println("Connected to Serial Port 9600");
 
-<<<<<<< HEAD
-=======
     pinMode(SOFTWARE_OK_CONTROL_PIN, OUTPUT);
     pinMode(AMS_OK_PIN, INPUT);
     pinMode(BSPD_OK_PIN, INPUT);
@@ -275,7 +262,6 @@ void setup() {
     pinMode(BRAKE_LIGHT_PIN, INPUT);    
 
     setupCAN();
->>>>>>> 49f6609 (fixed CAN from Controls Jail)
 
     Car->begin();
     active_faults = new unordered_set<bool (*)(const iCANflex&)>(); 

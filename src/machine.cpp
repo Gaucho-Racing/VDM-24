@@ -90,29 +90,19 @@ State ecu_flash(iCANflex& Car) {
 }
 
 /*
-
-GLV_ON STATE
-
-THIS STATE IS ACTIVE WHEN THE MICROCONTROLLER IS POWERED DUE TO THE 
-GLV MASTER SWITCH BEING TURNED. THIS STATE IS RESPONSIBLE FOR THE IDLE 
-STATE OF THE VEHICLE DYNAMICS MODULE. 
-
-THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
-    - SETTING THE DRIVE ENABLE TO 0
-    - SETTING THE MOTOR CURRENT TO 0
-    - WAITING FOR THE TS ACTIVE SWITCH TO BE PRESSED
-    - RECONFIGURING THE TUNE PARAMETERS THROUGH THE CAN DEVICE
+STARTUP STAGE 2:    
+GLV ON
+When the grounded low voltage system is turned on, the microcontroller has power, 
+but the motor controller is not enabled. This is the second state that the car will enter
+after the ECU Flash is complete. Here it waits for the TS ACTIVE button to be pressed.
 */
-
-
-
 State glv_on(iCANflex& Car) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);    
 
     // wait for the TS ACTIVE button to be pressed
-    if(true)  return TS_PRECHARGE;
-    return GLV_ON;
+    return TS_PRECHARGE;
+    // return GLV_ON;
 }  
 
 
@@ -153,37 +143,17 @@ State precharge_complete(iCANflex& Car){
 }
 
 /*
+STARTUP STAGE 4:  READY TO DRIVE
 
-RTD_0TQ STATE 
-
-PRECHARGING MUST BE COMPLETE BEFORE THIS STATE IS ENTERED. THIS STATE IS RESPONSIBLE FOR
-THE VEHICLE DYNAMICS IN IDLE SITUATIONS WHERE EITHER NO TORQUE IS REQUESTED BY THE DRIVER OR 
-THERE IS A VIOLATION THAT LIMITS TORQUE REQUESTS.
-
-THIS STATE IS RESPONSIBLE FOR THE FOLLOWING:
-    - SETTING THE DRIVE ENABLE TO 0
-    - SETTING THE MOTOR CURRENT TO 0
-    - ENSURING THE APPS AND BSE ARE NOT INTERFERING
-
+READY TO DRIVE SUB STATES
+- DRIVE_NULL
+- DRIVE_TORQUE
+- DRIVE_REGEN
 
 */
-
-
-
 State drive_null(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
-<<<<<<< HEAD
-    Car.DTI.setDriveEnable(0);
-    Car.DTI.setRCurrent(0);
-    //start cooling system and all that 
-
-    // switch 1 turned off 
-    if(!switches[0]) { return OFF;}
-    // switch 2 turned off while 1 is on
-    else if(!switches[1]) { return ON;}
-=======
     // Car.DTI.setDriveEnable(0); // TODO: Make this frequency lower to 100hz
     // Car.DTI.setRCurrent(0);
->>>>>>> 49f6609 (fixed CAN from Controls Jail)
 
     float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
@@ -228,17 +198,6 @@ THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED
 
 float requested_torque(iCANflex& Car, float throttle, int rpm) {
     // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
-<<<<<<< HEAD
-    float k = TORQUE_PROFILES[THROTTLE_MAPPING].K;
-    float p = TORQUE_PROFILES[THROTTLE_MAPPING].P;
-    float b = TORQUE_PROFILES[THROTTLE_MAPPING].B;
-    float current = TORQUE_PROFILES[THROTTLE_MAPPING].MAX_CURRENT;
-    float tq_percent = (throttle-(1-throttle)*(throttle+b)*pow(rpm/REV_LIMIT, p)*k);
-    if(tq_percent > 1) tq_percent = 1; // clipping
-    if(tq_percent < 0) tq_percent = 0;
-    return tq_percent*current;
->>>>>>> 49bd2fd (rebase)
-=======
     float k = TORQUE_PROFILES[throttle_map].K;
     float p = TORQUE_PROFILES[throttle_map].P;
     float b = TORQUE_PROFILES[throttle_map].B;
@@ -247,7 +206,6 @@ float requested_torque(iCANflex& Car, float throttle, int rpm) {
     if(tq_percent > 1) tq_percent = 1; // clipping
     if(tq_percent < 0) tq_percent = 0;
     return tq_percent*max_current;
->>>>>>> 49f6609 (fixed CAN from Controls Jail)
 }
 
 
@@ -271,7 +229,7 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0));
     float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
-    
+
     return DRIVE_TORQUE;
 }
 
@@ -280,43 +238,6 @@ float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
     // else return 0;
     return 0;
 }
-<<<<<<< HEAD
-=======
->>>>>>> 30f8389 (cdr)
-
-State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
-<<<<<<< HEAD
-    float throttle = Car.PEDALS.getAPPS1();
-    if(throttle > 0.05) return DRIVE_TORQUE;
-    if(brake < 0.05) return DRIVE_NULL;
-=======
-    
-    // APPS GRADIENT VIOLATION
-    if(abs(a1 - (2*a2)) > 0.1){
-        // send an error message on the dash
-        return DRIVE_NULL;
-    } 
-    // APPS BSE VIOLATION
-    if((brake > 0.05 && a1 > 0.25)) {
-        BSE_APPS_violation = true;
-        return DRIVE_NULL;
-    }
-
-
-    Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0));
-    
-    return DRIVE;
-}
-
-// float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
-//     // if(rpm > 500 && brake > 0.05) return Car.ACU1.getMaxChargeCurrent();
-//     // else return 0;
-//     return 0;
-// }
-=======
->>>>>>> 49f6609 (fixed CAN from Controls Jail)
 
 State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
@@ -342,10 +263,9 @@ THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED
 */
 
 
-State error(iCANflex& Car, volatile bool (*errorCheck)(const iCANflex& c)) {
+State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c)) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
-    Serial.println("HANDLING ERROR");
     if(errorCheck(Car))  return ERROR;
     else {
         active_faults->erase(errorCheck);
