@@ -19,6 +19,7 @@ iCANflex* Car;
 Debugger* dbg;
 CANComms* comms;
 SystemsCheck* sysCheck;
+Tune* tune;
 
 
 
@@ -27,19 +28,24 @@ uint8_t power_level; // 0 - 3
 uint8_t throttle_map; // 0-3
 uint8_t regen_level; // 0-3
 
-namespace std {
-    template <>
-    struct hash<bool (*)(const iCANflex&)> {
-        size_t operator()(bool (*f)(const iCANflex&)) const {
-            return reinterpret_cast<size_t>(f);
-        }
-    };
-}
+
+
+// namespace std {
+//     template <>
+//     struct hash<bool (*)(const iCANflex&)> {
+//         size_t operator()(bool (*f)(const iCANflex&)) const {
+//             return reinterpret_cast<size_t>(f);
+//         }
+//     };
+// };
 
 std::unordered_set<bool (*)(const iCANflex&)> *active_faults;
 std::unordered_set<bool (*)(const iCANflex&)> *active_warnings;
 std::unordered_set<bool (*)(const iCANflex&)> *active_limits;
  
+
+
+
 
 
 bool (*errorCheck)(const iCANflex& Car); 
@@ -86,6 +92,7 @@ void loop(){
 
     // TODO: read in settings from Steering Wheel CAN
 
+    // steering wheel inputs
     switch(power_level) {
         case LIMIT:
             // do something
@@ -137,14 +144,11 @@ void loop(){
             // ERROR
             break;
     }
-   
-
-    // STATE MACHINE OPERATION
-
+   // state machine operation
     switch (state) {
         // ERROR
         case ERROR:
-            state = error(*Car, errorCheck);
+            state = error(*Car, errorCheck, *active_faults);
             break;
 
         // STARTUP 
@@ -171,10 +175,10 @@ void loop(){
             state = drive_null(*Car, BSE_APPS_violation, mode); 
             break;
         case DRIVE_TORQUE:
-            state = drive_torque(*Car, BSE_APPS_violation, mode);
+            state = drive_torque(*Car, BSE_APPS_violation, mode, *tune);
             break;
         case DRIVE_REGEN:
-            state = drive_regen(*Car, BSE_APPS_violation, mode);
+            state = drive_regen(*Car, BSE_APPS_violation, mode, *tune, regen_level);
             break;
     }
 }
@@ -190,7 +194,7 @@ void setup() {
     dbg = new Debugger(500);
     comms = new CANComms();
     sysCheck = new SystemsCheck();  
-    
+    tune = new Tune();
 
 
     Serial.begin(9600);

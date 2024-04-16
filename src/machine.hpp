@@ -7,6 +7,7 @@
 #include <iostream>
 #include <SD.h>
 #include "tune.hpp"
+#include "unordered_set"
 
 using namespace std;
 
@@ -26,73 +27,8 @@ State ecu_flash(iCANflex& Car) {
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
     // flash the ecu
-    Serial.println("Initializing SD Card...");
-    while(!SD.begin(BUILTIN_SDCARD)){
-        Serial.println("Waiting for SD Card to initialize...");
-    }
-    
-    Serial.println("SD INITIALIZATION SUCCESSFUL");
-    File ecu_tune;
-    ecu_tune = SD.open("gr24.txt");
-    Serial.print("Reading ECU FLASH....");
-    String tune;
-    while(ecu_tune.available()){
-        Serial.print("..");
-        tune += (char)ecu_tune.read(); 
-    }
-    Serial.println(tune.length());
-    ecu_tune.close();
-    Serial.println("");
+    return ECU_FLASH;
 
-    stringstream iss(tune.c_str()); // const so put into FLASH MEMORY
-    // read in torque profiles, regen profiles, and traction profiles
-    for(int i = 0; i < 4; i++){
-        float k, p, b;
-        iss >> k >> p >> b;
-        TORQUE_PROFILES[i] = TorqueProfile(k, p, b);
-    }   
-    delay(250);
-    Serial.println("TORQUE PROFILES INITIALIZED");
-    for(int i = 0; i < 4; i++){
-        float cmax;
-        iss >> cmax;
-        POWER_LEVELS[i] = cmax;
-    }   
-    delay(250);
-    Serial.println("CURRENT LIMITS INITIALIZED");
-    for(int i = 0; i < 4; i++){
-        float r;
-        iss >> r;
-        REGEN_LEVELS[i] = r;
-    }
-    delay(250);
-    Serial.println("REGEN LEVELS INITIALIZED");
-    delay(250);
-    Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
-    Serial.println("STARTING CAR WITH SETTINGS: ");
-    Serial.print("THROTTLE MAP: ");
-    for (int i = 0; i < 4; i++) {
-        Serial.print(TORQUE_PROFILES[i].K); 
-        Serial.print(" ");
-        Serial.print(TORQUE_PROFILES[i].P);
-        Serial.print(" ");
-        Serial.println(TORQUE_PROFILES[i].B);
-    }
-    Serial.print("POWER LEVELS: ");
-    for (int i = 0; i < 4; i++) {
-        Serial.print(POWER_LEVELS[i]); 
-        Serial.print(" ");
-    }
-    Serial.println("");
-    Serial.print("REGEN LEVELS: ");
-    for (int i = 0; i < 4; i++) {
-        Serial.print(REGEN_LEVELS[i]); 
-        Serial.print(" ");
-    }
-    Serial.println("");
-    Serial.println("--------------------------");
-     
-    return GLV_ON;
 }
 
 /*
@@ -161,21 +97,21 @@ State drive_null(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     // Car.DTI.setDriveEnable(0); // TODO: Make this frequency lower to 100hz
     // Car.DTI.setRCurrent(0);
 
-    float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
+    // float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
+    // float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
     
-    // only if no violation, and throttle is pressed, go to DRIVE
-    if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_TORQUE;
-    if(!BSE_APPS_violation && brake > 0.05) return DRIVE_REGEN;
+    // // only if no violation, and throttle is pressed, go to DRIVE
+    // if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_TORQUE;
+    // if(!BSE_APPS_violation && brake > 0.05) return DRIVE_REGEN;
 
-    if(BSE_APPS_violation) {
-        // SEND CAN WARNING TO DASH
-        if(throttle < 0.05) {
-            // violation exit condition, reset violation and return to DRIVE_READY
-            BSE_APPS_violation = false;
-            return DRIVE_NULL;
-        }  
-    }
+    // if(BSE_APPS_violation) {
+    //     // SEND CAN WARNING TO DASH
+    //     if(throttle < 0.05) {
+    //         // violation exit condition, reset violation and return to DRIVE_READY
+    //         BSE_APPS_violation = false;
+    //         return DRIVE_NULL;
+    //     }  
+    // }
     // else loop back into RTD state with Violation still true
     return DRIVE_NULL;
 }
@@ -202,39 +138,40 @@ THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED
 */
 
 
-float requested_torque(iCANflex& Car, float throttle, int rpm) {
+float requested_torque(iCANflex& Car, float throttle, int rpm, Tune& tune, uint8_t power_level, uint8_t throttle_map, uint8_t regen_level) {
     // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
-    float k = TORQUE_PROFILES[throttle_map].K;
-    float p = TORQUE_PROFILES[throttle_map].P;
-    float b = TORQUE_PROFILES[throttle_map].B;
-    float max_current = POWER_LEVELS[power_level];
-    float tq_percent = (throttle-(1-throttle)*(throttle+b)*pow(rpm/REV_LIMIT, p)*k);
+    TorqueProfile tp = tune.getTorqueProfile(throttle_map);
+    float k = tp.K;
+    float p = tp.P;
+    float b = tp.B;
+    float max_current = tune.getPowerSetting(power_level);
+    float tq_percent = (throttle-(1-throttle)*(throttle+b)*pow(rpm/tune.revLimit(), p)*k);
     if(tq_percent > 1) tq_percent = 1; // clipping
     if(tq_percent < 0) tq_percent = 0;
     return tq_percent*max_current;
 }
 
 
-State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
+State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune) {
 
-    float a1 = Car.PEDALS.getAPPS1();
-    float a2 = Car.PEDALS.getAPPS2();
-    float throttle = a1; // TODO: FIX
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
+    // float a1 = Car.PEDALS.getAPPS1();
+    // float a2 = Car.PEDALS.getAPPS2();
+    // float throttle = a1; // TODO: FIX
+    // float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     
-    // APPS GRADIENT VIOLATION
-    if(abs(a1 - (2*a2)) > 0.1){
-        // send an error message on the dash that APPS blew up
-        return DRIVE_NULL;
-    } 
-    // APPS BSE VIOLATION
-    if((brake > 0.05 && a1 > 0.25)) {
-        BSE_APPS_violation = true;
-        return DRIVE_NULL;
-    }
-    Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0));
-    // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
+    // // APPS GRADIENT VIOLATION
+    // if(abs(a1 - (2*a2)) > 0.1){
+    //     // send an error message on the dash that APPS blew up
+    //     return DRIVE_NULL;
+    // } 
+    // // APPS BSE VIOLATION
+    // if((brake > 0.05 && a1 > 0.25)) {
+    //     BSE_APPS_violation = true;
+    //     return DRIVE_NULL;
+    // }
+    // Car.DTI.setDriveEnable(1);
+    // Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0, tune, ));
+    // // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
 
     return DRIVE_TORQUE;
 }
@@ -245,15 +182,15 @@ float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
     return 0;
 }
 
-State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune){
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
-    float throttle = Car.PEDALS.getAPPS1();
-    if(throttle > 0.05) return DRIVE_TORQUE;
-    if(brake < 0.05) return DRIVE_NULL;
+State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune, uint8_t regen_level){
+    // float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
+    // float throttle = Car.PEDALS.getAPPS1();
+    // if(throttle > 0.05) return DRIVE_TORQUE;
+    // if(brake < 0.05) return DRIVE_NULL;
 
-    float rpm = Car.DTI.getERPM()/10.0;
-    Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * tune.REGEN_LEVELS[regen_level]);
+    // float rpm = Car.DTI.getERPM()/10.0;
+    // Car.DTI.setDriveEnable(1);
+    // Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * tune.getRegenSetting(regen_level));
     return DRIVE_REGEN;
 }
 
@@ -269,12 +206,12 @@ THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED
 */
 
 
-State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c)) {
+State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c), unordered_set<bool (*)(const iCANflex& c)>& active_faults){
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
     if(errorCheck(Car))  return ERROR;
     else {
-        active_faults->erase(errorCheck);
+        active_faults.erase(errorCheck);
         return GLV_ON; // gets sent back to error from main() if there are more in the hashset from main
     }
     
