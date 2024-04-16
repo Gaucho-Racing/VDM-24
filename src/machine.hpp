@@ -11,7 +11,7 @@
 
 using namespace std;
 
-enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_NULL, DRIVE_TORQUE, DRIVE_REGEN, ERROR};
+enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
 enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
 
 /*
@@ -58,12 +58,11 @@ PRECHARGING is broken into 3 stages for ACU responses and communication
 */
 
 // -- PRECHARGING STAGE 1 
-State ts_precharge(iCANflex& Car) { 
+State ts_precharge(iCANflex& Car, CANComms& comms) { 
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
     // begin precharging by sendign signal to ACU
-    // wait for signal back
-    // if dont get signal back 
+    //TODO: Precharge stuff
     return PRECHARGING;
 }
 // -- PRECHARGING STAGE 2
@@ -81,7 +80,7 @@ State precharge_complete(iCANflex& Car){
     Car.DTI.setRCurrent(0);
 
     // wait for RTD signal
-    return DRIVE_NULL;  
+    return PRECHARGE_COMPLETE;  
 }
 
 /*
@@ -93,7 +92,7 @@ READY TO DRIVE SUB STATES
 - DRIVE_REGEN
 
 */
-State drive_null(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
+State drive_standby(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     // Car.DTI.setDriveEnable(0); // TODO: Make this frequency lower to 100hz
     // Car.DTI.setRCurrent(0);
 
@@ -152,7 +151,7 @@ float requested_torque(iCANflex& Car, float throttle, int rpm, Tune& tune, uint8
 }
 
 
-State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune) {
+State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune) {
 
     // float a1 = Car.PEDALS.getAPPS1();
     // float a2 = Car.PEDALS.getAPPS2();

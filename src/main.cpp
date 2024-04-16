@@ -23,11 +23,6 @@ Tune* tune;
 
 
 
-// STEERING WHEEL SETTINGS
-uint8_t power_level; // 0 - 3
-uint8_t throttle_map; // 0-3
-uint8_t regen_level; // 0-3
-
 
 
 // namespace std {
@@ -71,79 +66,30 @@ void loop(){
     #endif
 
 
-    if(comms->can1.read(comms->msg)) comms->HandleIncomingMessages(); //
+    if(comms->can1.read(comms->msg)) {
+        
+    }
     
+    // Get ping values for all systems
+    comms->tryPingReqests({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
+
     // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
     sysCheck->hardware_system_critical(*Car, *active_faults);
     sysCheck->system_faults(*Car, *active_faults);
     sysCheck->system_limits(*Car, *active_limits);
     sysCheck->system_warnings(*Car, *active_warnings);
 
-    // Get ping values for all systems
-    comms->tryPingReqests({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
+    
 
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
 
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
    
-    power_level = active_limits->size() ? LIMIT : power_level; // limit power in overheat conditions
+    tune->settings.power_level = active_limits->size() ? LIMIT : tune->settings.power_level; // limit power in overheat conditions
 
     // error severity: warning -> limit -> critical
 
     // TODO: read in settings from Steering Wheel CAN
-
-    // steering wheel inputs
-    switch(power_level) {
-        case LIMIT:
-            // do something
-            break;
-        case LOW_PWR:
-            // do something
-            break;
-        case MEDIUM_PWR:
-            // do something
-            break;
-        case HIGH_PWR:
-            // do something
-            break;
-        default:
-            // ERROR
-            break;
-    }
-    switch(throttle_map) {
-        case LINEAR:
-            // do something
-            break;
-        case TQ_MAP_1:
-            // do something
-            break;
-        case TQ_MAP_2:
-            // do something
-            break;
-        case TQ_MAP_3:
-            // do something
-            break;
-        default:
-            // ERROR
-            break;
-    }
-    switch(regen_level){
-        case REGEN_0:
-            // do something
-            break;
-        case REGEN_1:
-            // do something
-            break;
-        case REGEN_2:
-            // do something
-            break;
-        case REGEN_3:
-            // do something
-            break;
-        default:
-            // ERROR
-            break;
-    }
    // state machine operation
     switch (state) {
         // ERROR
@@ -171,11 +117,11 @@ void loop(){
             break;
         
         // DRIVE
-        case DRIVE_NULL:
-            state = drive_null(*Car, BSE_APPS_violation, mode); 
+        case DRIVE_STANDBY:
+            state = drive_standby(*Car, BSE_APPS_violation, mode); 
             break;
-        case DRIVE_TORQUE:
-            state = drive_torque(*Car, BSE_APPS_violation, mode, *tune);
+        case DRIVE_ACTIVE:
+            state = drive_active(*Car, BSE_APPS_violation, mode, *tune);
             break;
         case DRIVE_REGEN:
             state = drive_regen(*Car, BSE_APPS_violation, mode, *tune, regen_level);
@@ -192,7 +138,7 @@ void setup() {
     Car->begin();
 
     dbg = new Debugger(500);
-    comms = new CANComms();
+    comms = new CANComms(1000000);
     sysCheck = new SystemsCheck();  
     tune = new Tune();
 

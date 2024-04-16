@@ -18,8 +18,8 @@ class Debugger {
                 {TS_PRECHARGE, "TS_PRECHARGE"},
                 {PRECHARGING, "PRECHARGING"},
                 {PRECHARGE_COMPLETE, "PRECHARGE_COMPLETE"},
-                {DRIVE_NULL, "DRIVE_NULL"},
-                {DRIVE_TORQUE, "DRIVE_TORQUE"},
+                {DRIVE_STANDBY, "DRIVE_STANDBY"},
+                {DRIVE_ACTIVE, "DRIVE_ACTIVE"},
                 {DRIVE_REGEN, "DRIVE_REGEN"},
                 {ERROR, "ERROR"}
             };

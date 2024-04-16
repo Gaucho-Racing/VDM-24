@@ -30,6 +30,15 @@ struct TorqueProfile{
     TorqueProfile(){}
 };
 
+// STEERING WHEEL SETTINGS
+struct SWSettings {
+    uint8_t power_level; // 0 - 3
+    uint8_t throttle_map; // 0-3
+    uint8_t regen_level; // 0-3
+    SWSettings(){}  
+};  
+
+
 
 class Tune {
     private:
@@ -38,11 +47,16 @@ class Tune {
         std::vector<float> RegenLevels; // percentile value 0 to 100
         int rev_limit = 5500;
     public:
+
+        SWSettings settings;
+
         Tune(){
             // init from sd card
             TorqueProfiles = std::vector<TorqueProfile>(4);
             PowerLevels = std::vector<float>(4);
             RegenLevels = std::vector<float>(4);
+
+
 
             //             Serial.println("Initializing SD Card...");
             // while(!SD.begin(BUILTIN_SDCARD)){

@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <vector>
 #include <FlexCAN_T4.h>
+#include "tune.hpp"
 
 
 
@@ -16,6 +17,7 @@ class CANComms {
         unsigned long SteeringWheel_Ping;
 
         unsigned long sendTime;
+        unsigned long lastPrechargeTime;
 
         unsigned long ping() {
             unsigned long newTime = (long)msg.buf[3] + ((long)msg.buf[2] << 8) + ((long)msg.buf[1] << 16) + ((long)msg.buf[0] << 24);
@@ -29,14 +31,16 @@ class CANComms {
         FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
         CAN_message_t msg;
         
-        CANComms(){
+        CANComms(uint32_t baud){
             ACU_Ping = 0;
             Pedals_Ping = 0;
             DashPanel_Ping = 0;
             SteeringWheel_Ping = 0;
             sendTime = 0;
+            lastPrechargeTime = 0;
             can1.begin();
-            can1.setBaudRate(1000000);
+            can1.setBaudRate(baud);
+            msg.flags.extended = true;
         }
         unsigned long getACU_Ping(){ return ACU_Ping; }
         unsigned long getPedals_Ping(){ return Pedals_Ping; }
@@ -68,27 +72,60 @@ class CANComms {
             }   
         }
 
-    void HandleIncomingMessages() {
-        // Handle incoming CAN messages
-        if(msg.id == 0x13000){
-            // print the message
-            Serial.print("Received on 0x13000: ");
-            for(int i=0; i<msg.len; i++){
-                Serial.print(msg.buf[i], HEX);
-                Serial.print(" ");
-            }
-            Serial.println();
-        }
-        if(msg.id == 0x13001){
-            // print the message
-            Serial.print("Received on 0x13001: ");
-            for(int i=0; i<msg.len; i++){
-                Serial.print(msg.buf[i], HEX);
-                Serial.print(" ");
-            }
-            Serial.println();
-        }
 
+    
+
+    void handleDriverInputs(Tune& tune){
+        if(msg.id == 0x11002){
+            tune.settings.power_level = msg.buf[0];
+            tune.settings.throttle_map = msg.buf[1];
+            tune.settings.regen_level = msg.buf[2];
+        }
+    }
+
+
+    void handleDashPanelInputs(State& state){
+        if(msg.id == 0x13000 ){
+            if(msg.buf[0]){ // TS_ACTIVE
+                if(state == GLV_ON){
+                    if(millis() - lastPrechargeTime > 5000){
+                        state = TS_PRECHARGE;
+                        CAN_message_t message;
+                        message.flags.extended = true;
+                        message.id = 0x66;
+                        message.len = 8;
+                        message.buf[0] = 1;
+                        can1.write(message);
+                        lastPrechargeTime = millis();
+                    }
+                }
+            }
+            else if(msg.buf[1]){ // TS_OFF
+                // shut off car entireley
+                CAN_message_t message;
+                message.flags.extended = true;
+                message.id = 0x66;
+                message.len = 8;
+                message.buf[0] = 0;
+                can1.write(message);
+                state = GLV_ON;
+            }
+            else if(msg.buf[2]) {// RTD_ON
+                if(state == TS_PRECHARGE){
+                    state = DRIVE_STANDBY;
+                    // play rtd sound
+                }
+            }
+            else if(msg.buf[3]){ // RTD_OFF
+                if(state == DRIVE_STANDBY) {
+                    state = TS_PRECHARGE;
+                }
+            }
+        }
+        
+    }
+
+    void handlePings(){
         //PING RESPONSES
 
         if (msg.id == ACU_Ping_Response) {
@@ -132,8 +169,6 @@ class CANComms {
             msg.id = VDM_Ping_Values;
             can1.write(msg);
         }
-    
-    
     }
 
 
