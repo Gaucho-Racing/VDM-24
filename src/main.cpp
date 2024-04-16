@@ -8,7 +8,7 @@
 #include "tune.hpp"
 #include "debug.hpp"
 #include <unordered_set>
-
+#include <cstddef>
 
 
 
@@ -23,27 +23,25 @@ Tune* tune;
 
 
 
-
-
 // namespace std {
 //     template <>
 //     struct hash<bool (*)(const iCANflex&)> {
-//         size_t operator()(bool (*f)(const iCANflex&)) const {
+//         size_t operator()(bool (*f)(const iCANflex&)) const noexcept{
 //             return reinterpret_cast<size_t>(f);
 //         }
 //     };
 // };
 
-std::unordered_set<bool (*)(const iCANflex&)> *active_faults;
-std::unordered_set<bool (*)(const iCANflex&)> *active_warnings;
-std::unordered_set<bool (*)(const iCANflex&)> *active_limits;
+std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_faults;
+std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_warnings;
+std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_limits;
  
 
 
 
 
 
-bool (*errorCheck)(const iCANflex& Car); 
+bool (*errorCheck)(const iCANflex& Car, Tune&); 
 bool BSE_APPS_violation = false;
 
 
@@ -52,7 +50,7 @@ State state;
 Mode mode;
 
 
-State sendToError(bool (*erFunc)(const iCANflex& Car)) {
+State sendToError(bool (*erFunc)(const iCANflex& Car, Tune& tune)) {
    errorCheck = erFunc; 
    return ERROR;
 }
@@ -67,17 +65,19 @@ void loop(){
 
 
     if(comms->can1.read(comms->msg)) {
-        
+        comms->handleDashPanelInputs(state);    
+        comms->handleDriverInputs(*tune);
+        comms->handlePings();
     }
     
     // Get ping values for all systems
     comms->tryPingReqests({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
 
     // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
-    sysCheck->hardware_system_critical(*Car, *active_faults);
-    sysCheck->system_faults(*Car, *active_faults);
-    sysCheck->system_limits(*Car, *active_limits);
-    sysCheck->system_warnings(*Car, *active_warnings);
+    sysCheck->hardware_system_critical(*Car, *active_faults, tune);
+    sysCheck->system_faults(*Car, *active_faults, tune);
+    sysCheck->system_limits(*Car, *active_limits, tune);
+    sysCheck->system_warnings(*Car, *active_warnings, tune);
 
     
 
@@ -94,7 +94,7 @@ void loop(){
     switch (state) {
         // ERROR
         case ERROR:
-            state = error(*Car, errorCheck, *active_faults);
+            state = error(*Car, *tune, errorCheck, *active_faults);
             break;
 
         // STARTUP 
@@ -155,15 +155,14 @@ void setup() {
     pinMode(BRAKE_LIGHT_PIN, INPUT);    
 
 
-    active_faults = new unordered_set<bool (*)(const iCANflex&)>(); 
-    active_warnings = new unordered_set<bool (*)(const iCANflex&)>();
-    active_limits = new unordered_set<bool (*)(const iCANflex&)>();
+    active_faults = new unordered_set<bool (*)(const iCANflex&, Tune&)>(); 
+    active_warnings = new unordered_set<bool (*)(const iCANflex&, Tune&)>();
+    active_limits = new unordered_set<bool (*)(const iCANflex&, Tune&)>();
 
     active_faults->clear();
     active_warnings->clear();
     active_limits->clear();
 
-    for(int i = 0; i < 5; i++) SYS_CHECK_CAN_FRAME[i] = 0x0;
 
     // set state  
     // state = ECU_FLASH; TODO: Remember to uncomment 

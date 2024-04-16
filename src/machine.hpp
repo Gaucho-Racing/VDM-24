@@ -210,10 +210,10 @@ THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED
 */
 
 
-State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c), unordered_set<bool (*)(const iCANflex& c)>& active_faults){
+State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& t), unordered_set<bool (*)(const iCANflex& c, Tune& t)>& active_faults){
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
-    if(errorCheck(Car))  return ERROR;
+    if(errorCheck(Car, t))  return ERROR;
     else {
         active_faults.erase(errorCheck);
         return GLV_ON; // gets sent back to error from main() if there are more in the hashset from main
