@@ -4,17 +4,17 @@
 #include "debug.hpp"
 
 
+// #define PRINT_LOGS 0x00;
+
+
 bool (*errorCheck)(const iCANflex& Car); 
 bool BSE_APPS_violation = false;
-
-// #define PRINT_LOGS 0x00;
 
 
 State sendToError(bool (*erFunc)(const iCANflex& Car)) {
    errorCheck = erFunc; 
    return ERROR;
 }
-
 
 void loop(){
 

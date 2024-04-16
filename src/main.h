@@ -17,6 +17,9 @@
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_NULL, DRIVE_TORQUE, DRIVE_REGEN, ERROR};
 enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
 
+
+
+
 // status
 static State state;
 static Mode mode;
@@ -103,6 +106,7 @@ static std::unordered_set<bool (*)(const iCANflex&)> *active_faults;
 static std::unordered_set<bool (*)(const iCANflex&)> *active_warnings;
 static std::unordered_set<bool (*)(const iCANflex&)> *active_limits;
  
+
 
 
 
