@@ -111,7 +111,7 @@ class CANComms {
                 state = GLV_ON;
             }
             else if(msg.buf[2]) {// RTD_ON
-                if(state == TS_PRECHARGE){
+                if(state == PRECHARGE_COMPLETE){
                     state = DRIVE_STANDBY;
                     // play rtd sound
                 }

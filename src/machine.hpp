@@ -58,12 +58,15 @@ PRECHARGING is broken into 3 stages for ACU responses and communication
 */
 
 // -- PRECHARGING STAGE 1 
-State ts_precharge(iCANflex& Car, CANComms& comms) { 
+State ts_precharge(iCANflex& Car) { 
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
     // begin precharging by sendign signal to ACU
     //TODO: Precharge stuff
-    return PRECHARGING;
+    if(Car.ACU1.getPrecharging()){
+        return PRECHARGING;
+    }
+    return TS_PRECHARGE;
 }
 // -- PRECHARGING STAGE 2
 State precharging(iCANflex& Car){
@@ -71,6 +74,8 @@ State precharging(iCANflex& Car){
     // wait for precharge complete signal
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
+
+    if(Car.ACU1.getPrechargeDone()) return PRECHARGE_COMPLETE;
     return PRECHARGE_COMPLETE;
 }
 
@@ -112,7 +117,7 @@ State drive_standby(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     //     }  
     // }
     // else loop back into RTD state with Violation still true
-    return DRIVE_NULL;
+    return DRIVE_STANDBY;
 }
 
 
@@ -172,7 +177,7 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tun
     // Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0, tune, ));
     // // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
 
-    return DRIVE_TORQUE;
+    return DRIVE_ACTIVE;
 }
 
 float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
@@ -181,7 +186,7 @@ float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
     return 0;
 }
 
-State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune, uint8_t regen_level){
+State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune){
     // float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     // float throttle = Car.PEDALS.getAPPS1();
     // if(throttle > 0.05) return DRIVE_TORQUE;
