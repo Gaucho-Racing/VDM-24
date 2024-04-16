@@ -73,7 +73,15 @@ class CANComms {
         }
 
 
-    
+    void sendDashboardPopup(int warning_id){
+        //TODO:
+
+    }
+
+
+    void sendVDMInfo(State state, Mode mode, Tune& tune){
+       //TODO:
+    }
 
     void handleDriverInputs(Tune& tune){
         if(msg.id == 0x11002){

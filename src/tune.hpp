@@ -42,9 +42,10 @@ struct SWSettings {
 
 class Tune {
     private:
-        std::vector<TorqueProfile> TorqueProfiles; // see above
-        std::vector<float> PowerLevels; // max current value in Amperes
-        std::vector<float> RegenLevels; // percentile value 0 to 100
+        std::vector<TorqueProfile> TorqueProfilesData; // see above
+        std::vector<float> PowerLevelsData; // max current value in Amperes
+        std::vector<float> RegenLevelsData; // percentile value 0 to 100
+
         uint32_t MaxCANPing = 100000; // microsec
         uint8_t temp_motor_warn = 60; // celsius
         uint8_t temp_motor_limit = 65; // celsius
@@ -59,13 +60,14 @@ class Tune {
         uint8_t temp_inverter_limit = 65; // celsius
         uint8_t temp_inverter_critical = 70; // celsius
         uint16_t rev_limit = 5500;// RPM      public:
+
     public:
         SWSettings settings;
         Tune(){
             // init from sd card
-            TorqueProfiles = std::vector<TorqueProfile>(4);
-            PowerLevels = std::vector<float>(4);
-            RegenLevels = std::vector<float>(4);
+            TorqueProfilesData = std::vector<TorqueProfile>(4);
+            PowerLevelsData = std::vector<float>(4);
+            RegenLevelsData = std::vector<float>(4);
 
 
 
@@ -171,10 +173,18 @@ class Tune {
         void setInverterCriticalTemp(uint8_t temp){ temp_inverter_critical = temp; }
 
 
-        TorqueProfile getTorqueProfile(uint8_t setting){ return TorqueProfiles[setting]; }        
-        float getPowerSetting(uint8_t setting){ return PowerLevels[setting];}
-        float getRegenSetting(uint8_t setting){ return RegenLevels[setting];}
+        TorqueProfile getActiveTorqueProfile(){ return TorqueProfilesData[settings.throttle_map]; }        
+        float getActiveCurrentLimit(){ return PowerLevelsData[settings.power_level];}
+        float getActiveRegenPower(){ return RegenLevelsData[settings.regen_level];}
         int revLimit(){ return rev_limit; } 
+
+
+        void setTorqueProfileData(uint8_t index, TorqueProfile tp){ TorqueProfilesData[index] = tp; }
+        void setPowerLevelData(uint8_t index, float power){ PowerLevelsData[index] = power; }
+        void setRegenLevelData(uint8_t index, float regen){ RegenLevelsData[index] = regen; }
+
+
+
 
 };
 

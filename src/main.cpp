@@ -121,7 +121,7 @@ void loop(){
             state = drive_standby(*Car, BSE_APPS_violation, mode); 
             break;
         case DRIVE_ACTIVE:
-            state = drive_active(*Car, BSE_APPS_violation, mode, *tune);
+            state = drive_active(*Car, BSE_APPS_violation, mode, *tune, *comms);
             break;
         case DRIVE_REGEN:
             state = drive_regen(*Car, BSE_APPS_violation, mode, *tune);

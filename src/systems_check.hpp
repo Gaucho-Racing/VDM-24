@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <unordered_set>
+#include <unordered_map>
 
 // PIN DEFINITIONS
 const uint8_t SOFTWARE_OK_CONTROL_PIN = 41;
@@ -10,8 +11,6 @@ const uint8_t BRAKE_LIGHT_PIN = 4;
 const uint8_t BSPD_OK_PIN = 19;
 const uint8_t IMD_OK_PIN = 20;
 const uint8_t AMS_OK_PIN = 21;
-
-
 
         /*
         8 bytes of 8 bits:

@@ -70,8 +70,6 @@ State ts_precharge(iCANflex& Car) {
 }
 // -- PRECHARGING STAGE 2
 State precharging(iCANflex& Car){
-   
-    // wait for precharge complete signal
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
 
@@ -142,40 +140,41 @@ THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED
 */
 
 
-float requested_torque(iCANflex& Car, float throttle, int rpm, Tune& tune, uint8_t power_level, uint8_t throttle_map, uint8_t regen_level) {
+float requested_torque(iCANflex& Car, float throttle, int rpm, Tune& tune) {
     // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
-    TorqueProfile tp = tune.getTorqueProfile(throttle_map);
+    TorqueProfile tp = tune.getActiveTorqueProfile();
     float k = tp.K;
     float p = tp.P;
     float b = tp.B;
-    float max_current = tune.getPowerSetting(power_level);
-    float tq_percent = (throttle-(1-throttle)*(throttle+b)*pow(rpm/tune.revLimit(), p)*k);
-    if(tq_percent > 1) tq_percent = 1; // clipping
-    if(tq_percent < 0) tq_percent = 0;
-    return tq_percent*max_current;
+    float max_current = tune.getActiveCurrentLimit();
+    float torque_multiplier = (throttle-(1-throttle)*(throttle+b)*pow(rpm/tune.revLimit(), p)*k);
+    if(torque_multiplier > 1) torque_multiplier = 1; // clipping
+    if(torque_multiplier < 0) torque_multiplier = 0;
+    return torque_multiplier*max_current;
 }
 
 
-State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune) {
+State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune, CANComms& comms) {
 
-    // float a1 = Car.PEDALS.getAPPS1();
-    // float a2 = Car.PEDALS.getAPPS2();
-    // float throttle = a1; // TODO: FIX
-    // float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
+    float a1 = Car.PEDALS.getAPPS1();
+    float a2 = Car.PEDALS.getAPPS2();
+    float throttle = a1; // TODO: FIX
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     
-    // // APPS GRADIENT VIOLATION
-    // if(abs(a1 - (2*a2)) > 0.1){
-    //     // send an error message on the dash that APPS blew up
-    //     return DRIVE_NULL;
-    // } 
-    // // APPS BSE VIOLATION
-    // if((brake > 0.05 && a1 > 0.25)) {
-    //     BSE_APPS_violation = true;
-    //     return DRIVE_NULL;
-    // }
-    // Car.DTI.setDriveEnable(1);
-    // Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0, tune, ));
-    // // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
+    // APPS GRADIENT VIOLATION
+    if(abs(a1 - (2*a2)) > 0.1){
+        // TODO: send an error message on the dash that APPS blew up
+        comms.sendDashboardPopup(0x01);
+        return DRIVE_STANDBY;
+    } 
+    // APPS BSE VIOLATION
+    if((brake > 0.05 && a1 > 0.25)) {
+        BSE_APPS_violation = true;
+        return DRIVE_STANDBY;
+    }
+    Car.DTI.setDriveEnable(1);
+    Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0, tune));
+    // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
 
     return DRIVE_ACTIVE;
 }
@@ -187,14 +186,14 @@ float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
 }
 
 State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune){
-    // float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
-    // float throttle = Car.PEDALS.getAPPS1();
-    // if(throttle > 0.05) return DRIVE_TORQUE;
-    // if(brake < 0.05) return DRIVE_NULL;
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
+    float throttle = Car.PEDALS.getAPPS1();
+    if(throttle > 0.05) return DRIVE_ACTIVE;
+    if(brake < 0.05) return DRIVE_STANDBY;
 
-    // float rpm = Car.DTI.getERPM()/10.0;
-    // Car.DTI.setDriveEnable(1);
-    // Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * tune.getRegenSetting(regen_level));
+    float rpm = Car.DTI.getERPM()/10.0;
+    Car.DTI.setDriveEnable(1);
+    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * tune.getActiveRegenPower());
     return DRIVE_REGEN;
 }
 
