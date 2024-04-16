@@ -13,10 +13,20 @@
 #include "SD.h"
 #include "systems_check.h" 
 
-using namespace std;
+
+enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_NULL, DRIVE_TORQUE, DRIVE_REGEN, ERROR};
+enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
+
+// status
+static State state;
+static Mode mode;
 
 // le car
 static iCANflex* Car;
+
+// CAN BUS
+static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
+static CAN_message_t msg;
 
 // PIN DEFINITIONS
 const uint8_t SOFTWARE_OK_CONTROL_PIN = 41;
@@ -38,6 +48,12 @@ const uint8_t LOW_PWR = 1;
 const uint8_t MEDIUM_PWR = 2;
 const uint8_t HIGH_PWR = 3;
 
+// REGEN LEVELS
+const uint8_t REGEN_0 = 0;
+const uint8_t REGEN_1 = 1;
+const uint8_t REGEN_2 = 2;
+const uint8_t REGEN_3 = 3;
+
 struct TorqueProfile{
     float K;
     float P;
@@ -48,16 +64,16 @@ struct TorqueProfile{
 
 
 // ECU TUNE READS TODO: Initialize in SD card read
-static vector<TorqueProfile> TORQUE_PROFILES(4); // see above
-static vector<float> POWER_LEVELS(4); // max current value in Amperes
-static vector<float> REGEN_LEVELS(4); // percentile value 0 to 100
+static std::vector<TorqueProfile> TORQUE_PROFILES(4); // see above
+static std::vector<float> POWER_LEVELS(4); // max current value in Amperes
+static std::vector<float> REGEN_LEVELS(4); // percentile value 0 to 100
 
 static const float REV_LIMIT = 5500.0;
 
 // STEERING WHEEL SETTINGS
+static uint8_t power_level; // 0 - 3
 static uint8_t throttle_map; // 0-3
 static uint8_t regen_level; // 0-3
-static uint8_t power_level; // 0 - 3
 
 /*
 5 bytes of 8 bits:
@@ -83,31 +99,12 @@ namespace std {
     };
 }
 
-static unordered_set<bool (*)(const iCANflex&)> *active_faults;
-static unordered_set<bool (*)(const iCANflex&)> *active_warnings;
-static unordered_set<bool (*)(const iCANflex&)> *active_limits;
+static std::unordered_set<bool (*)(const iCANflex&)> *active_faults;
+static std::unordered_set<bool (*)(const iCANflex&)> *active_warnings;
+static std::unordered_set<bool (*)(const iCANflex&)> *active_limits;
  
- // ping requests:
-    // DTI (use age)
-    // ACU 
-    // BCM (data)
-    // Pedals
-    // Energy Meter (use age)
-    // Dash Panel 
-    // Steering Wheel
-
-static unsigned long BCM_Age;
-static unsigned long DTI_Age;
-static unsigned long ACU_Ping;
-static unsigned long Pedals_Ping;
-static unsigned long DashPanel_Ping;
-static unsigned long SteeringWheel_Ping;
-
-static unsigned long sendTime;
 
 
 
-enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_NULL, DRIVE_TORQUE, DRIVE_REGEN, ERROR};
-enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
 
 #endif

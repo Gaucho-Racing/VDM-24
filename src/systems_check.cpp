@@ -1,4 +1,5 @@
 #include "systems_check.h"
+#include "comms.hpp"
 
 void SystemsCheck::hardware_system_critical(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&)> &af){
 
@@ -60,10 +61,11 @@ void SystemsCheck::system_warnings(const iCANflex& Car, unordered_set<bool (*)(c
 // bit 0
 
 bool SystemsCheck::warn_can_failure(const iCANflex& Car){ // TODO: Fix
-    return Pedals_Ping > 1000000 || ACU_Ping > 1000000 || BCM_Age > 1000000 || DashPanel_Ping > 1000000 || SteeringWheel_Ping > 1000000 || DTI_Age > 1000000;
+    // return Pedals_Ping > 1000000 || ACU_Ping > 1000000 || /*BCM_Age > 1000000 || */ DashPanel_Ping > 1000000 || SteeringWheel_Ping > 1000000 /*|| DTI_Age > 1000000*/;
+    return false;
 }   
 // bit 1
-bool SystemsCheck::critical_can_failure(const iCANflex& Car){
+bool SystemsCheck::critical_can_failure(const iCANflex& Car){ // TODO: Fix
     return false;
 }
 
