@@ -1,18 +1,51 @@
-#include "machine.h"
-#include "main.h"
+#include "icanflex.h"
+#include "imxrt.h"
+#include "Arduino.h"
+#include "Nodes.h"
+#include "machine.hpp"
 #include "comms.hpp"
+#include "systems_check.hpp"    
+#include "tune.hpp"
 #include "debug.hpp"
+#include <unordered_set>
 
 
-#define PRINT_DBG 0x00;
+
+
+
+// #define PRINT_DBG 0x00;
+
+iCANflex* Car;
+Debugger* dbg;
+CANComms* comms;
+SystemsCheck* sysCheck;
+
+
+
+// STEERING WHEEL SETTINGS
+uint8_t power_level; // 0 - 3
+uint8_t throttle_map; // 0-3
+uint8_t regen_level; // 0-3
+
+namespace std {
+    template <>
+    struct hash<bool (*)(const iCANflex&)> {
+        size_t operator()(bool (*f)(const iCANflex&)) const {
+            return reinterpret_cast<size_t>(f);
+        }
+    };
+}
+
+std::unordered_set<bool (*)(const iCANflex&)> *active_faults;
+std::unordered_set<bool (*)(const iCANflex&)> *active_warnings;
+std::unordered_set<bool (*)(const iCANflex&)> *active_limits;
+ 
 
 
 bool (*errorCheck)(const iCANflex& Car); 
 bool BSE_APPS_violation = false;
 
-iCANflex* Car;
-Debugger* dbg;
-CANComms* comms;
+
 
 State state;
 Mode mode;
@@ -35,10 +68,10 @@ void loop(){
     if(comms->can1.read(comms->msg)) comms->HandleIncomingMessages(); //
     
     // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
-    SystemsCheck::hardware_system_critical(*Car, *active_faults);
-    SystemsCheck::system_faults(*Car, *active_faults);
-    SystemsCheck::system_limits(*Car, *active_limits);
-    SystemsCheck::system_warnings(*Car, *active_warnings);
+    sysCheck->hardware_system_critical(*Car, *active_faults);
+    sysCheck->system_faults(*Car, *active_faults);
+    sysCheck->system_limits(*Car, *active_limits);
+    sysCheck->system_warnings(*Car, *active_warnings);
 
     // Get ping values for all systems
     comms->tryPingReqests({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
@@ -156,6 +189,8 @@ void setup() {
 
     dbg = new Debugger(500);
     comms = new CANComms();
+    sysCheck = new SystemsCheck();  
+    
 
 
     Serial.begin(9600);

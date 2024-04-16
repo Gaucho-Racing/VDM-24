@@ -2,7 +2,6 @@
 #define DEBUG_HPP
 
 #include <unordered_map>
-#include "main.h"
 #include "comms.hpp"
 
 class Debugger {
@@ -51,14 +50,14 @@ class Debugger {
             }
         }
 
-        void print_system_health(){
+        void print_system_health(std::unordered_set<bool (*)(const iCANflex&)> *active_faults, std::unordered_set<bool (*)(const iCANflex&)> *active_warnings, std::unordered_set<bool (*)(const iCANflex&)> *active_limits) {
             if(millis() % interval == 0){
                 Serial.println("SYSTEM HEALTH: ");
                 Serial.println("==================================");
                 Serial.print("Critical Faults: ");
                 Serial.println(active_faults->size());
                 Serial.print("Limits: ");
-                Serial.println(active_warnings->size());
+                Serial.println(active_limits->size());
                 Serial.print("Warnings: ");
                 Serial.println(active_warnings->size());
                 Serial.print("==================================");

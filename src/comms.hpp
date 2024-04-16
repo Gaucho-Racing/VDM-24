@@ -1,9 +1,9 @@
 #ifndef COMMS_HPP
 #define COMMS_HPP
 
+#include <Arduino.h>
 #include <vector>
 #include <FlexCAN_T4.h>
-#include "main.h"
 
 
 

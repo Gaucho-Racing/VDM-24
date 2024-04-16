@@ -1,11 +1,17 @@
+#ifndef MACHINE
+#define MACHINE
+
 #include <Arduino.h>
 #include <imxrt.h>
-#include "machine.h"
 #include <sstream>
 #include <iostream>
+#include <SD.h>
+#include "tune.hpp"
+
 using namespace std;
 
-
+enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_NULL, DRIVE_TORQUE, DRIVE_REGEN, ERROR};
+enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
 
 /*
 
@@ -239,7 +245,7 @@ float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
     return 0;
 }
 
-State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
+State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune){
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
     float throttle = Car.PEDALS.getAPPS1();
     if(throttle > 0.05) return DRIVE_TORQUE;
@@ -247,7 +253,7 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode){
 
     float rpm = Car.DTI.getERPM()/10.0;
     Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * REGEN_LEVELS[regen_level]);
+    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * tune.REGEN_LEVELS[regen_level]);
     return DRIVE_REGEN;
 }
 
@@ -273,3 +279,5 @@ State error(iCANflex& Car, bool (*errorCheck)(const iCANflex& c)) {
     }
     
 }
+
+#endif
