@@ -4,11 +4,18 @@
 #include "debug.hpp"
 
 
-// #define PRINT_LOGS 0x00;
+#define PRINT_DBG 0x00;
 
 
 bool (*errorCheck)(const iCANflex& Car); 
 bool BSE_APPS_violation = false;
+
+iCANflex* Car;
+Debugger* dbg;
+CANComms* comms;
+
+State state;
+Mode mode;
 
 
 State sendToError(bool (*erFunc)(const iCANflex& Car)) {
@@ -18,14 +25,14 @@ State sendToError(bool (*erFunc)(const iCANflex& Car)) {
 
 void loop(){
 
-    #if defined(PRINT_LOGS) 
-        print_status(500);
-        print_system_health(500);
-        print_pings(500);
+    #if defined(PRINT_DBG) 
+        dbg->print_status(state, mode);
+        dbg->print_system_health();
+        dbg->print_pings(comms);
     #endif
 
 
-    if(can1.read(msg)) HandleIncomingMessages(); //
+    if(comms->can1.read(comms->msg)) comms->HandleIncomingMessages(); //
     
     // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
     SystemsCheck::hardware_system_critical(*Car, *active_faults);
@@ -34,12 +41,13 @@ void loop(){
     SystemsCheck::system_warnings(*Car, *active_warnings);
 
     // Get ping values for all systems
-    tryPingReqests({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
+    comms->tryPingReqests({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
 
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
 
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
    
+    power_level = active_limits->size() ? LIMIT : power_level; // limit power in overheat conditions
 
     // error severity: warning -> limit -> critical
 
@@ -96,15 +104,6 @@ void loop(){
             // ERROR
             break;
     }
-
-    
-
-
-    power_level = active_limits->size() ? LIMIT : power_level; // limit power in overheat conditions
-
-    
-    mode = ENDURANCE; // TODO: Energy management algorithm for endurance
-
    
 
     // STATE MACHINE OPERATION
@@ -153,6 +152,12 @@ void loop(){
 //GLV STARTUP
 void setup() {
     Car = new iCANflex();
+    Car->begin();
+
+    dbg = new Debugger(500);
+    comms = new CANComms();
+
+
     Serial.begin(9600);
     Serial.println("Waiting for Serial Port to connect");
     while(!Serial) Serial.println("Waiting for Serial Port to connect");
@@ -164,9 +169,7 @@ void setup() {
     pinMode(IMD_OK_PIN, INPUT);
     pinMode(BRAKE_LIGHT_PIN, INPUT);    
 
-    setupCAN();
 
-    Car->begin();
     active_faults = new unordered_set<bool (*)(const iCANflex&)>(); 
     active_warnings = new unordered_set<bool (*)(const iCANflex&)>();
     active_limits = new unordered_set<bool (*)(const iCANflex&)>();
@@ -174,9 +177,12 @@ void setup() {
     active_faults->clear();
     active_warnings->clear();
     active_limits->clear();
+
     for(int i = 0; i < 5; i++) SYS_CHECK_CAN_FRAME[i] = 0x0;
 
     // set state  
     // state = ECU_FLASH; TODO: Remember to uncomment 
     state = GLV_ON;
+    mode = ENDURANCE; // TODO: Energy management algorithm for endurance
+
 }

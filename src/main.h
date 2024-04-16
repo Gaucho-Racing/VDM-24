@@ -19,18 +19,6 @@ enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
 
 
 
-
-// status
-static State state;
-static Mode mode;
-
-// le car
-static iCANflex* Car;
-
-// CAN BUS
-static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
-static CAN_message_t msg;
-
 // PIN DEFINITIONS
 const uint8_t SOFTWARE_OK_CONTROL_PIN = 41;
 const uint8_t BRAKE_LIGHT_PIN = 4;

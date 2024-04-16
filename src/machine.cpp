@@ -228,7 +228,7 @@ State drive_torque(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
     }
     Car.DTI.setDriveEnable(1);
     Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0));
-    float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
+    // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
 
     return DRIVE_TORQUE;
 }
