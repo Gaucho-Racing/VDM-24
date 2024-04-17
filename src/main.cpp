@@ -2,26 +2,27 @@
 #include "imxrt.h"
 #include "Arduino.h"
 #include "Nodes.h"
-#include "machine.hpp"
-#include "comms.hpp"
-#include "systems_check.hpp"    
-#include "tune.hpp"
-#include "debug.hpp"
 #include <unordered_set>
 #include <cstddef>
 
+#include "comms.hpp"
+#include "machine.hpp"
+#include "tune.hpp"
+#include "debug.hpp"
+#include "systems_check.hpp"
 
 
 
-// #define PRINT_DBG 0x00;
+
+
+
+#define PRINT_DBG 0x00;
 
 iCANflex* Car;
 Debugger* dbg;
 CANComms* comms;
 SystemsCheck* sysCheck;
 Tune* tune;
-
-
 
 // namespace std {
 //     template <>
@@ -55,18 +56,20 @@ State sendToError(bool (*erFunc)(const iCANflex& Car, Tune& tune)) {
    return ERROR;
 }
 
-void loop(){
+unsigned long sendTime; 
 
+void loop(){
+/*
     #if defined(PRINT_DBG) 
         dbg->print_status(state, mode);
-        dbg->print_system_health();
+        // dbg->print_system_health(active_faults, active_warnings, active_limits);
         dbg->print_pings(comms);
     #endif
 
 
     if(comms->can1.read(comms->msg)) {
         comms->handleDashPanelInputs(state);    
-        comms->handleDriverInputs(*tune);
+        // comms->handleDriverInputs(*tune);
         comms->handlePings();
     }
     
@@ -74,18 +77,18 @@ void loop(){
     comms->tryPingReqests({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
 
     // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
-    sysCheck->hardware_system_critical(*Car, *active_faults, tune);
-    sysCheck->system_faults(*Car, *active_faults, tune);
-    sysCheck->system_limits(*Car, *active_limits, tune);
-    sysCheck->system_warnings(*Car, *active_warnings, tune);
+    // sysCheck->hardware_system_critical(*Car, *active_faults, tune);
+    // sysCheck->system_faults(*Car, *active_faults, tune);
+    // sysCheck->system_limits(*Car, *active_limits, tune);
+    // sysCheck->system_warnings(*Car, *active_warnings, tune);
 
     
 
-    state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
+    // state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
 
-    digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
+    // digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
    
-    tune->settings.power_level = active_limits->size() ? LIMIT : tune->settings.power_level; // limit power in overheat conditions
+    // tune->settings.power_level = active_limits->size() ? LIMIT : tune->settings.power_level; // limit power in overheat conditions
 
     // error severity: warning -> limit -> critical
 
@@ -127,6 +130,7 @@ void loop(){
             state = drive_regen(*Car, BSE_APPS_violation, mode, *tune);
             break;
     }
+    */
 }
 
 
@@ -137,7 +141,7 @@ void setup() {
     Car = new iCANflex();
     Car->begin();
 
-    dbg = new Debugger(500);
+    dbg = new Debugger(10);
     comms = new CANComms(1000000);
     sysCheck = new SystemsCheck();  
     tune = new Tune();
@@ -155,9 +159,9 @@ void setup() {
     pinMode(BRAKE_LIGHT_PIN, INPUT);    
 
 
-    active_faults = new unordered_set<bool (*)(const iCANflex&, Tune&)>(); 
-    active_warnings = new unordered_set<bool (*)(const iCANflex&, Tune&)>();
-    active_limits = new unordered_set<bool (*)(const iCANflex&, Tune&)>();
+    active_faults = new std::unordered_set<bool (*)(const iCANflex&, Tune&)>(); 
+    active_warnings = new std::unordered_set<bool (*)(const iCANflex&, Tune&)>();
+    active_limits = new std::unordered_set<bool (*)(const iCANflex&, Tune&)>();
 
     active_faults->clear();
     active_warnings->clear();

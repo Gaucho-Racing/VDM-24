@@ -6,14 +6,11 @@
 #include <sstream>
 #include <iostream>
 #include <SD.h>
-#include "tune.hpp"
 #include "unordered_set"
 
-using namespace std;
-
-enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
-enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
-
+#include "tune.hpp"
+#include "comms.hpp"
+ #include "enums.h"
 /*
 
 STARTUP STAGE 1:
@@ -24,8 +21,8 @@ This is essential for the car to operate as the ECU flash contains the
 torque profiles, regen profiles, and traction control profiles.
 */
 State ecu_flash(iCANflex& Car) {
-    Car.DTI.setDriveEnable(0);
-    Car.DTI.setRCurrent(0);
+    // Car.DTI.setDriveEnable(0);
+    // Car.DTI.setRCurrent(0);
     // flash the ecu
     return ECU_FLASH;
 
@@ -39,12 +36,12 @@ but the motor controller is not enabled. This is the second state that the car w
 after the ECU Flash is complete. Here it waits for the TS ACTIVE button to be pressed.
 */
 State glv_on(iCANflex& Car) {
-    Car.DTI.setDriveEnable(0);
-    Car.DTI.setRCurrent(0);    
+    // Car.DTI.setDriveEnable(0);
+    // Car.DTI.setRCurrent(0);    
 
     // wait for the TS ACTIVE button to be pressed
-    return TS_PRECHARGE;
-    // return GLV_ON;
+    // return TS_PRECHARGE;
+    return GLV_ON;
 }  
 
 
@@ -209,7 +206,7 @@ THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED
 */
 
 
-State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& t), unordered_set<bool (*)(const iCANflex& c, Tune& t)>& active_faults){
+State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& t), std::unordered_set<bool (*)(const iCANflex& c, Tune& t)>& active_faults){
     Car.DTI.setDriveEnable(0);
     Car.DTI.setRCurrent(0);
     if(errorCheck(Car, t))  return ERROR;

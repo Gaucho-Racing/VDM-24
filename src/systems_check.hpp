@@ -36,7 +36,7 @@ class SystemsCheck {
             return SYS_CHECK_CAN_FRAME;
         }
         
-        void hardware_system_critical(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&, Tune& t)> &af, Tune* t){
+        void hardware_system_critical(const iCANflex& Car, std::unordered_set<bool (*)(const iCANflex&, Tune& t)> &af, Tune* t){
             if(SDC_opened(Car, *t)) af.insert(SDC_opened);  
             SYS_CHECK_CAN_FRAME[0] = SDC_opened(Car, *t) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000100) : (SYS_CHECK_CAN_FRAME[0] & 0b11111011);
             if(AMS_fault(Car, *t)) af.insert(AMS_fault);
@@ -50,7 +50,7 @@ class SystemsCheck {
         }
 
         // NOTE: OPEN THE SOFTWARE LATCH IF the Inverter is not responding or there are critical system faults. 
-        void system_faults(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&, Tune& t)> &af, Tune* t){
+        void system_faults(const iCANflex& Car, std::unordered_set<bool (*)(const iCANflex&, Tune& t)> &af, Tune* t){
             if(critical_motor_temp(Car, *t)) af.insert(critical_motor_temp);
             SYS_CHECK_CAN_FRAME[1] = critical_motor_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[1] | 0b00100000) : (SYS_CHECK_CAN_FRAME[1] & 0b11011111);
             if(critical_battery_temp(Car, *t)) af.insert(critical_battery_temp);
@@ -64,7 +64,7 @@ class SystemsCheck {
             
         }
 
-        void system_limits(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&, Tune& t)> &al, Tune* t){
+        void system_limits(const iCANflex& Car, std::unordered_set<bool (*)(const iCANflex&, Tune& t)> &al, Tune* t){
             if(limit_motor_temp(Car, *t)) al.insert(limit_motor_temp);
             SYS_CHECK_CAN_FRAME[1] = limit_motor_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[1] | 0b01000000) : (SYS_CHECK_CAN_FRAME[1] & 0b10111111);
             if(limit_battery_temp(Car, *t)) al.insert(limit_battery_temp);
@@ -75,7 +75,7 @@ class SystemsCheck {
             SYS_CHECK_CAN_FRAME[2] = limit_mcu_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[2] | 0b00001000) : (SYS_CHECK_CAN_FRAME[2] & 0b11110111);
         }
 
-        void system_warnings(const iCANflex& Car, unordered_set<bool (*)(const iCANflex&, Tune& t)> &aw, Tune* t){
+        void system_warnings(const iCANflex& Car, std::unordered_set<bool (*)(const iCANflex&, Tune& t)> &aw, Tune* t){
             if(warn_motor_temp(Car, *t)) aw.insert(warn_motor_temp);
             SYS_CHECK_CAN_FRAME[1] = warn_motor_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[1] | 0b10000000) : (SYS_CHECK_CAN_FRAME[1] & 0b01111111);
             if(warn_battery_temp(Car, *t)) aw.insert(warn_battery_temp);

@@ -3,12 +3,18 @@
 
 #include <unordered_map>
 #include "comms.hpp"
+#include "machine.hpp"
+#include "string"
 
 class Debugger {
     private:
         int interval;
-        std::unordered_map<State, string> state_to_string;
-        std::unordered_map<Mode, string> mode_to_string;
+        std::unordered_map<State, std::string> state_to_string;
+        std::unordered_map<Mode, std::string> mode_to_string;
+        unsigned long lastDebugTime0;
+        unsigned long lastDebugTime1;
+        unsigned long lastDebugTime2;
+        unsigned long lastDebugTime3;
     public:            
         Debugger(int interval){
             this->interval = interval;
@@ -32,12 +38,16 @@ class Debugger {
                 {ACC, "ACC"},
                 {PIT, "PIT"}
             };  
+            lastDebugTime0 = 0;
+            lastDebugTime1 = 0;
+            lastDebugTime2 = 0;
+            lastDebugTime3 = 0;
         }
 
         void print_status(State state, Mode mode){
-            if(millis() % interval == 0){
+            if(millis() - lastDebugTime0 > interval){
                 Serial.println("==================================");
-                Serial.print("TIME: ");
+                Serial.print("CLOCK TIME: ");
                 Serial.println(millis());
                 Serial.print("STATE: ");
                 State currentState = state;
@@ -47,27 +57,27 @@ class Debugger {
                 Serial.print("MODE: ");
                 Serial.println(mode_to_string.find(currentMode)->second.c_str());
                 Serial.println("==================================");
+                lastDebugTime0 = millis();
             }
         }
 
-        void print_system_health(std::unordered_set<bool (*)(const iCANflex&)> *active_faults, std::unordered_set<bool (*)(const iCANflex&)> *active_warnings, std::unordered_set<bool (*)(const iCANflex&)> *active_limits) {
-            if(millis() % interval == 0){
+        void print_system_health(std::unordered_set<bool (*)(const iCANflex&, Tune&)> *active_faults, std::unordered_set<bool (*)(const iCANflex&, Tune&)> *active_warnings, std::unordered_set<bool (*)(const iCANflex&, Tune&)> *active_limits) {
+            if(millis() - lastDebugTime1 > interval){
                 Serial.println("SYSTEM HEALTH: ");
-                Serial.println("==================================");
                 Serial.print("Critical Faults: ");
                 Serial.println(active_faults->size());
                 Serial.print("Limits: ");
                 Serial.println(active_limits->size());
                 Serial.print("Warnings: ");
                 Serial.println(active_warnings->size());
-                Serial.print("==================================");
+                Serial.println("==================================");
+                lastDebugTime1 = millis();
             }
         }
 
         void print_pings(CANComms* comms){
-            if(millis() % interval == 0){
+            if(millis() - lastDebugTime2 > interval){
                 Serial.println("PING TIME: ");
-                Serial.println("==================================");
                 Serial.print("ACU Ping: ");
                 Serial.println(comms->getACU_Ping());
                 Serial.print("Pedals Ping: ");
@@ -77,6 +87,7 @@ class Debugger {
                 Serial.print("SteeringWheel Ping: ");
                 Serial.println(comms->getSteeringWheel_Ping());
                 Serial.print("==================================");
+                lastDebugTime2 = millis();
             }
         }
 

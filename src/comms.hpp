@@ -5,9 +5,10 @@
 #include <vector>
 #include <FlexCAN_T4.h>
 #include "tune.hpp"
+#include "iCANflex.h"
+#include "Nodes.h"  
 
-
-
+#include "enums.h"
 
 class CANComms {
     private: 
