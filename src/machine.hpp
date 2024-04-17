@@ -9,7 +9,6 @@
 #include "unordered_set"
 
 #include "tune.hpp"
-#include "comms.hpp"
  #include "enums.h"
 /*
 
@@ -56,8 +55,8 @@ PRECHARGING is broken into 3 stages for ACU responses and communication
 
 // -- PRECHARGING STAGE 1 
 State ts_precharge(iCANflex& Car) { 
-    Car.DTI.setDriveEnable(0);
-    Car.DTI.setRCurrent(0);
+    // Car.DTI.setDriveEnable(0);
+    // Car.DTI.setRCurrent(0);
     // begin precharging by sendign signal to ACU
     //TODO: Precharge stuff
     if(Car.ACU1.getPrecharging()){
@@ -151,7 +150,7 @@ float requested_torque(iCANflex& Car, float throttle, int rpm, Tune& tune) {
 }
 
 
-State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune, CANComms& comms) {
+State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune) {
 
     float a1 = Car.PEDALS.getAPPS1();
     float a2 = Car.PEDALS.getAPPS2();
@@ -161,7 +160,7 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tun
     // APPS GRADIENT VIOLATION
     if(abs(a1 - (2*a2)) > 0.1){
         // TODO: send an error message on the dash that APPS blew up
-        comms.sendDashboardPopup(0x01);
+        // comms.sendDashboardPopup(0x01);
         return DRIVE_STANDBY;
     } 
     // APPS BSE VIOLATION
