@@ -55,8 +55,8 @@ class SystemsCheck {
             SYS_CHECK_CAN_FRAME[1] = critical_motor_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[1] | 0b00100000) : (SYS_CHECK_CAN_FRAME[1] & 0b11011111);
             if(critical_battery_temp(Car, *t)) af.insert(critical_battery_temp);
             SYS_CHECK_CAN_FRAME[1] = critical_battery_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[1] | 0b00000100) : (SYS_CHECK_CAN_FRAME[1] & 0b11111011);
-            if(critical_water_temp(Car, *t)) af.insert(critical_water_temp);
-            SYS_CHECK_CAN_FRAME[2] = critical_water_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[2] | 0b00100000) : (SYS_CHECK_CAN_FRAME[2] & 0b11011111);
+            // if(critical_water_temp(Car, *t)) af.insert(critical_water_temp);
+            // SYS_CHECK_CAN_FRAME[2] = critical_water_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[2] | 0b00100000) : (SYS_CHECK_CAN_FRAME[2] & 0b11011111);
             if(critical_mcu_temp(Car, *t)) af.insert(critical_mcu_temp);
             SYS_CHECK_CAN_FRAME[2] = critical_mcu_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[2] | 0b00000100) : (SYS_CHECK_CAN_FRAME[2] & 0b11111011);
             // if(critical_can_failure(Car)) af.insert(critical_can_failure);
@@ -69,8 +69,8 @@ class SystemsCheck {
             SYS_CHECK_CAN_FRAME[1] = limit_motor_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[1] | 0b01000000) : (SYS_CHECK_CAN_FRAME[1] & 0b10111111);
             if(limit_battery_temp(Car, *t)) al.insert(limit_battery_temp);
             SYS_CHECK_CAN_FRAME[1] = limit_battery_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[1] | 0b00001000) : (SYS_CHECK_CAN_FRAME[1] & 0b11110111);
-            if(limit_water_temp(Car, *t)) al.insert(limit_water_temp);
-            SYS_CHECK_CAN_FRAME[2] = limit_water_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[2] | 0b01000000) : (SYS_CHECK_CAN_FRAME[2] & 0b10111111);
+            // if(limit_water_temp(Car, *t)) al.insert(limit_water_temp);
+            // SYS_CHECK_CAN_FRAME[2] = limit_water_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[2] | 0b01000000) : (SYS_CHECK_CAN_FRAME[2] & 0b10111111);
             if(limit_mcu_temp(Car, *t)) al.insert(limit_mcu_temp);
             SYS_CHECK_CAN_FRAME[2] = limit_mcu_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[2] | 0b00001000) : (SYS_CHECK_CAN_FRAME[2] & 0b11110111);
         }
@@ -80,8 +80,8 @@ class SystemsCheck {
             SYS_CHECK_CAN_FRAME[1] = warn_motor_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[1] | 0b10000000) : (SYS_CHECK_CAN_FRAME[1] & 0b01111111);
             if(warn_battery_temp(Car, *t)) aw.insert(warn_battery_temp);
             SYS_CHECK_CAN_FRAME[1] = warn_battery_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[1] | 0b00010000) : (SYS_CHECK_CAN_FRAME[1] & 0b11101111);
-            if(warn_water_temp(Car, *t)) aw.insert(warn_water_temp);
-            SYS_CHECK_CAN_FRAME[2] = warn_water_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[2] | 0b10000000) : (SYS_CHECK_CAN_FRAME[2] & 0b01111111);
+            // if(warn_water_temp(Car, *t)) aw.insert(warn_water_temp);
+            // SYS_CHECK_CAN_FRAME[2] = warn_water_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[2] | 0b10000000) : (SYS_CHECK_CAN_FRAME[2] & 0b01111111);
             if(warn_mcu_temp(Car, *t)) aw.insert(warn_mcu_temp);
             SYS_CHECK_CAN_FRAME[2] = warn_mcu_temp(Car, *t) ? (SYS_CHECK_CAN_FRAME[2] | 0b00010000) : (SYS_CHECK_CAN_FRAME[2] & 0b11101111);
             if(rev_limit_exceeded(Car, *t)) aw.insert(rev_limit_exceeded);
@@ -134,9 +134,9 @@ class SystemsCheck {
 
         // BYTE 2 ---------------------------------------------------------------------------
         // bit 0, 1, 2
-        static bool warn_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getBatteryWarnTemp() && Car.ACU1.getWaterTemp() < t.getCoolantLimitTemp();}
-        static bool limit_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getCoolantLimitTemp() && Car.ACU1.getWaterTemp() < t.getCoolantCriticalTemp();}
-        static bool critical_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getCoolantCriticalTemp();}
+        // static bool warn_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.get() > t.getBatteryWarnTemp() && Car.ACU1.getWaterTemp() < t.getCoolantLimitTemp();}
+        // static bool limit_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getCoolantLimitTemp() && Car.ACU1.getWaterTemp() < t.getCoolantCriticalTemp();}
+        // static bool critical_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getCoolantCriticalTemp();}
         // bit 3, 4, 5
         static bool warn_mcu_temp(const iCANflex& Car, Tune& t) {return Car.DTI.getInvTemp() > t.getInverterWarnTemp() && Car.DTI.getInvTemp() < t.getInverterLimitTemp();}
         static bool limit_mcu_temp(const iCANflex& Car, Tune& t){return Car.DTI.getInvTemp() > t.getInverterLimitTemp() && Car.DTI.getInvTemp() < t.getInverterCriticalTemp();}

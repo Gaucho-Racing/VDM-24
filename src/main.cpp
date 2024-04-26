@@ -12,7 +12,7 @@
 #include "string"
 
 
-#define PRINT_DBG 0x00;
+// #define PRINT_DBG 0x00;
 
 iCANflex* Car;
 // Debugger* dbg;
@@ -53,7 +53,7 @@ unsigned long ping() {
 
 
 void tryPingReqests(std::vector<uint32_t> request_ids, iCANflex& Car){
-    if(millis()-sendTime > 250){
+    if(millis()-sendTime > 20){
         for(uint32_t request_id : request_ids){
             
             unsigned long mills=millis();
@@ -76,7 +76,7 @@ void tryPingReqests(std::vector<uint32_t> request_ids, iCANflex& Car){
         }
     }   
 }
-void sendDashboardPopup(int warning_id){
+    void sendDashboardPopup(int warning_id){
         //TODO:
 
     }
@@ -219,14 +219,8 @@ std::unordered_map<Mode, std::string>mode_to_string = {
             };  
 
 void loop(){
-
-    // #if defined(PRINT_DBG) 
-    //     dbg->print_status(state, mode);
-    //     // dbg->print_system_health(active_faults, active_warnings, active_limits);
-    //     dbg->print_pings(comms);
-    // #endif
-
-
+    
+    // Serial.println(Car->ACU1.getPrecharging());
     if(can1.read(msg)) {
         handleDashPanelInputs(state);    
         handleDriverInputs(*tune);
@@ -235,14 +229,14 @@ void loop(){
     
     // Get ping values for all systems
     tryPingReqests({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
-
+   
     // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
     // sysCheck->hardware_system_critical(*Car, *active_faults, tune);
     // sysCheck->system_faults(*Car, *active_faults, tune);
     // sysCheck->system_limits(*Car, *active_limits, tune);
     // sysCheck->system_warnings(*Car, *active_warnings, tune);
     #if defined(PRINT_DBG)
-        if(millis() % 100 == 0){
+    if(millis() % 100 == 0){
         Serial.println("==================================");
         Serial.print("CLOCK TIME: ");
         Serial.println(millis());
@@ -275,16 +269,6 @@ void loop(){
     }
     #endif
     
-    
-    CAN_message_t message;
-    message.flags.extended = true;
-    message.id = 0x13001;
-    message.len = 8;
-    message.buf[0] = 200;
-    message.buf[1] = 200;
-    message.buf[2] = 200;
-    if(millis() % 100 == 0) can1.write(message);
-
 
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
 
@@ -342,6 +326,7 @@ void loop(){
 void setup() {
     Car = new iCANflex();
     Car->begin();
+    
 
     // dbg = new Debugger(10);
     sysCheck = new SystemsCheck();  
@@ -350,7 +335,7 @@ void setup() {
     can1.setBaudRate(1000000);
     msg.flags.extended = true;
 
-    Serial.begin(9600);
+    Serial.begin(115200);
     Serial.println("Waiting for Serial Port to connect");
     while(!Serial) Serial.println("Waiting for Serial Port to connect");
     Serial.println("Connected to Serial Port 9600");
