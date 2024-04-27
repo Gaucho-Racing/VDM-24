@@ -12,7 +12,7 @@
 #include "string"
 
 
-// #define PRINT_DBG 0x00;
+#define PRINT_DBG 0x00;
 
 iCANflex* Car;
 // Debugger* dbg;
@@ -43,6 +43,8 @@ unsigned long SteeringWheel_Ping = 0;
 
 unsigned long sendTime = 0;
 unsigned long lastPrechargeTime = 0;
+
+unsigned long lastDTIMessage = 0;
 
 unsigned long ping() {
     unsigned long newTime = (long)msg.buf[3] + ((long)msg.buf[2] << 8) + ((long)msg.buf[1] << 16) + ((long)msg.buf[0] << 24);
@@ -231,10 +233,10 @@ void loop(){
     tryPingReqests({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
    
     // reads bspd, ams, and imd pins as analog   TODO: Uncomment for actual test bench
-    // sysCheck->hardware_system_critical(*Car, *active_faults, tune);
-    // sysCheck->system_faults(*Car, *active_faults, tune);
-    // sysCheck->system_limits(*Car, *active_limits, tune);
-    // sysCheck->system_warnings(*Car, *active_warnings, tune);
+    sysCheck->hardware_system_critical(*Car, *active_faults, tune);
+    sysCheck->system_faults(*Car, *active_faults, tune);
+    sysCheck->system_limits(*Car, *active_limits, tune);
+    sysCheck->system_warnings(*Car, *active_warnings, tune);
     #if defined(PRINT_DBG)
     if(millis() % 100 == 0){
         Serial.println("==================================");
@@ -291,7 +293,7 @@ void loop(){
             state = ecu_flash(*Car);
             break;
         case GLV_ON:
-            state = glv_on(*Car);
+            state = glv_on(*Car, lastDTIMessage);
             break;
      
         // PRECHARGE

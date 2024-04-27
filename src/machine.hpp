@@ -34,10 +34,11 @@ When the grounded low voltage system is turned on, the microcontroller has power
 but the motor controller is not enabled. This is the second state that the car will enter
 after the ECU Flash is complete. Here it waits for the TS ACTIVE button to be pressed.
 */
-State glv_on(iCANflex& Car) {
-    // Car.DTI.setDriveEnable(0);
-    // Car.DTI.setRCurrent(0);    
-
+State glv_on(iCANflex& Car, unsigned long &lastDTIMessage) {
+    if(millis() - lastDTIMessage > 10){
+        Car.DTI.setDriveEnable(0);
+        lastDTIMessage = millis();
+    }
     // wait for the TS ACTIVE button to be pressed
     // return TS_PRECHARGE;
     return GLV_ON;
@@ -54,9 +55,13 @@ PRECHARGING is broken into 3 stages for ACU responses and communication
 */
 
 // -- PRECHARGING STAGE 1 
-State ts_precharge(iCANflex& Car) { 
-    // Car.DTI.setDriveEnable(0);
-    // Car.DTI.setRCurrent(0);
+State ts_precharge(iCANflex& Car, unsigned long &lastDTIMessage) { 
+    if(millis() - lastDTIMessage > 10){
+        Car.DTI.setRCurrent(0);
+        Car.DTI.setDriveEnable(0);
+        lastDTIMessage = millis();
+    }
+
     // begin precharging by sendign signal to ACU
     //TODO: Precharge stuff
     if(Car.ACU1.getPrecharging()){
@@ -65,19 +70,24 @@ State ts_precharge(iCANflex& Car) {
     return TS_PRECHARGE;
 }
 // -- PRECHARGING STAGE 2
-State precharging(iCANflex& Car){
-    Car.DTI.setDriveEnable(0);
-    Car.DTI.setRCurrent(0);
+State precharging(iCANflex& Car, unsigned long &lastDTIMessage){
+    if(millis() - lastDTIMessage > 10){
+        Car.DTI.setRCurrent(0);
+        Car.DTI.setDriveEnable(0);
+        lastDTIMessage = millis();
+    }
 
     if(Car.ACU1.getPrechargeDone()) return PRECHARGE_COMPLETE;
     return PRECHARGE_COMPLETE;
 }
 
 // -- PRECHARGING STAGE 3
-State precharge_complete(iCANflex& Car){
-    Car.DTI.setDriveEnable(0);
-    Car.DTI.setRCurrent(0);
-
+State precharge_complete(iCANflex& Car, unsigned long &lastDTIMessage){
+    if(millis() - lastDTIMessage > 10){
+        Car.DTI.setRCurrent(0);
+        Car.DTI.setDriveEnable(0);
+        lastDTIMessage = millis();
+    }
     // wait for RTD signal
     return PRECHARGE_COMPLETE;  
 }
@@ -91,25 +101,29 @@ READY TO DRIVE SUB STATES
 - DRIVE_REGEN
 
 */
-State drive_standby(iCANflex& Car, bool& BSE_APPS_violation, Mode mode) {
-    // Car.DTI.setDriveEnable(0); // TODO: Make this frequency lower to 100hz
-    // Car.DTI.setRCurrent(0);
-
-    // float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
-    // float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
+State drive_standby(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, unsigned long &lastDTIMessage) {
     
-    // // only if no violation, and throttle is pressed, go to DRIVE
-    // if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_TORQUE;
-    // if(!BSE_APPS_violation && brake > 0.05) return DRIVE_REGEN;
+    if(millis() - lastDTIMessage > 10){
+        Car.DTI.setRCurrent(0);
+        Car.DTI.setDriveEnable(0);
+        lastDTIMessage = millis();
+    }
 
-    // if(BSE_APPS_violation) {
-    //     // SEND CAN WARNING TO DASH
-    //     if(throttle < 0.05) {
-    //         // violation exit condition, reset violation and return to DRIVE_READY
-    //         BSE_APPS_violation = false;
-    //         return DRIVE_NULL;
-    //     }  
-    // }
+    float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
+    
+    // only if no violation, and throttle is pressed, go to DRIVE
+    if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_ACTIVE;
+    if(!BSE_APPS_violation && brake > 0.05) return DRIVE_REGEN;
+
+    if(BSE_APPS_violation) {
+        // SEND CAN WARNING TO DASH
+        if(throttle < 0.05) {
+            // violation exit condition, reset violation and return to DRIVE_READY
+            BSE_APPS_violation = false;
+            return DRIVE_STANDBY;
+        }  
+    }
     // else loop back into RTD state with Violation still true
     return DRIVE_STANDBY;
 }
@@ -150,7 +164,7 @@ float requested_torque(iCANflex& Car, float throttle, int rpm, Tune& tune) {
 }
 
 
-State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune) {
+State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune, unsigned long &lastDTIMessage) {
 
     float a1 = Car.PEDALS.getAPPS1();
     float a2 = Car.PEDALS.getAPPS2();
@@ -168,10 +182,13 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tun
         BSE_APPS_violation = true;
         return DRIVE_STANDBY;
     }
-    Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0, tune));
-    // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
-
+    if(millis() - lastDTIMessage > 10){
+        Car.DTI.setDriveEnable(1);
+        Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0, tune));
+        // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
+        lastDTIMessage = millis();
+    }
+    
     return DRIVE_ACTIVE;
 }
 
@@ -181,15 +198,19 @@ float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
     return 0;
 }
 
-State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune){
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2;
+State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Mode mode, Tune& tune, unsigned long &lastDTIMessage){
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2; // TODO: Change to AnalogRead from pin
     float throttle = Car.PEDALS.getAPPS1();
     if(throttle > 0.05) return DRIVE_ACTIVE;
     if(brake < 0.05) return DRIVE_STANDBY;
 
     float rpm = Car.DTI.getERPM()/10.0;
-    Car.DTI.setDriveEnable(1);
-    Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * tune.getActiveRegenPower());
+    
+    if(millis() - lastDTIMessage > 10){
+        Car.DTI.setDriveEnable(1);
+        Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * tune.getActiveRegenPower());
+        lastDTIMessage = millis();
+    }
     return DRIVE_REGEN;
 }
 
@@ -205,9 +226,13 @@ THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED
 */
 
 
-State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& t), std::unordered_set<bool (*)(const iCANflex& c, Tune& t)>& active_faults){
-    Car.DTI.setDriveEnable(0);
-    Car.DTI.setRCurrent(0);
+State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& t), std::unordered_set<bool (*)(const iCANflex& c, Tune& t)>& active_faults, unsigned long &lastDTIMessage){
+    if(millis() - lastDTIMessage > 10){
+        Car.DTI.setRCurrent(0);
+        Car.DTI.setDriveEnable(0);
+        lastDTIMessage = millis();
+    }
+
     if(errorCheck(Car, t))  return ERROR;
     else {
         active_faults.erase(errorCheck);
