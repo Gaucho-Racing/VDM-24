@@ -14,25 +14,21 @@
 
 #define PRINT_DBG 0x00;
 
+enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
+enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
+
 iCANflex* Car;
-// Debugger* dbg;
 SystemsCheck* sysCheck;
 Tune* tune;
 
 std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_faults;
 std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_warnings;
 std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_limits;
- 
 bool (*errorCheck)(const iCANflex& Car, Tune&); 
+
 bool BSE_APPS_violation = false;
-
-enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
-enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
-
 State state;
 Mode mode;
-
-
 
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
 CAN_message_t msg;
@@ -41,10 +37,8 @@ unsigned long ACU_Ping = 0;
 unsigned long Pedals_Ping = 0;
 unsigned long DashPanel_Ping = 0;
 unsigned long SteeringWheel_Ping = 0;
-
 unsigned long sendTime = 0;
 unsigned long lastPrechargeTime = 0;
-
 unsigned long lastDTIMessage = 0;
 
 
@@ -62,9 +56,6 @@ void setup() {
     msg.flags.extended = true;
 
     Serial.begin(115200);
-    Serial.println("Waiting for Serial Port to connect");
-    while(!Serial) Serial.println("Waiting for Serial Port to connect");
-    Serial.println("Connected to Serial Port 9600");
 
     pinMode(SOFTWARE_OK_CONTROL_PIN, OUTPUT);
     pinMode(AMS_OK_PIN, INPUT);
@@ -91,7 +82,7 @@ void setup() {
 
 
 
-
+// ----------------------------- CONTROLLER AREA NETWORK -----------------------------
 unsigned long ping() {
     unsigned long newTime = (long)msg.buf[3] + ((long)msg.buf[2] << 8) + ((long)msg.buf[1] << 16) + ((long)msg.buf[0] << 24);
     unsigned long newTime2 = (long)msg.buf[7] + ((long)msg.buf[6] << 8) + ((long)msg.buf[5] << 16) + ((long)msg.buf[4] << 24);
@@ -576,7 +567,6 @@ void loop(){
 
     // error severity: warning -> limit -> critical
 
-    // TODO: read in settings from Steering Wheel CAN
    // state machine operation
     switch (state) {
         // ERROR

@@ -3,6 +3,9 @@
 
 #include <Arduino.h>
 #include <vector>
+#include <sstream>
+#include <iostream>
+#include <SD.h>
 
 // TORQUE MAP PROFILES 
 const uint8_t LINEAR = 0;
@@ -71,71 +74,71 @@ class Tune {
 
 
 
-            //             Serial.println("Initializing SD Card...");
-            // while(!SD.begin(BUILTIN_SDCARD)){
-            //     Serial.println("Waiting for SD Card to initialize...");
-            // }
+            Serial.println("Initializing SD Card...");
+            while(!SD.begin(BUILTIN_SDCARD)){
+                Serial.println("Waiting for SD Card to initialize...");
+            }
             
-            // Serial.println("SD INITIALIZATION SUCCESSFUL");
-            // File ecu_tune;
-            // ecu_tune = SD.open("gr24.txt");
-            // Serial.print("Reading ECU FLASH....");
-            // String tune;
-            // while(ecu_tune.available()){
-            //     Serial.print("..");
-            //     tune += (char)ecu_tune.read(); 
-            // }
-            // Serial.println(tune.length());
-            // ecu_tune.close();
-            // Serial.println("");
+            Serial.println("SD INITIALIZATION SUCCESSFUL");
+            File ecu_tune;
+            ecu_tune = SD.open("gr24.txt");
+            Serial.print("Reading ECU FLASH....");
+            String tune;
+            while(ecu_tune.available()){
+                Serial.print("..");
+                tune += (char)ecu_tune.read(); 
+            }
+            Serial.println(tune.length());
+            ecu_tune.close();
+            Serial.println("");
 
-            // stringstream iss(tune.c_str()); // const so put into FLASH MEMORY
-            // // read in torque profiles, regen profiles, and traction profiles
-            // for(int i = 0; i < 4; i++){
-            //     float k, p, b;
-            //     iss >> k >> p >> b;
-            //     TORQUE_PROFILES[i] = TorqueProfile(k, p, b);
-            // }   
-            // delay(250);
-            // Serial.println("TORQUE PROFILES INITIALIZED");
-            // for(int i = 0; i < 4; i++){
-            //     float cmax;
-            //     iss >> cmax;
-            //     POWER_LEVELS[i] = cmax;
-            // }   
-            // delay(250);
-            // Serial.println("CURRENT LIMITS INITIALIZED");
-            // for(int i = 0; i < 4; i++){
-            //     float r;
-            //     iss >> r;
-            //     REGEN_LEVELS[i] = r;
-            // }
-            // delay(250);
-            // Serial.println("REGEN LEVELS INITIALIZED");
-            // delay(250);
-            // Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
-            // Serial.println("STARTING CAR WITH SETTINGS: ");
-            // Serial.print("THROTTLE MAP: ");
-            // for (int i = 0; i < 4; i++) {
-            //     Serial.print(TORQUE_PROFILES[i].K); 
-            //     Serial.print(" ");
-            //     Serial.print(TORQUE_PROFILES[i].P);
-            //     Serial.print(" ");
-            //     Serial.println(TORQUE_PROFILES[i].B);
-            // }
-            // Serial.print("POWER LEVELS: ");
-            // for (int i = 0; i < 4; i++) {
-            //     Serial.print(POWER_LEVELS[i]); 
-            //     Serial.print(" ");
-            // }
-            // Serial.println("");
-            // Serial.print("REGEN LEVELS: ");
-            // for (int i = 0; i < 4; i++) {
-            //     Serial.print(REGEN_LEVELS[i]); 
-            //     Serial.print(" ");
-            // }
-            // Serial.println("");
-            // Serial.println("--------------------------");
+            stringstream iss(tune.c_str()); // const so put into FLASH MEMORY
+            // read in torque profiles, regen profiles, and traction profiles
+            for(int i = 0; i < 4; i++){
+                float k, p, b;
+                iss >> k >> p >> b;
+                TORQUE_PROFILES[i] = TorqueProfile(k, p, b);
+            }   
+            delay(250);
+            Serial.println("TORQUE PROFILES INITIALIZED");
+            for(int i = 0; i < 4; i++){
+                float cmax;
+                iss >> cmax;
+                POWER_LEVELS[i] = cmax;
+            }   
+            delay(250);
+            Serial.println("CURRENT LIMITS INITIALIZED");
+            for(int i = 0; i < 4; i++){
+                float r;
+                iss >> r;
+                REGEN_LEVELS[i] = r;
+            }
+            delay(250);
+            Serial.println("REGEN LEVELS INITIALIZED");
+            delay(250);
+            Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
+            Serial.println("STARTING CAR WITH SETTINGS: ");
+            Serial.print("THROTTLE MAP: ");
+            for (int i = 0; i < 4; i++) {
+                Serial.print(TORQUE_PROFILES[i].K); 
+                Serial.print(" ");
+                Serial.print(TORQUE_PROFILES[i].P);
+                Serial.print(" ");
+                Serial.println(TORQUE_PROFILES[i].B);
+            }
+            Serial.print("POWER LEVELS: ");
+            for (int i = 0; i < 4; i++) {
+                Serial.print(POWER_LEVELS[i]); 
+                Serial.print(" ");
+            }
+            Serial.println("");
+            Serial.print("REGEN LEVELS: ");
+            for (int i = 0; i < 4; i++) {
+                Serial.print(REGEN_LEVELS[i]); 
+                Serial.print(" ");
+            }
+            Serial.println("");
+            Serial.println("--------------------------");
             
 
         }
