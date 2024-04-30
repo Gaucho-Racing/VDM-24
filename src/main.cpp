@@ -188,7 +188,6 @@ class Tune {
         void setInverterLimitTemp(uint8_t temp){ temp_inverter_limit = temp; }
         void setInverterCriticalTemp(uint8_t temp){ temp_inverter_critical = temp; }
 
-
         TorqueProfile getActiveTorqueProfile(){ return TorqueProfilesData[settings.throttle_map]; }        
         float getActiveCurrentLimit(){ return PowerLevelsData[settings.power_level];}
         float getActiveRegenPower(){ return RegenLevelsData[settings.regen_level];}
@@ -328,7 +327,7 @@ class SystemsCheck {
         // check voltage < 7V (this one is 16V 8 bit ADC)
         static bool SDC_opened(const iCANflex& Car, Tune& t){ return Car.ACU1.getSDCVoltage() < 112; } 
         // bit 6
-        // bool SystemsCheck::max_current(const iCANflex& Car){return Car.DTI.getDCCurrent() > Car.DTI.getDCCurrentLim();}
+        // bool SystemsCheck::max_current(const iCANflex& Car){return Car.DTI.getDCCurrent() > Car.DTI.getDCCurrentLim();} //TODO: Relay data from ACU Polling
 
         // BYTE 1 ---------------------------------------------------------------------------
         // bit 0, 1, 2
@@ -345,7 +344,7 @@ class SystemsCheck {
 
         // BYTE 2 ---------------------------------------------------------------------------
         // bit 0, 1, 2
-        // static bool warn_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.get() > t.getBatteryWarnTemp() && Car.ACU1.getWaterTemp() < t.getCoolantLimitTemp();}
+        // static bool warn_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.get() > t.getBatteryWarnTemp() && Car.ACU1.getWaterTemp() < t.getCoolantLimitTemp();} //TODO: Implement in NODES
         // static bool limit_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getCoolantLimitTemp() && Car.ACU1.getWaterTemp() < t.getCoolantCriticalTemp();}
         // static bool critical_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getCoolantCriticalTemp();}
         // bit 3, 4, 5
@@ -355,7 +354,6 @@ class SystemsCheck {
         // bit 6
         static bool TCM_fault(const iCANflex& Car, Tune& t) {return false;} // TODO: do
         // bit 7 empty for now
-
 
         // TODO: add more system checks
 
@@ -377,10 +375,21 @@ iCANflex* Car;
 SystemsCheck* sysCheck;
 Tune* tune;
 
+// namespace std {
+//     template <>
+//     struct hash<bool (*)(const iCANflex&, Tune& t)> {
+//         size_t operator()(bool (*f)(const iCANflex&, Tune& t)) const noexcept{
+//             return reinterpret_cast<size_t>(f);
+//         }
+//     };
+// };
+
 std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_faults;
 std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_warnings;
 std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_limits;
 bool (*errorCheck)(const iCANflex& Car, Tune&); 
+
+std::unordered_set<int> timeout_nodes;
 
 bool BSE_APPS_violation = false;
 State state;
@@ -389,10 +398,10 @@ Mode mode;
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
 CAN_message_t msg;
 
-const int16_t DTI_COMM_FREQUENCY = 100; // Hz
-const int16_t NETWORK_PING_FREQUENCY = 10; // Hz
-
-
+const uint16_t DTI_COMM_FREQUENCY = 100; // Hz
+const uint16_t PING_REQ_FREQENCY = 10; // Hz
+const uint16_t PING_VALUE_SEND_FREQENCY = 10; // Hz
+const unsigned long PING_TIMEOUT = 1000000; // microseconds 
 
 
 
@@ -412,26 +421,91 @@ const int16_t NETWORK_PING_FREQUENCY = 10; // Hz
 */
 
 
-unsigned long ACU_Ping = 0;
-unsigned long Pedals_Ping = 0;
-unsigned long DashPanel_Ping = 0;
-unsigned long SteeringWheel_Ping = 0;
-unsigned long sendTime = 0;
 unsigned long lastPrechargeTime = 0;
 unsigned long lastDTIMessage = 0;
+unsigned long lastPingSend = 0; // last send on 0xF2
 
-unsigned long ping() {
-    unsigned long newTime = (long)msg.buf[3] + ((long)msg.buf[2] << 8) + ((long)msg.buf[1] << 16) + ((long)msg.buf[0] << 24);
-    unsigned long newTime2 = (long)msg.buf[7] + ((long)msg.buf[6] << 8) + ((long)msg.buf[5] << 16) + ((long)msg.buf[4] << 24);
-    unsigned long roundTripDelay = ((millis() - newTime) * 1000) + ((micros() - newTime2) % 1000);
-    return roundTripDelay;
+void handleDriverInputs(Tune& tune){
+    if(msg.id == 0x11002){
+        tune.settings.power_level = msg.buf[0];
+        tune.settings.throttle_map = msg.buf[1];
+        tune.settings.regen_level = msg.buf[2];
+    }
 }
 
 
-void tryPingReqests(std::vector<uint32_t> request_ids, iCANflex& Car){
-    if(millis()-sendTime > 100/NETWORK_PING_FREQUENCY){
+void handleDashPanelInputs(){
+    if(msg.id == Button_Event ){
+        if(msg.buf[0]){ // TS_ACTIVE
+            if(state == GLV_ON){
+                if(millis() - lastPrechargeTime > 5000){
+                    state = TS_PRECHARGE;
+                    CAN_message_t message;
+                    message.flags.extended = true;
+                    message.id = 0x66;
+                    message.len = 8;
+                    message.buf[0] = 1;
+                    can1.write(message);
+                    lastPrechargeTime = millis();
+                }
+            }
+        }
+        else if(msg.buf[1]){ // TS_OFF
+            // shut off car entirely
+            CAN_message_t message;
+            message.flags.extended = true;
+            message.id = 0x66;
+            message.len = 8;
+            message.buf[0] = 0;
+            can1.write(message);
+            state = GLV_ON;
+        }
+        else if(msg.buf[2]) {// RTD_ON
+            if(state == PRECHARGE_COMPLETE){
+                state = DRIVE_STANDBY;
+                //TODO: play rtd sound
+            }
+        }
+        else if(msg.buf[3]){ // RTD_OFF
+            if(state == DRIVE_STANDBY) {
+                state = TS_PRECHARGE;
+            }
+        }
+    }
+}
+
+
+// PING LOGIC
+
+// response times as {id, time} in microseconds
+std::unordered_map<int, unsigned long> ping_response_times = { // TODO: BCM, TCM
+    {ACU_Ping_Response, 0},
+    {Pedals_Ping_Response, 0},
+    {Steering_Wheel_Ping_Response, 0},
+    {Dash_Panel_Ping_Response, 0}
+};
+
+std::unordered_map<int, unsigned long> last_response_times = {
+    {ACU_Ping_Response, 0},
+    {Pedals_Ping_Response, 0},
+    {Steering_Wheel_Ping_Response, 0},
+    {Dash_Panel_Ping_Response, 0}
+};
+std::unordered_map<int, int> node_numbers = {
+    {ACU_Ping_Response, 1},
+    {Pedals_Ping_Response, 2},
+    {Steering_Wheel_Ping_Response, 3},
+    {Dash_Panel_Ping_Response, 4}
+};
+
+unsigned long lastPingRequestAttempt = 0;
+
+// Will try to send a ping request to the nodes in the list
+// @param request_ids: list of request ids to request a ping response from
+// @param Car: iCANflex object
+void tryPingRequests(std::vector<uint32_t> request_ids, iCANflex& Car){
+    if(millis()-lastPingRequestAttempt > 100/PING_REQ_FREQENCY){
         for(uint32_t request_id : request_ids){
-            
             unsigned long mills=millis();
             unsigned long micro=micros();
             byte data[8] = {0x00};
@@ -439,139 +513,58 @@ void tryPingReqests(std::vector<uint32_t> request_ids, iCANflex& Car){
                 data[3-i]=(byte)(mills >> (i*8));
                 data[7-i]=(byte)(micro >> (i*8));
             }
-
             CAN_message_t message;
             message.flags.extended = true;  
             message.id = request_id;
             message.len = 8;
             memcpy(message.buf, data, 8);
-
             can1.write(message);
-
-            sendTime=millis();
+            lastPingRequestAttempt=millis();
         }
     }   
 }
-    void sendDashboardPopup(int warning_id){
-        //TODO:
 
-    }
-
-
-    void sendVDMInfo(Tune& tune){
-       //TODO:
-    }
-
-    void handleDriverInputs(Tune& tune){
-        if(msg.id == 0x11002){
-            tune.settings.power_level = msg.buf[0];
-            tune.settings.throttle_map = msg.buf[1];
-            tune.settings.regen_level = msg.buf[2];
-        }
-    }
-
-
-    void handleDashPanelInputs(){
-        if(msg.id == 0x13000 ){
-            if(msg.buf[0]){ // TS_ACTIVE
-                if(state == GLV_ON){
-                    if(millis() - lastPrechargeTime > 5000){
-                        state = TS_PRECHARGE;
-                        CAN_message_t message;
-                        message.flags.extended = true;
-                        message.id = 0x66;
-                        message.len = 8;
-                        message.buf[0] = 1;
-                        can1.write(message);
-                        lastPrechargeTime = millis();
-                    }
-                }
-            }
-            else if(msg.buf[1]){ // TS_OFF
-                // shut off car entireley
-                CAN_message_t message;
-                message.flags.extended = true;
-                message.id = 0x66;
-                message.len = 8;
-                message.buf[0] = 0;
-                can1.write(message);
-                state = GLV_ON;
-            }
-            else if(msg.buf[2]) {// RTD_ON
-                if(state == PRECHARGE_COMPLETE){
-                    state = DRIVE_STANDBY;
-                    // play rtd sound
-                }
-            }
-            else if(msg.buf[3]){ // RTD_OFF
-                if(state == DRIVE_STANDBY) {
-                    state = TS_PRECHARGE;
-                }
-            }
-        }
-        
-    }
-
-    void handlePings(){
-        //PING RESPONSES
-        if (msg.id == ACU_Ping_Response) {
-            ACU_Ping = ping();
-            msg.buf[0] = 1;
-            // add the ACU_Ping to the next 4 bytes
-            for(int i=0; i<4; i++){
-                msg.buf[4-i]=(byte)(ACU_Ping >> (i*8));
-            }
-            msg.len = 8;
-            msg.id = VDM_Ping_Values;
-            can1.write(msg);
-        }
-        if (msg.id == 0xC9) {
-            Pedals_Ping = ping();
-            msg.buf[0] = 2;
-            for(int i=0; i<4; i++){
-                msg.buf[4-i]=(byte)(Pedals_Ping >> (i*8));
-            }
-            msg.len = 8;
-            msg.id = VDM_Ping_Values;
-            can1.write(msg);
-        }
-        if (msg.id == 0x10FFF) {
-            SteeringWheel_Ping = ping();    
-            msg.buf[0] = 3;
-            for(int i=0; i<4; i++){
-                msg.buf[4-i]=(byte)(SteeringWheel_Ping >> (i*8));
-            }
-            msg.len = 8;
-            msg.id = VDM_Ping_Values;
-            can1.write(msg);
-        }
-        if (msg.id == 0x12FFF) {
-            DashPanel_Ping = ping();
-            msg.buf[0] = 4;
-            for(int i=0; i<4; i++){
-                msg.buf[4-i]=(byte)(DashPanel_Ping >> (i*8));
-            }
-            msg.len = 8;
-            msg.id = VDM_Ping_Values;
-            can1.write(msg);
-        }
-    }
-
-
-// namespace std {
-//     template <>
-//     struct hash<bool (*)(const iCANflex&)> {
-//         size_t operator()(bool (*f)(const iCANflex&)) const noexcept{
-//             return reinterpret_cast<size_t>(f);
-//         }
-//     };
-// };
-
-
-State sendToError(bool (*erFunc)(const iCANflex& Car, Tune& tune)) {
-   errorCheck = erFunc; 
-   return ERROR;
+unsigned long calculatePing() {
+    unsigned long newTime = (long)msg.buf[3] + ((long)msg.buf[2] << 8) + ((long)msg.buf[1] << 16) + ((long)msg.buf[0] << 24);
+    unsigned long newTime2 = (long)msg.buf[7] + ((long)msg.buf[6] << 8) + ((long)msg.buf[5] << 16) + ((long)msg.buf[4] << 24);
+    unsigned long roundTripDelay = ((millis() - newTime) * 1000) + ((micros() - newTime2) % 1000);
+    return roundTripDelay;
 }
+
+void handlePingResponse(){
+    ping_response_times[msg.id] = calculatePing();
+    last_response_times[msg.id] = millis();
+}
+
+void sendPingValues(){
+    if(millis()-lastPingSend > 1000/PING_VALUE_SEND_FREQENCY){
+        for(auto const& e : ping_response_times){
+            msg.buf[0] = node_numbers[e.first];
+            for(int j=0; j<4; j++){
+                msg.buf[4-j]=(byte)(e.second >> (j*8));
+            }
+            msg.len = 8;
+            msg.id = VDM_Ping_Values;
+            can1.write(msg);
+        }
+        lastPingSend = millis();
+    }
+}
+
+void checkPingTimeout(){
+    for(auto const& e : last_response_times){
+        if(millis() - e.second > PING_TIMEOUT){
+            timeout_nodes.insert(node_numbers[e.first]);
+        }
+        else{
+            if(timeout_nodes.find(node_numbers[e.first]) != timeout_nodes.end()){
+                timeout_nodes.erase(node_numbers[e.first]);
+            }
+        }
+    }
+
+}
+
 
 
 
@@ -589,7 +582,10 @@ State sendToError(bool (*erFunc)(const iCANflex& Car, Tune& tune)) {
                                                                                                                                 
 
 */
-
+State sendToError(bool (*erFunc)(const iCANflex& Car, Tune& tune)) {
+   errorCheck = erFunc; 
+   return ERROR;
+}
 /*
 
 STARTUP STAGE 1:
@@ -773,7 +769,7 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
 float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
     // if(rpm > 500 && brake > 0.05) return Car.ACU1.getMaxChargeCurrent();
     // else return 0;
-    return 0;
+    return 0; //TODO:
 }
 
 State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune){
@@ -863,7 +859,7 @@ std::unordered_map<State, std::string> state_to_string = {
                 {DRIVE_ACTIVE, "DRIVE_ACTIVE"},
                 {DRIVE_REGEN, "DRIVE_REGEN"},
                 {ERROR, "ERROR"}
-            };
+};
 std::unordered_map<Mode, std::string>mode_to_string = {
                 {TESTING, "TESTING"},
                 {LAUNCH, "LAUNCH"},
@@ -872,7 +868,15 @@ std::unordered_map<Mode, std::string>mode_to_string = {
                 {SKIDPAD, "SKIDPAD"},
                 {ACC, "ACC"},
                 {PIT, "PIT"}
-            };  
+}; 
+
+std::unordered_map<int, std::string>response_id_to_node = {
+    {ACU_Ping_Response, "ACU"},
+    {Pedals_Ping_Response, "Pedals"},
+    {Steering_Wheel_Ping_Response, "Steering Wheel"},
+    {Dash_Panel_Ping_Response, "Dash Panel"} //TODO: BCM, TCM
+};
+
 void printStatus(){
     if(millis() - lastPrintTime > 1000/DEBUG_PRINT_FREQUENCY){
         Serial.println("==================================");
@@ -896,14 +900,19 @@ void printStatus(){
         Serial.println("==================================");
         Serial.println("PING TIME: ");
         Serial.print("ACU Ping: ");
-        Serial.println(ACU_Ping);
+        Serial.println(ping_response_times[ACU_Ping_Response]);
         Serial.print("Pedals Ping: ");
-        Serial.println(Pedals_Ping);
-        Serial.print("DashPanel Ping: ");
-        Serial.println(DashPanel_Ping);
+        Serial.println(ping_response_times[Pedals_Ping_Response]);
         Serial.print("SteeringWheel Ping: ");
-        Serial.println(SteeringWheel_Ping);
+        Serial.println(ping_response_times[Steering_Wheel_Ping_Response]);
+        Serial.print("DashPanel Ping: ");
+        Serial.println(ping_response_times[Dash_Panel_Ping_Response]);
         Serial.print("==================================");
+        Serial.println("TIMEOUT NODES: ");
+        for(int node : timeout_nodes){
+            Serial.print(response_id_to_node[node].c_str());
+            Serial.print(" | ");
+        }
         lastPrintTime = millis();
     }
 }
@@ -930,8 +939,6 @@ void setup() {
     Car = new iCANflex();
     Car->begin();
     
-
-    // dbg = new Debugger(10);
     sysCheck = new SystemsCheck();  
     tune = new Tune();
     can1.begin();
@@ -945,7 +952,7 @@ void setup() {
     pinMode(BSPD_OK_PIN, INPUT);
     pinMode(IMD_OK_PIN, INPUT);
     pinMode(BRAKE_LIGHT_PIN, INPUT);    
-
+    //TODO: BRAKE CURRENT PIN
 
     active_faults = new std::unordered_set<bool (*)(const iCANflex&, Tune&)>(); 
     active_warnings = new std::unordered_set<bool (*)(const iCANflex&, Tune&)>();
@@ -957,7 +964,6 @@ void setup() {
 
 
     // set state  
-    // state = ECU_FLASH; TODO: Remember to uncomment 
     state = GLV_ON;
     mode = ENDURANCE; // TODO: Energy management algorithm for endurance
 
@@ -966,16 +972,17 @@ void setup() {
 // MAIN LOOP
 void loop(){
     
-    // Serial.println(Car->ACU1.getPrecharging());
     if(can1.read(msg)) {
         handleDashPanelInputs();    
         handleDriverInputs(*tune);
-        handlePings();
+        handlePingResponse();
     }
     
     // Get ping values for all systems
-    tryPingReqests({0x10FFE, 0x12FFE, 0xCA, 0x95}, *Car);
-   
+    tryPingRequests({Pedals_Ping_Request, Steering_Wheel_Ping_Request, Dash_Panel_Ping_Request, ACU_Ping_Request}, *Car);
+    checkPingTimeout();
+    sendPingValues();
+    
     // System Checks
     sysCheck->hardware_system_critical(*Car, *active_faults, tune);
     sysCheck->system_faults(*Car, *active_faults, tune);
