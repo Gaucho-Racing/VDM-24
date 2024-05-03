@@ -81,6 +81,11 @@ class Tune {
         uint8_t temp_inverter_critical = 70; // celsius
         uint16_t rev_limit = 5500;// RPM      public:
 
+        uint16_t apps_zero_1 = 50100;
+        uint16_t apps_zero_2 = 41810;
+        uint16_t apps_floor_1 = 44256; 
+        uint16_t apps_floor_2 = 38750;
+
     public:
         SWSettings settings;
         Tune(){
@@ -158,6 +163,10 @@ class Tune {
 
         }
 
+        uint32_t getAPPSZero1(){ return apps_zero_1; }
+        uint32_t getAPPSZero2(){ return apps_zero_2; }
+        uint32_t getAPPSFloor1(){ return apps_floor_1; }
+        uint32_t getAPPSFloor2(){ return apps_floor_2; }
         
         // getters for all the settings
         uint8_t getMaxCANPing(){ return MaxCANPing; }
@@ -187,6 +196,12 @@ class Tune {
         void setInverterWarnTemp(uint8_t temp){ temp_inverter_warn = temp; }
         void setInverterLimitTemp(uint8_t temp){ temp_inverter_limit = temp; }
         void setInverterCriticalTemp(uint8_t temp){ temp_inverter_critical = temp; }
+
+        void setAPPSZero1(uint32_t apps){ apps_zero_1 = apps; }
+        void setAPPSZero2(uint32_t apps){ apps_zero_2 = apps; }
+        void setAPPSFloor1(uint32_t apps){ apps_floor_1 = apps; }
+        void setAPPSFloor2(uint32_t apps){ apps_floor_2 = apps; }
+
 
         TorqueProfile getActiveTorqueProfile(){ return TorqueProfilesData[settings.throttle_map]; }        
         float getActiveCurrentLimit(){ return PowerLevelsData[settings.power_level];}
@@ -475,6 +490,14 @@ void handleDashPanelInputs(){
 }
 
 
+void sendVDMInfo(){
+    
+}
+
+void sendDashPopup(){
+
+}
+
 // PING LOGIC
 
 // response times as {id, time} in microseconds
@@ -504,7 +527,7 @@ unsigned long lastPingRequestAttempt = 0;
 // @param request_ids: list of request ids to request a ping response from
 // @param Car: iCANflex object
 void tryPingRequests(std::vector<uint32_t> request_ids, iCANflex& Car){
-    if(millis()-lastPingRequestAttempt > 100/PING_REQ_FREQENCY){
+    if(millis()-lastPingRequestAttempt > 1000/PING_REQ_FREQENCY){
         for(uint32_t request_id : request_ids){
             unsigned long mills=millis();
             unsigned long micro=micros();
@@ -553,11 +576,14 @@ void sendPingValues(){
 
 void checkPingTimeout(){
     for(auto const& e : last_response_times){
-        if(millis() - e.second > PING_TIMEOUT){
+        if(micros() - e.second > PING_TIMEOUT){
+            Serial.println("TIMEOUT");
             timeout_nodes.insert(node_numbers[e.first]);
         }
         else{
             if(timeout_nodes.find(node_numbers[e.first]) != timeout_nodes.end()){
+                Serial.println("NOT TIMEOUT");
+
                 timeout_nodes.erase(node_numbers[e.first]);
             }
         }
@@ -738,15 +764,30 @@ float requested_torque(iCANflex& Car, float throttle, int rpm, Tune& tune) {
 }
 
 
+float getThrottle1(uint16_t a1, Tune& tune){
+    float throttle =  1.0 - ((a1 - tune.getAPPSFloor1()*1.0)/(tune.getAPPSZero1()-tune.getAPPSFloor1()));
+    if (throttle < 0.05) return 0;
+    else if (throttle > 1 && throttle < 1.1) return 1;
+    else if (throttle > 1.1) return 0;
+    else return throttle;
+}
+
+float getThrottle2(uint16_t a2,  Tune& tune){
+    float throttle =  1.0 - ((a2 - tune.getAPPSFloor2()*1.0)/(tune.getAPPSZero2()-tune.getAPPSFloor2()));
+    if (throttle < 0.05) return 0;
+    else if (throttle > 1 && throttle < 1.1) return 1;
+    else if (throttle > 1.1) return 0;
+    else return throttle;
+}
+
 State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
 
-    float a1 = Car.PEDALS.getAPPS1();
-    float a2 = Car.PEDALS.getAPPS2();
-    float throttle = a1; // TODO: FIX
+    float a1 = getThrottle1(Car.PEDALS.getAPPS1(), tune);
+    float a2 = getThrottle2(Car.PEDALS.getAPPS2(), tune);
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
     
     // APPS GRADIENT VIOLATION
-    if(abs(a1 - (2*a2)) > 0.1){
+    if(abs(a1-a2) > 0.1){
         // TODO: send an error message on the dash that APPS blew up
         // comms.sendDashboardPopup(0x01);
         return DRIVE_STANDBY;
@@ -758,7 +799,7 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
     }
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         Car.DTI.setDriveEnable(1);
-        Car.DTI.setRCurrent(requested_torque(Car, throttle, Car.DTI.getERPM()/10.0, tune));
+        Car.DTI.setRCurrent(requested_torque(Car, a1, Car.DTI.getERPM()/10.0, tune));
         // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
         lastDTIMessage = millis();
     }
@@ -907,12 +948,23 @@ void printStatus(){
         Serial.println(ping_response_times[Steering_Wheel_Ping_Response]);
         Serial.print("DashPanel Ping: ");
         Serial.println(ping_response_times[Dash_Panel_Ping_Response]);
-        Serial.print("==================================");
+        Serial.println("==================================");
         Serial.println("TIMEOUT NODES: ");
         for(int node : timeout_nodes){
-            Serial.print(response_id_to_node[node].c_str());
+            Serial.print(response_id_to_node.find(node)->second.c_str());
             Serial.print(" | ");
         }
+        Serial.println();
+        Serial.println("==================================");
+        Serial.println("PEDALS: ");
+        Serial.print("APPS1: ");
+        Serial.println(getThrottle1(Car->PEDALS.getAPPS1(), *tune));
+        Serial.print("APPS2: ");
+        Serial.println(getThrottle2(Car->PEDALS.getAPPS2(), *tune));
+        Serial.println("BRAKES: ");
+        Serial.print("Brake Pressure: ");
+        Serial.println((Car->PEDALS.getBrakePressureF() + Car->PEDALS.getBrakePressureR())/2.0);
+        Serial.println("==================================");
         lastPrintTime = millis();
     }
 }
@@ -964,14 +1016,14 @@ void setup() {
 
 
     // set state  
-    state = GLV_ON;
+    state = DRIVE_STANDBY;
     mode = ENDURANCE; // TODO: Energy management algorithm for endurance
 
 }
 
 // MAIN LOOP
 void loop(){
-    
+    Car->readData(msg);
     if(can1.read(msg)) {
         handleDashPanelInputs();    
         handleDriverInputs(*tune);
@@ -980,14 +1032,14 @@ void loop(){
     
     // Get ping values for all systems
     tryPingRequests({Pedals_Ping_Request, Steering_Wheel_Ping_Request, Dash_Panel_Ping_Request, ACU_Ping_Request}, *Car);
-    checkPingTimeout();
+    // checkPingTimeout();// TODO: This is broken
     sendPingValues();
     
     // System Checks
-    sysCheck->hardware_system_critical(*Car, *active_faults, tune);
-    sysCheck->system_faults(*Car, *active_faults, tune);
-    sysCheck->system_limits(*Car, *active_limits, tune);
-    sysCheck->system_warnings(*Car, *active_warnings, tune);
+    // sysCheck->hardware_system_critical(*Car, *active_faults, tune);
+    // sysCheck->system_faults(*Car, *active_faults, tune);
+    // sysCheck->system_limits(*Car, *active_limits, tune);
+    // sysCheck->system_warnings(*Car, *active_warnings, tune);
     
     #if defined(PRINT_DBG)
         printStatus();
