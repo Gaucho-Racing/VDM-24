@@ -86,6 +86,8 @@ class Tune {
         uint16_t apps_floor_1 = 44256; 
         uint16_t apps_floor_2 = 38750;
 
+
+
     public:
         SWSettings settings;
         Tune(){
@@ -101,7 +103,7 @@ class Tune {
             
             Serial.println("SD INITIALIZATION SUCCESSFUL");
             File ecu_tune;
-            ecu_tune = SD.open("gr24.txt");
+            ecu_tune = SD.open("gr24.ecu");
             Serial.print("Reading ECU FLASH....");
             String tune;
             while(ecu_tune.available()){
@@ -163,12 +165,17 @@ class Tune {
 
         }
 
+        // APPS CALIBRATION
         uint32_t getAPPSZero1(){ return apps_zero_1; }
         uint32_t getAPPSZero2(){ return apps_zero_2; }
         uint32_t getAPPSFloor1(){ return apps_floor_1; }
         uint32_t getAPPSFloor2(){ return apps_floor_2; }
+        void setAPPSZero1(uint32_t apps){ apps_zero_1 = apps; }
+        void setAPPSZero2(uint32_t apps){ apps_zero_2 = apps; }
+        void setAPPSFloor1(uint32_t apps){ apps_floor_1 = apps; }
+        void setAPPSFloor2(uint32_t apps){ apps_floor_2 = apps; }
         
-        // getters for all the settings
+        // ERROR LIMITATIONS
         uint8_t getMaxCANPing(){ return MaxCANPing; }
         uint8_t getMotorWarnTemp(){ return temp_motor_warn; }
         uint8_t getMotorLimitTemp(){ return temp_motor_limit; }
@@ -182,7 +189,6 @@ class Tune {
         uint8_t getInverterWarnTemp(){ return temp_inverter_warn; }
         uint8_t getInverterLimitTemp(){ return temp_inverter_limit; }
         uint8_t getInverterCriticalTemp(){ return temp_inverter_critical; }
-
         void setMaxCANPing(uint32_t ping){ MaxCANPing = ping; }
         void setMotorWarnTemp(uint8_t temp){ temp_motor_warn = temp; }
         void setMotorLimitTemp(uint8_t temp){ temp_motor_limit = temp; }
@@ -197,22 +203,14 @@ class Tune {
         void setInverterLimitTemp(uint8_t temp){ temp_inverter_limit = temp; }
         void setInverterCriticalTemp(uint8_t temp){ temp_inverter_critical = temp; }
 
-        void setAPPSZero1(uint32_t apps){ apps_zero_1 = apps; }
-        void setAPPSZero2(uint32_t apps){ apps_zero_2 = apps; }
-        void setAPPSFloor1(uint32_t apps){ apps_floor_1 = apps; }
-        void setAPPSFloor2(uint32_t apps){ apps_floor_2 = apps; }
-
 
         TorqueProfile getActiveTorqueProfile(){ return TorqueProfilesData[settings.throttle_map]; }        
         float getActiveCurrentLimit(){ return PowerLevelsData[settings.power_level];}
         float getActiveRegenPower(){ return RegenLevelsData[settings.regen_level];}
         int revLimit(){ return rev_limit; } 
-
-
         void setTorqueProfileData(uint8_t index, TorqueProfile tp){ TorqueProfilesData[index] = tp; }
         void setPowerLevelData(uint8_t index, float power){ PowerLevelsData[index] = power; }
         void setRegenLevelData(uint8_t index, float regen){ RegenLevelsData[index] = regen; }
-
 };
 
 
@@ -416,6 +414,7 @@ CAN_message_t msg;
 const uint16_t DTI_COMM_FREQUENCY = 100; // Hz
 const uint16_t PING_REQ_FREQENCY = 10; // Hz
 const uint16_t PING_VALUE_SEND_FREQENCY = 10; // Hz
+const uint16_t VDM_INFO_SEND_FREQENCY = 10; // Hz
 const unsigned long PING_TIMEOUT = 1000000; // microseconds 
 
 
@@ -491,30 +490,30 @@ void handleDashPanelInputs(){
 
 
 void sendVDMInfo(){
-    
+    // TODO:
 }
 
 void sendDashPopup(){
-
+    // TODO:
 }
 
 // PING LOGIC
 
 // response times as {id, time} in microseconds
-std::unordered_map<int, unsigned long> ping_response_times = { // TODO: BCM, TCM
+static std::unordered_map<int, unsigned long> ping_response_times = { // TODO: BCM, TCM
     {ACU_Ping_Response, 0},
     {Pedals_Ping_Response, 0},
     {Steering_Wheel_Ping_Response, 0},
     {Dash_Panel_Ping_Response, 0}
 };
 
-std::unordered_map<int, unsigned long> last_response_times = {
+static std::unordered_map<int, unsigned long> last_response_times = {
     {ACU_Ping_Response, 0},
     {Pedals_Ping_Response, 0},
     {Steering_Wheel_Ping_Response, 0},
     {Dash_Panel_Ping_Response, 0}
 };
-std::unordered_map<int, int> node_numbers = {
+static std::unordered_map<int, int> node_numbers = {
     {ACU_Ping_Response, 1},
     {Pedals_Ping_Response, 2},
     {Steering_Wheel_Ping_Response, 3},
@@ -593,6 +592,35 @@ void checkPingTimeout(){
 
 
 
+/*
+  __________  ___   ____________________  _   __   
+ /_  __/ __ \/   | / ____/_  __/  _/ __ \/ | / /   
+  / / / /_/ / /| |/ /     / /  / // / / /  |/ /    
+ / / / _, _/ ___ / /___  / / _/ // /_/ / /|  /     
+/_/ /_/ |_/_/  |_\____/ /_/ /___/\____/_/ |_/      
+    __________  _   ____________  ____  __ 
+  / ____/ __ \/ | / /_  __/ __ \/ __ \/ / 
+ / /   / / / /  |/ / / / / /_/ / / / / /  
+/ /___/ /_/ / /|  / / / / _, _/ /_/ / /___
+\____/\____/_/ |_/ /_/ /_/ |_|\____/_____/
+                                                                                            
+
+*/
+
+/*
+    _______   ____________  ________  __   
+   / ____/ | / / ____/ __ \/ ____/\ \/ /   
+  / __/ /  |/ / __/ / /_/ / / __   \  /    
+ / /___/ /|  / /___/ _, _/ /_/ /   / /     
+/_____/_/ |_/_____/_/ |_|\____/   /_/      
+    __  ______    _   _____   ______________  __________   ________
+   /  |/  /   |  / | / /   | / ____/ ____/  |/  / ____/ | / /_  __/
+  / /|_/ / /| | /  |/ / /| |/ / __/ __/ / /|_/ / __/ /  |/ / / /   
+ / /  / / ___ |/ /|  / ___ / /_/ / /___/ /  / / /___/ /|  / / /    
+/_/  /_/_/  |_/_/ |_/_/  |_\____/_____/_/  /_/_____/_/ |_/ /_/     
+                                                                                                          
+
+*/
 
 /*
    ______________  ____________   __  ______   ________  _______   ________
@@ -710,11 +738,11 @@ State drive_standby(iCANflex& Car, bool& BSE_APPS_violation) {
     }
 
     float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;//TODO: Fix
     
     // only if no violation, and throttle is pressed, go to DRIVE
     if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_ACTIVE;
-    if(!BSE_APPS_violation && brake > 0.05) return DRIVE_REGEN;
+    if(!BSE_APPS_violation && brake > 0.05) return DRIVE_REGEN;//TODO: Fix
 
     if(BSE_APPS_violation) {
         // SEND CAN WARNING TO DASH
@@ -756,11 +784,10 @@ float requested_torque(iCANflex& Car, float throttle, int rpm, Tune& tune) {
     float k = tp.K;
     float p = tp.P;
     float b = tp.B;
-    float max_current = tune.getActiveCurrentLimit();
     float torque_multiplier = (throttle-(1-throttle)*(throttle+b)*pow(rpm/tune.revLimit(), p)*k);
     if(torque_multiplier > 1) torque_multiplier = 1; // clipping
     if(torque_multiplier < 0) torque_multiplier = 0;
-    return torque_multiplier*max_current;
+    return torque_multiplier*100;
 }
 
 
@@ -799,6 +826,7 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
     }
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         Car.DTI.setDriveEnable(1);
+        Car.DTI.setMaxCurrent(tune.getActiveCurrentLimit());   
         Car.DTI.setRCurrent(requested_torque(Car, a1, Car.DTI.getERPM()/10.0, tune));
         // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
         lastDTIMessage = millis();
@@ -839,8 +867,6 @@ DRIVER REQUESTS TO STOP THE VEHICLE.
 THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED 
 
 */
-
-
 State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& t), std::unordered_set<bool (*)(const iCANflex& c, Tune& t)>& active_faults){
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         Car.DTI.setRCurrent(0);
@@ -856,20 +882,6 @@ State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& 
     
 }
 
-/*
-  __________  ___   ____________________  _   __   
- /_  __/ __ \/   | / ____/_  __/  _/ __ \/ | / /   
-  / / / /_/ / /| |/ /     / /  / // / / /  |/ /    
- / / / _, _/ ___ / /___  / / _/ // /_/ / /|  /     
-/_/ /_/ |_/_/  |_\____/ /_/ /___/\____/_/ |_/      
-    __________  _   ____________  ____  __ 
-  / ____/ __ \/ | / /_  __/ __ \/ __ \/ / 
- / /   / / / /  |/ / / / / /_/ / / / / /  
-/ /___/ /_/ / /|  / / / / _, _/ /_/ / /___
-\____/\____/_/ |_/ /_/ /_/ |_|\____/_____/
-                                                                                            
-
-*/
 
 
 
@@ -910,14 +922,12 @@ std::unordered_map<Mode, std::string>mode_to_string = {
                 {ACC, "ACC"},
                 {PIT, "PIT"}
 }; 
-
 std::unordered_map<int, std::string>response_id_to_node = {
     {ACU_Ping_Response, "ACU"},
     {Pedals_Ping_Response, "Pedals"},
     {Steering_Wheel_Ping_Response, "Steering Wheel"},
     {Dash_Panel_Ping_Response, "Dash Panel"} //TODO: BCM, TCM
 };
-
 void printStatus(){
     if(millis() - lastPrintTime > 1000/DEBUG_PRINT_FREQUENCY){
         Serial.println("==================================");
@@ -1034,12 +1044,14 @@ void loop(){
     tryPingRequests({Pedals_Ping_Request, Steering_Wheel_Ping_Request, Dash_Panel_Ping_Request, ACU_Ping_Request}, *Car);
     // checkPingTimeout();// TODO: This is broken
     sendPingValues();
+    sendVDMInfo();
+
     
     // System Checks
-    // sysCheck->hardware_system_critical(*Car, *active_faults, tune);
-    // sysCheck->system_faults(*Car, *active_faults, tune);
-    // sysCheck->system_limits(*Car, *active_limits, tune);
-    // sysCheck->system_warnings(*Car, *active_warnings, tune);
+    sysCheck->hardware_system_critical(*Car, *active_faults, tune);
+    sysCheck->system_faults(*Car, *active_faults, tune);
+    sysCheck->system_limits(*Car, *active_limits, tune);
+    sysCheck->system_warnings(*Car, *active_warnings, tune);
     
     #if defined(PRINT_DBG)
         printStatus();
