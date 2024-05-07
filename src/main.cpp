@@ -415,7 +415,7 @@ const uint16_t DTI_COMM_FREQUENCY = 100; // Hz
 const uint16_t PING_REQ_FREQENCY = 10; // Hz
 const uint16_t PING_VALUE_SEND_FREQENCY = 10; // Hz
 const uint16_t VDM_INFO_SEND_FREQENCY = 10; // Hz
-const unsigned long PING_TIMEOUT = 1000000; // microseconds 
+const unsigned long PING_TIMEOUT = 3000000; // microseconds 
 
 
 
@@ -574,15 +574,12 @@ void sendPingValues(){
 }
 
 void checkPingTimeout(){
-    for(auto const& e : last_response_times){
+    for(auto e : last_response_times){
         if(micros() - e.second > PING_TIMEOUT){
-            Serial.println("TIMEOUT");
             timeout_nodes.insert(node_numbers[e.first]);
         }
         else{
             if(timeout_nodes.find(node_numbers[e.first]) != timeout_nodes.end()){
-                Serial.println("NOT TIMEOUT");
-
                 timeout_nodes.erase(node_numbers[e.first]);
             }
         }
@@ -922,11 +919,11 @@ std::unordered_map<Mode, std::string>mode_to_string = {
                 {ACC, "ACC"},
                 {PIT, "PIT"}
 }; 
-std::unordered_map<int, std::string>response_id_to_node = {
-    {ACU_Ping_Response, "ACU"},
-    {Pedals_Ping_Response, "Pedals"},
-    {Steering_Wheel_Ping_Response, "Steering Wheel"},
-    {Dash_Panel_Ping_Response, "Dash Panel"} //TODO: BCM, TCM
+std::unordered_map<int, std::string>node_to_string = {
+    {1, "ACU"},
+    {2, "Pedals"},
+    {3, "Steering Wheel"},
+    {4, "Dash Panel"} //TODO: BCM, TCM
 };
 void printStatus(){
     if(millis() - lastPrintTime > 1000/DEBUG_PRINT_FREQUENCY){
@@ -959,9 +956,10 @@ void printStatus(){
         Serial.print("DashPanel Ping: ");
         Serial.println(ping_response_times[Dash_Panel_Ping_Response]);
         Serial.println("==================================");
-        Serial.println("TIMEOUT NODES: ");
+        Serial.print("UNRESPONSIVE NODES: ");
+        Serial.println(timeout_nodes.size());
         for(int node : timeout_nodes){
-            Serial.print(response_id_to_node.find(node)->second.c_str());
+            Serial.print(node_to_string.find(node)->second.c_str());
             Serial.print(" | ");
         }
         Serial.println();
@@ -1038,20 +1036,23 @@ void loop(){
         handleDashPanelInputs();    
         handleDriverInputs(*tune);
         handlePingResponse();
+        if(msg.id == 0x6969){
+            Serial.println("GOT MESSAGE FROM TUNER");
+        }
     }
     
     // Get ping values for all systems
     tryPingRequests({Pedals_Ping_Request, Steering_Wheel_Ping_Request, Dash_Panel_Ping_Request, ACU_Ping_Request}, *Car);
-    // checkPingTimeout();// TODO: This is broken
+    checkPingTimeout();// TODO: This is broken
     sendPingValues();
     sendVDMInfo();
 
     
     // System Checks
-    sysCheck->hardware_system_critical(*Car, *active_faults, tune);
-    sysCheck->system_faults(*Car, *active_faults, tune);
-    sysCheck->system_limits(*Car, *active_limits, tune);
-    sysCheck->system_warnings(*Car, *active_warnings, tune);
+    // sysCheck->hardware_system_critical(*Car, *active_faults, tune);
+    // sysCheck->system_faults(*Car, *active_faults, tune);
+    // sysCheck->system_limits(*Car, *active_limits, tune);
+    // sysCheck->system_warnings(*Car, *active_warnings, tune);
     
     #if defined(PRINT_DBG)
         printStatus();
