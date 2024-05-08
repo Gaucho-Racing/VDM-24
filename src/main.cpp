@@ -88,6 +88,8 @@ class Tune {
 
 
 
+
+
     public:
         SWSettings settings;
         Tune(){
@@ -95,6 +97,7 @@ class Tune {
             TorqueProfilesData = std::vector<TorqueProfile>(4);
             PowerLevelsData = std::vector<float>(4);
             RegenLevelsData = std::vector<float>(4);
+    
 
             Serial.println("Initializing SD Card...");
             while(!SD.begin(BUILTIN_SDCARD)){
@@ -554,8 +557,10 @@ unsigned long calculatePing() {
 }
 
 void handlePingResponse(){
-    ping_response_times[msg.id] = calculatePing();
-    last_response_times[msg.id] = millis();
+    if(msg.id == ACU_Ping_Response || msg.id == Pedals_Ping_Response || msg.id == Steering_Wheel_Ping_Response || msg.id == Dash_Panel_Ping_Response){
+        ping_response_times[msg.id] = calculatePing();
+        last_response_times[msg.id] = millis();
+    }
 }
 
 void sendPingValues(){
@@ -726,7 +731,7 @@ READY TO DRIVE SUB STATES
 - DRIVE_REGEN
 
 */
-State drive_standby(iCANflex& Car, bool& BSE_APPS_violation) {
+State drive_standby(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
     
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         Car.DTI.setRCurrent(0);
@@ -734,12 +739,13 @@ State drive_standby(iCANflex& Car, bool& BSE_APPS_violation) {
         lastDTIMessage = millis();
     }
 
-    float throttle = (Car.PEDALS.getAPPS1() + Car.PEDALS.getAPPS2())/2.0;
+    float throttle = getThrottle1(Car.PEDALS.getAPPS1(), tune);
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;//TODO: Fix
     
     // only if no violation, and throttle is pressed, go to DRIVE
+
     if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_ACTIVE;
-    if(!BSE_APPS_violation && brake > 0.05) return DRIVE_REGEN;//TODO: Fix
+    if(!BSE_APPS_violation && throttle == 0 && brake > 0.05 && Car.DTI.getERPM() > 250) return DRIVE_REGEN;//TODO: Fix
 
     if(BSE_APPS_violation) {
         // SEND CAN WARNING TO DASH
@@ -833,14 +839,13 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
 }
 
 float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
-    // if(rpm > 500 && brake > 0.05) return Car.ACU1.getMaxChargeCurrent();
-    // else return 0;
-    return 0; //TODO:
+    // return Car.ACU1.maxRegenPower() * brake;
+    return 0;
 }
 
 State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune){
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2; // TODO: Change to AnalogRead from pin
-    float throttle = Car.PEDALS.getAPPS1();
+    float throttle = getThrottle1(Car.PEDALS.getAPPS1(), tune);
     if(throttle > 0.05) return DRIVE_ACTIVE;
     if(brake < 0.05) return DRIVE_STANDBY;
 
@@ -1049,10 +1054,10 @@ void loop(){
 
     
     // System Checks
-    // sysCheck->hardware_system_critical(*Car, *active_faults, tune);
-    // sysCheck->system_faults(*Car, *active_faults, tune);
-    // sysCheck->system_limits(*Car, *active_limits, tune);
-    // sysCheck->system_warnings(*Car, *active_warnings, tune);
+    sysCheck->hardware_system_critical(*Car, *active_faults, tune);
+    sysCheck->system_faults(*Car, *active_faults, tune);
+    sysCheck->system_limits(*Car, *active_limits, tune);
+    sysCheck->system_warnings(*Car, *active_warnings, tune);
     
     #if defined(PRINT_DBG)
         printStatus();
@@ -1092,7 +1097,7 @@ void loop(){
         
         // DRIVE
         case DRIVE_STANDBY:
-            state = drive_standby(*Car, BSE_APPS_violation); 
+            state = drive_standby(*Car, BSE_APPS_violation, *tune); 
             break;
         case DRIVE_ACTIVE:
             state = drive_active(*Car, BSE_APPS_violation, *tune);
