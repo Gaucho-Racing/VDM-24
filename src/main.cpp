@@ -592,11 +592,73 @@ void checkPingTimeout(){
                                                                                             
 
 */
+float Kp = 0.2;   // Proportional gain
+float Ki = 0.02;  // Integral gain
+float Kd = 0.1;   // Derivative gain
+
+// System variables
 float tc_multiplier = 1;
+float loss, previousLoss = 0;
+float integral = 0;
+float derivative;
+float pidOutput;
 unsigned long lastTractionCompute = 0;
-void computeTractionControl(){
-    if(millis() - lastTractionCompute > 1000/TRACTION_CONTROL_FREQENCY){
-        
+
+// Constants for performance thresholds
+const float SLIP_THRESHOLD = 0.1;  // Threshold for initiating corrective action
+
+// Function to dynamically adjust PID gains based on driving conditions
+void adjustPIDGains(float slipRatio) {
+    if (slipRatio > SLIP_THRESHOLD) {
+        // Increase gains for high slip scenarios
+        Kp = 0.3;
+        Ki = 0.03;
+        Kd = 0.15;
+    } else {
+        // Reset to normal gains if slip is under control
+        Kp = 0.2;
+        Ki = 0.02;
+        Kd = 0.1;
+    }
+}
+
+// Calculate slip ratio
+float calculateSlipRatio(float referenceSpeed, float actualSpeed) {
+    if (referenceSpeed == 0) return 0;
+    return (actualSpeed - referenceSpeed) / referenceSpeed;
+}
+
+// Main traction control function
+void computeTractionControl(iCANflex& Car) {
+    if (millis() - lastTractionCompute > 1000 / TRACTION_CONTROL_FREQENCY) {
+        float rearLeftWheelSpeed = Car.WRL.getWheelSpeed();
+        float rearRightWheelSpeed = Car.WRR.getWheelSpeed();
+        float frontLeftWheelSpeed = Car.WFL.getWheelSpeed();
+        float frontRightWheelSpeed = Car.WFR.getWheelSpeed();
+
+        float averageRearWheelSpeed = (rearLeftWheelSpeed + rearRightWheelSpeed) / 2;
+        float averageFrontWheelSpeed = (frontLeftWheelSpeed + frontRightWheelSpeed) / 2;
+
+        float slipRatio = calculateSlipRatio(averageFrontWheelSpeed, averageRearWheelSpeed);
+
+        // Adjust PID gains dynamically based on slip ratio
+        adjustPIDGains(slipRatio);
+
+        // Compute loss and PID output
+        loss = slipRatio;
+        integral += loss;
+        derivative = loss - previousLoss;
+        pidOutput = Kp * loss + Ki * integral + Kd * derivative;
+        previousLoss = loss;
+
+        tc_multiplier = 1.0 - constrain(pidOutput, 0.0, 1.0);
+        // Update system control loop timing
+        lastTractionCompute = millis(); 
+
+        // Optionally log or display the PID parameters and multiplier for tuning and monitoring
+        Serial.print("Slip Ratio: "); Serial.println(slipRatio);
+        Serial.print("PID Output: "); Serial.println(pidOutput);
+        Serial.print("Throttle Multiplier: "); Serial.println(tc_multiplier);
     }
 }
 
@@ -1098,8 +1160,9 @@ void loop(){
 
     sendVDMInfo();
 
-    if(mode == DYNAMIC_TC) computeTractionControl();
-    
+    if(mode == DYNAMIC_TC) computeTractionControl(*Car);
+    if(tc_multiplier < 1) sendDashPopup(0x07, 1);
+
     // System Checks
     sysCheck->hardware_system_critical(*Car, *active_faults, tune);
     sysCheck->system_faults(*Car, *active_faults, tune);
