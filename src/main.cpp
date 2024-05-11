@@ -70,12 +70,15 @@ class Tune {
         uint8_t temp_motor_warn = 60; // celsius
         uint8_t temp_motor_limit = 65; // celsius
         uint8_t temp_motor_critical = 70; // celsius
+
         uint8_t temp_battery_warn = 60; // celsius
         uint8_t temp_battery_limit = 65; // celsius
         uint8_t temp_battery_critical = 70; // celsius
+
         uint8_t temp_coolant_warn = 60; // celsius
         uint8_t temp_coolant_limit = 65; // celsius
         uint8_t temp_coolant_critical = 70; // celsius
+
         uint8_t temp_inverter_warn = 60; // celsius
         uint8_t temp_inverter_limit = 65; // celsius
         uint8_t temp_inverter_critical = 70; // celsius
@@ -86,7 +89,8 @@ class Tune {
         uint16_t apps_floor_1 = 44256; 
         uint16_t apps_floor_2 = 38750;
 
-
+        float max_regen_steering_angle = 0.5; // radians
+        
 
 
 
@@ -167,6 +171,10 @@ class Tune {
             
 
         }
+
+        // REGEN STEERING ANGLE LIMIT
+        float getMaxRegenSteeringAngle(){ return max_regen_steering_angle; }
+        void setMaxRegenSteeringAngle(float angle){ max_regen_steering_angle = angle; }
 
         // APPS CALIBRATION
         uint32_t getAPPSZero1(){ return apps_zero_1; }
@@ -360,7 +368,7 @@ class SystemsCheck {
 
         // BYTE 2 ---------------------------------------------------------------------------
         // bit 0, 1, 2
-        // static bool warn_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.get() > t.getBatteryWarnTemp() && Car.ACU1.getWaterTemp() < t.getCoolantLimitTemp();} //TODO: Implement in NODES
+        // static bool warn_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.get() > t.getBatteryWarnTemp() && Car..getWaterTemp() < t.getCoolantLimitTemp();} //TODO: Implement in NODES
         // static bool limit_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getCoolantLimitTemp() && Car.ACU1.getWaterTemp() < t.getCoolantCriticalTemp();}
         // static bool critical_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getCoolantCriticalTemp();}
         // bit 3, 4, 5
@@ -383,15 +391,15 @@ class SystemsCheck {
 / /_/ / /___/ /_/ / /_/ / ___ |/ /___
 \____/_____/\____/_____/_/  |_/_____/
 */
-#define PRINT_DBG 0x00; //TODO: COMMENT FOR EFFICIENCY
+#define PRINT_DBG true; //TODO: COMMENT THIS LINE FOR SPEED
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
-enum Mode {TESTING, LAUNCH, ENDURANCE, AUTOX, SKIDPAD, ACC, PIT};
+enum Mode {PIT, LAUNCH, STANDARD, DYNAMIC_TC, ENDURANCE};
 
 iCANflex* Car;
 SystemsCheck* sysCheck;
 Tune* tune;
 
-// namespace std {
+// namespace std { // THIS HASH DOES NOT WORK DO NOT USE
 //     template <>
 //     struct hash<bool (*)(const iCANflex&, Tune& t)> {
 //         size_t operator()(bool (*f)(const iCANflex&, Tune& t)) const noexcept{
@@ -414,10 +422,13 @@ Mode mode;
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
 CAN_message_t msg;
 
-const uint16_t DTI_COMM_FREQUENCY = 100; // Hz
-const uint16_t PING_REQ_FREQENCY = 10; // Hz
-const uint16_t PING_VALUE_SEND_FREQENCY = 10; // Hz
-const uint16_t VDM_INFO_SEND_FREQENCY = 10; // Hz
+const uint8_t DTI_COMM_FREQUENCY = 100; // Hz
+const uint8_t PING_REQ_FREQENCY = 10; // Hz
+const uint8_t PING_VALUE_SEND_FREQENCY = 10; // Hz
+const uint8_t VDM_INFO_SEND_FREQENCY = 10; // Hz
+const uint8_t TRACTION_CONTROL_FREQENCY = 100; // Hz
+const uint8_t DEBUG_PRINT_FREQUENCY = 10; // Hz
+
 const unsigned long PING_TIMEOUT = 3000000; // microseconds 
 
 
@@ -494,9 +505,14 @@ void handleDashPanelInputs(){
 
 void sendVDMInfo(){
     // TODO:
+    byte* sys_check_data = sysCheck->getSysCheckFrame();
+    // write system check data
+    // write VDM State and mode data
+
+
 }
 
-void sendDashPopup(){
+void sendDashPopup(int8_t error_code){
     // TODO:
 }
 
@@ -608,6 +624,10 @@ void checkPingTimeout(){
                                                                                             
 
 */
+float tc_multiplier = 1;
+void update_tc_multiplier(){
+
+}
 
 /*
     _______   ____________  ________  __   
@@ -722,6 +742,7 @@ State precharge_complete(iCANflex& Car){
     return PRECHARGE_COMPLETE;  
 }
 
+
 /*
 STARTUP STAGE 4:  READY TO DRIVE
 
@@ -731,6 +752,26 @@ READY TO DRIVE SUB STATES
 - DRIVE_REGEN
 
 */
+
+
+
+
+float getThrottle1(uint16_t a1, Tune& tune){
+    float throttle =  1.0 - ((a1 - tune.getAPPSFloor1()*1.0)/(tune.getAPPSZero1()-tune.getAPPSFloor1()));
+    if (throttle < 0.05) return 0;
+    else if (throttle > 1 && throttle < 1.1) return 1;
+    else if (throttle > 1.1) return 0;
+    else return throttle;
+}
+
+float getThrottle2(uint16_t a2,  Tune& tune){
+    float throttle =  1.0 - ((a2 - tune.getAPPSFloor2()*1.0)/(tune.getAPPSZero2()-tune.getAPPSFloor2()));
+    if (throttle < 0.05) return 0;
+    else if (throttle > 1 && throttle < 1.1) return 1;
+    else if (throttle > 1.1) return 0;
+    else return throttle;
+}
+
 State drive_standby(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
     
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
@@ -749,6 +790,7 @@ State drive_standby(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
 
     if(BSE_APPS_violation) {
         // SEND CAN WARNING TO DASH
+        sendDashPopup(0x01);
         if(throttle < 0.05) {
             // violation exit condition, reset violation and return to DRIVE_READY
             BSE_APPS_violation = false;
@@ -780,68 +822,45 @@ THE DRIVE_TORQUE STATE IS ALSO RESPONSIBLE FOR CHECKING THE APPS AND BSE FOR VIO
 THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED. 
 */
 
-
-float requested_torque(iCANflex& Car, float throttle, int rpm, Tune& tune) {
-    // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100)
-    TorqueProfile tp = tune.getActiveTorqueProfile();
-    float k = tp.K;
-    float p = tp.P;
-    float b = tp.B;
-    float torque_multiplier = (throttle-(1-throttle)*(throttle+b)*pow(rpm/tune.revLimit(), p)*k);
-    if(torque_multiplier > 1) torque_multiplier = 1; // clipping
-    if(torque_multiplier < 0) torque_multiplier = 0;
-    return torque_multiplier*100;
-}
-
-
-float getThrottle1(uint16_t a1, Tune& tune){
-    float throttle =  1.0 - ((a1 - tune.getAPPSFloor1()*1.0)/(tune.getAPPSZero1()-tune.getAPPSFloor1()));
-    if (throttle < 0.05) return 0;
-    else if (throttle > 1 && throttle < 1.1) return 1;
-    else if (throttle > 1.1) return 0;
-    else return throttle;
-}
-
-float getThrottle2(uint16_t a2,  Tune& tune){
-    float throttle =  1.0 - ((a2 - tune.getAPPSFloor2()*1.0)/(tune.getAPPSZero2()-tune.getAPPSFloor2()));
-    if (throttle < 0.05) return 0;
-    else if (throttle > 1 && throttle < 1.1) return 1;
-    else if (throttle > 1.1) return 0;
-    else return throttle;
-}
-
 State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
 
-    float a1 = getThrottle1(Car.PEDALS.getAPPS1(), tune);
+    float throttle = getThrottle1(Car.PEDALS.getAPPS1(), tune);
     float a2 = getThrottle2(Car.PEDALS.getAPPS2(), tune);
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0; // TODO: All the Braking stuff is wrong
     
     // APPS GRADIENT VIOLATION
-    if(abs(a1-a2) > 0.1){
-        // TODO: send an error message on the dash that APPS blew up
-        // comms.sendDashboardPopup(0x01);
+    if(abs(throttle-a2) > 0.1){
+        sendDashPopup(0x02);
         return DRIVE_STANDBY;
     } 
     // APPS BSE VIOLATION
-    if((brake > 0.05 && a1 > 0.25)) {
+    if((brake > 0.05 && throttle > 0.25)) {
+        sendDashPopup(0x01);
         BSE_APPS_violation = true;
         return DRIVE_STANDBY;
     }
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         Car.DTI.setDriveEnable(1);
-        Car.DTI.setMaxCurrent(tune.getActiveCurrentLimit());   
-        Car.DTI.setRCurrent(requested_torque(Car, a1, Car.DTI.getERPM()/10.0, tune));
-        // float power = Car.ACU1.getAccumulatorVoltage() * Car.DTI.getDCCurrent();
+        Car.DTI.setMaxCurrent(tune.getActiveCurrentLimit());  
+        // TORQUE MAPPING FOR DRIVING AND STABILITY AND NONLINEAR THROTTLE CONTROL
+        // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100) 
+        TorqueProfile tp = tune.getActiveTorqueProfile();
+        float k = tp.K;
+        float p = tp.P;
+        float b = tp.B;
+        float rpm = Car.DTI.getERPM()/10.0;
+        float torque_multiplier = (throttle-(1-throttle)*(throttle+b)*pow(rpm/tune.revLimit(), p)*k);
+        if(torque_multiplier > 1) torque_multiplier = 1; // clipping
+        if(torque_multiplier < 0) torque_multiplier = 0;
+        float r_current = torque_multiplier*100;
+        if(mode == DYNAMIC_TC) r_current *= tc_multiplier;
+        Car.DTI.setRCurrent(r_current);
         lastDTIMessage = millis();
     }
     
     return DRIVE_ACTIVE;
 }
 
-float requested_regenerative_torque(iCANflex& Car, float brake, int rpm) {
-    // return Car.ACU1.maxRegenPower() * brake;
-    return 0;
-}
 
 State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune){
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2; // TODO: Change to AnalogRead from pin
@@ -853,7 +872,15 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune){
     
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         Car.DTI.setDriveEnable(1);
-        Car.DTI.setRCurrent(-1 * requested_regenerative_torque(Car, brake, rpm) * tune.getActiveRegenPower());
+        // TODO: Do this in AMPS instead of Relative Current
+        float max_accumulator_input = 0; //TODO: in nodes
+        float steering_angle = 0; //TODO: in nodes
+        // must be > 5 kph
+        if(rpm > 250 && brake > 0.05 && abs(steering_angle) < tune.getMaxRegenSteeringAngle()) {// make sure revs are high enough for significant backemf
+
+        }
+
+        Car.DTI.setCurrent(-1 * max_accumulator_input * tune.getActiveRegenPower());
         lastDTIMessage = millis();
     }
     return DRIVE_REGEN;
@@ -901,7 +928,6 @@ State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& 
                                             
 */
 
-const int DEBUG_PRINT_FREQUENCY = 10; // Hz
 unsigned long lastPrintTime = 0;
 
 std::unordered_map<State, std::string> state_to_string = {
@@ -916,13 +942,11 @@ std::unordered_map<State, std::string> state_to_string = {
                 {ERROR, "ERROR"}
 };
 std::unordered_map<Mode, std::string>mode_to_string = {
-                {TESTING, "TESTING"},
                 {LAUNCH, "LAUNCH"},
                 {ENDURANCE, "ENDURANCE"},
-                {AUTOX, "AUTOX"},
-                {SKIDPAD, "SKIDPAD"},
-                {ACC, "ACC"},
-                {PIT, "PIT"}
+                {PIT, "PIT"},
+                {STANDARD, "STANDARD"},
+                {DYNAMIC_TC, "DYNAMIC_TC"}
 }; 
 std::unordered_map<int, std::string>node_to_string = {
     {1, "ACU"},
@@ -1017,7 +1041,7 @@ void setup() {
     pinMode(BSPD_OK_PIN, INPUT);
     pinMode(IMD_OK_PIN, INPUT);
     pinMode(BRAKE_LIGHT_PIN, INPUT);    
-    //TODO: BRAKE CURRENT PIN
+    //TODO: BRAKE CURRENT PIN 
 
     active_faults = new std::unordered_set<bool (*)(const iCANflex&, Tune&)>(); 
     active_warnings = new std::unordered_set<bool (*)(const iCANflex&, Tune&)>();
@@ -1029,8 +1053,8 @@ void setup() {
 
 
     // set state  
-    state = DRIVE_STANDBY;
-    mode = ENDURANCE; // TODO: Energy management algorithm for endurance
+    state = ECU_FLASH;
+    mode = STANDARD; // TODO: Energy management algorithm for endurance
 
 }
 
@@ -1041,17 +1065,17 @@ void loop(){
         handleDashPanelInputs();    
         handleDriverInputs(*tune);
         handlePingResponse();
-        if(msg.id == 0x6969){
-            Serial.println("GOT MESSAGE FROM TUNER");
-        }
+        // if(msg.id == 0x6969){
+            
+        // }
     }
     
     // Get ping values for all systems
     tryPingRequests({Pedals_Ping_Request, Steering_Wheel_Ping_Request, Dash_Panel_Ping_Request, ACU_Ping_Request}, *Car);
-    checkPingTimeout();// TODO: This is broken
+    checkPingTimeout();
     sendPingValues();
     sendVDMInfo();
-
+    
     
     // System Checks
     sysCheck->hardware_system_critical(*Car, *active_faults, tune);
@@ -1060,7 +1084,7 @@ void loop(){
     sysCheck->system_warnings(*Car, *active_warnings, tune);
     
     #if defined(PRINT_DBG)
-        printStatus();
+        // printStatus();
     #endif
     
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
