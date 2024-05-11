@@ -25,7 +25,6 @@
                                                 
                                     
 */
-
 // TORQUE MAP PROFILES 
 const uint8_t LINEAR = 0;
 const uint8_t TQ_MAP_1 = 1;
@@ -52,58 +51,11 @@ struct TorqueProfile{
     TorqueProfile(){}
 };
 
-// STEERING WHEEL SETTINGS
-struct SWSettings {
-    uint8_t power_level; // 0 - 3
-    uint8_t throttle_map; // 0-3
-    uint8_t regen_level; // 0-3
-    SWSettings(){}  
-};  
-
-class Tune {
-    private:
-        std::vector<TorqueProfile> TorqueProfilesData; // see above
-        std::vector<float> PowerLevelsData; // max current value in Amperes
-        std::vector<float> RegenLevelsData; // percentile value 0 to 100
-
-        uint32_t MaxCANPing = 100000; // microsec
-        uint8_t temp_motor_warn = 60; // celsius
-        uint8_t temp_motor_limit = 65; // celsius
-        uint8_t temp_motor_critical = 70; // celsius
-
-        uint8_t temp_battery_warn = 60; // celsius
-        uint8_t temp_battery_limit = 65; // celsius
-        uint8_t temp_battery_critical = 70; // celsius
-
-        uint8_t temp_coolant_warn = 60; // celsius
-        uint8_t temp_coolant_limit = 65; // celsius
-        uint8_t temp_coolant_critical = 70; // celsius
-
-        uint8_t temp_inverter_warn = 60; // celsius
-        uint8_t temp_inverter_limit = 65; // celsius
-        uint8_t temp_inverter_critical = 70; // celsius
-        uint16_t rev_limit = 5500;// RPM      public:
-
-        uint16_t apps_zero_1 = 50100;
-        uint16_t apps_zero_2 = 41810;
-        uint16_t apps_floor_1 = 44256; 
-        uint16_t apps_floor_2 = 38750;
-
-        float max_regen_steering_angle = 0.5; // radians
-        
 
 
 
-    public:
-        SWSettings settings;
-        Tune(){
-            // init from sd card
-            TorqueProfilesData = std::vector<TorqueProfile>(4);
-            PowerLevelsData = std::vector<float>(4);
-            RegenLevelsData = std::vector<float>(4);
-    
-
-            Serial.println("Initializing SD Card...");
+void readSDCard(std::vector<TorqueProfile>& TorqueProfilesData, std::vector<float>& PowerLevelsData, std::vector<float>& RegenLevelsData){
+    Serial.println("Initializing SD Card...");
             while(!SD.begin(BUILTIN_SDCARD)){
                 Serial.println("Waiting for SD Card to initialize...");
             }
@@ -168,13 +120,66 @@ class Tune {
             }
             Serial.println("");
             Serial.println("--------------------------");
-            
+}
+
+
+class Tune {
+    private:
+        std::vector<TorqueProfile> TorqueProfilesData; // see above
+        std::vector<float> PowerLevelsData; // max current value in Amperes
+        std::vector<float> RegenLevelsData; // percentile value 0 to 100
+
+        uint32_t MaxCANPing = 100000; // microsec
+        uint8_t temp_motor_warn = 60; // celsius
+        uint8_t temp_motor_limit = 65; // celsius
+        uint8_t temp_motor_critical = 70; // celsius
+
+        uint8_t temp_battery_warn = 60; // celsius
+        uint8_t temp_battery_limit = 65; // celsius
+        uint8_t temp_battery_critical = 70; // celsius
+
+        uint8_t temp_coolant_warn = 60; // celsius
+        uint8_t temp_coolant_limit = 65; // celsius
+        uint8_t temp_coolant_critical = 70; // celsius
+
+        uint8_t temp_inverter_warn = 60; // celsius
+        uint8_t temp_inverter_limit = 65; // celsius
+        uint8_t temp_inverter_critical = 70; // celsius
+        uint16_t rev_limit = 5500;// RPM      public:
+
+        uint16_t apps_zero_1 = 50100;
+        uint16_t apps_zero_2 = 41810;
+        uint16_t apps_floor_1 = 44256; 
+        uint16_t apps_floor_2 = 38750;
+
+        float max_regen_steering_angle = 0.5; // radians
+        float regen_rms_amps = 15;
+        float regen_dump_amps = 30;
+        float regen_rms_max_rpm = 2000;
+        float regen_dump_min_rpm = 3000;
+
+    public:
+        Tune(){
+            // init from sd card
+            TorqueProfilesData = std::vector<TorqueProfile>(4);
+            PowerLevelsData = std::vector<float>(4);
+            RegenLevelsData = std::vector<float>(4);
+            readSDCard(TorqueProfilesData, PowerLevelsData, RegenLevelsData);            
 
         }
 
-        // REGEN STEERING ANGLE LIMIT
+        // REGEN STUFF
         float getMaxRegenSteeringAngle(){ return max_regen_steering_angle; }
+        float getRegenRMSAmps(){ return regen_rms_amps; }
+        float getRegenDumpAmps(){ return regen_dump_amps; }
+        float getRegenRMSMaxRPM(){ return regen_rms_max_rpm; }
+        float getRegenDumpMinRPM(){ return regen_dump_min_rpm; }
         void setMaxRegenSteeringAngle(float angle){ max_regen_steering_angle = angle; }
+        void setRegenRMSAmps(float amps){ regen_rms_amps = amps; }
+        void setRegenDumpAmps(float amps){ regen_dump_amps = amps; }
+        void setRegenRMSMaxRPM(float rpm){ regen_rms_max_rpm = rpm; }
+        void setRegenDumpMinRPM(float rpm){ regen_dump_min_rpm = rpm; }
+
 
         // APPS CALIBRATION
         uint32_t getAPPSZero1(){ return apps_zero_1; }
@@ -215,14 +220,21 @@ class Tune {
         void setInverterCriticalTemp(uint8_t temp){ temp_inverter_critical = temp; }
 
 
-        TorqueProfile getActiveTorqueProfile(){ return TorqueProfilesData[settings.throttle_map]; }        
-        float getActiveCurrentLimit(){ return PowerLevelsData[settings.power_level];}
-        float getActiveRegenPower(){ return RegenLevelsData[settings.regen_level];}
+        TorqueProfile getActiveTorqueProfile(int8_t pos){ return TorqueProfilesData[pos]; }        
+        float getActiveCurrentLimit(int8_t pos){ return PowerLevelsData[pos];}
+        float getActiveRegenPower(int8_t pos){ return RegenLevelsData[pos];}
         int revLimit(){ return rev_limit; } 
         void setTorqueProfileData(uint8_t index, TorqueProfile tp){ TorqueProfilesData[index] = tp; }
         void setPowerLevelData(uint8_t index, float power){ PowerLevelsData[index] = power; }
         void setRegenLevelData(uint8_t index, float regen){ RegenLevelsData[index] = regen; }
 };
+
+
+
+void handleECUTuning(Tune& tune){
+    // TODO:
+}
+
 
 
 /*
@@ -384,6 +396,12 @@ class SystemsCheck {
 
 };
 
+void sendDashPopup(int8_t error_code, int8_t secs){
+    // TODO:
+}
+
+
+
 /*
    ________    ____  ____  ___    __ 
   / ____/ /   / __ \/ __ )/   |  / / 
@@ -394,6 +412,13 @@ class SystemsCheck {
 #define PRINT_DBG true; //TODO: COMMENT THIS LINE FOR SPEED
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
 enum Mode {PIT, LAUNCH, STANDARD, DYNAMIC_TC, ENDURANCE};
+// STEERING WHEEL SETTINGS
+struct SWSettings {
+    uint8_t power_level; // 0 - 3
+    uint8_t throttle_map; // 0-3
+    uint8_t regen_level; // 0-3
+    SWSettings(){}  
+};  
 
 iCANflex* Car;
 SystemsCheck* sysCheck;
@@ -422,6 +447,8 @@ Mode mode;
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
 CAN_message_t msg;
 
+SWSettings settings;
+
 const uint8_t DTI_COMM_FREQUENCY = 100; // Hz
 const uint8_t PING_REQ_FREQENCY = 10; // Hz
 const uint8_t PING_VALUE_SEND_FREQENCY = 10; // Hz
@@ -432,89 +459,30 @@ const uint8_t DEBUG_PRINT_FREQUENCY = 10; // Hz
 const unsigned long PING_TIMEOUT = 3000000; // microseconds 
 
 
-
-
-
-/*
-   _________    _   __      ____  __  _______
-  / ____/   |  / | / /     / __ )/ / / / ___/
- / /   / /| | /  |/ /_____/ __  / / / /\__ \ 
-/ /___/ ___ |/ /|  /_____/ /_/ / /_/ /___/ / 
-\____/_/  |_/_/ |_/     /_____/\____//____/  
-   __________  __  _____  ________
-  / ____/ __ \/  |/  /  |/  / ___/
- / /   / / / / /|_/ / /|_/ /\__ \ 
-/ /___/ /_/ / /  / / /  / /___/ / 
-\____/\____/_/  /_/_/  /_//____/  
-*/
-
-
 unsigned long lastPrechargeTime = 0;
 unsigned long lastDTIMessage = 0;
 unsigned long lastPingSend = 0; // last send on 0xF2
 
+
+
+
 void handleDriverInputs(Tune& tune){
     if(msg.id == 0x11002){
-        tune.settings.power_level = msg.buf[0];
-        tune.settings.throttle_map = msg.buf[1];
-        tune.settings.regen_level = msg.buf[2];
+        settings.power_level = msg.buf[0];
+        settings.throttle_map = msg.buf[1];
+        settings.regen_level = msg.buf[2];
     }
 }
-
-
-void handleDashPanelInputs(){
-    if(msg.id == Button_Event ){
-        if(msg.buf[0]){ // TS_ACTIVE
-            if(state == GLV_ON){
-                if(millis() - lastPrechargeTime > 5000){
-                    state = TS_PRECHARGE;
-                    CAN_message_t message;
-                    message.flags.extended = true;
-                    message.id = 0x66;
-                    message.len = 8;
-                    message.buf[0] = 1;
-                    can1.write(message);
-                    lastPrechargeTime = millis();
-                }
-            }
-        }
-        else if(msg.buf[1]){ // TS_OFF
-            // shut off car entirely
-            CAN_message_t message;
-            message.flags.extended = true;
-            message.id = 0x66;
-            message.len = 8;
-            message.buf[0] = 0;
-            can1.write(message);
-            state = GLV_ON;
-        }
-        else if(msg.buf[2]) {// RTD_ON
-            if(state == PRECHARGE_COMPLETE){
-                state = DRIVE_STANDBY;
-                //TODO: play rtd sound
-            }
-        }
-        else if(msg.buf[3]){ // RTD_OFF
-            if(state == DRIVE_STANDBY) {
-                state = TS_PRECHARGE;
-            }
-        }
-    }
-}
-
-
 void sendVDMInfo(){
     // TODO:
     byte* sys_check_data = sysCheck->getSysCheckFrame();
+    Serial.println(sys_check_data[0]);
     // write system check data
     // write VDM State and mode data
 
 
 }
 
-void sendDashPopup(int8_t error_code){
-    // TODO:
-}
 
 // PING LOGIC
 
@@ -625,8 +593,11 @@ void checkPingTimeout(){
 
 */
 float tc_multiplier = 1;
-void update_tc_multiplier(){
-
+unsigned long lastTractionCompute = 0;
+void computeTractionControl(){
+    if(millis() - lastTractionCompute > 1000/TRACTION_CONTROL_FREQENCY){
+        
+    }
 }
 
 /*
@@ -655,9 +626,49 @@ void update_tc_multiplier(){
  / / / / /_/ / __/ / /_/ / /| | / /  / // / / /  |/ / 
 / /_/ / ____/ /___/ _, _/ ___ |/ / _/ // /_/ / /|  /  
 \____/_/   /_____/_/ |_/_/  |_/_/ /___/\____/_/ |_/   
-                                                                                                                                
-
+                                                                                                                            
 */
+
+void handleDashPanelInputs(){
+    if(msg.id == Button_Event ){
+        if(msg.buf[0]){ // TS_ACTIVE
+            if(state == GLV_ON){
+                if(millis() - lastPrechargeTime > 5000){
+                    state = TS_PRECHARGE;
+                    CAN_message_t message;
+                    message.flags.extended = true;
+                    message.id = 0x66;
+                    message.len = 8;
+                    message.buf[0] = 1;
+                    can1.write(message);
+                    lastPrechargeTime = millis();
+                }
+            }
+        }
+        else if(msg.buf[1]){ // TS_OFF
+            // shut off car entirely
+            CAN_message_t message;
+            message.flags.extended = true;
+            message.id = 0x66;
+            message.len = 8;
+            message.buf[0] = 0;
+            can1.write(message);
+            state = GLV_ON;
+        }
+        else if(msg.buf[2]) {// RTD_ON
+            if(state == PRECHARGE_COMPLETE){
+                state = DRIVE_STANDBY;
+                //TODO: play rtd sound
+            }
+        }
+        else if(msg.buf[3]){ // RTD_OFF
+            if(state == DRIVE_STANDBY) {
+                state = TS_PRECHARGE;
+            }
+        }
+    }
+}
+
 State sendToError(bool (*erFunc)(const iCANflex& Car, Tune& tune)) {
    errorCheck = erFunc; 
    return ERROR;
@@ -790,7 +801,7 @@ State drive_standby(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
 
     if(BSE_APPS_violation) {
         // SEND CAN WARNING TO DASH
-        sendDashPopup(0x01);
+        sendDashPopup(0x01, 3);
         if(throttle < 0.05) {
             // violation exit condition, reset violation and return to DRIVE_READY
             BSE_APPS_violation = false;
@@ -830,21 +841,21 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
     
     // APPS GRADIENT VIOLATION
     if(abs(throttle-a2) > 0.1){
-        sendDashPopup(0x02);
+        sendDashPopup(0x02, 3);
         return DRIVE_STANDBY;
     } 
     // APPS BSE VIOLATION
     if((brake > 0.05 && throttle > 0.25)) {
-        sendDashPopup(0x01);
+        sendDashPopup(0x01, 1);
         BSE_APPS_violation = true;
         return DRIVE_STANDBY;
     }
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         Car.DTI.setDriveEnable(1);
-        Car.DTI.setMaxCurrent(tune.getActiveCurrentLimit());  
+        Car.DTI.setMaxCurrent(tune.getActiveCurrentLimit(settings.power_level));  
         // TORQUE MAPPING FOR DRIVING AND STABILITY AND NONLINEAR THROTTLE CONTROL
         // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100) 
-        TorqueProfile tp = tune.getActiveTorqueProfile();
+        TorqueProfile tp = tune.getActiveTorqueProfile(settings.throttle_map);
         float k = tp.K;
         float p = tp.P;
         float b = tp.B;
@@ -872,15 +883,26 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune){
     
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         Car.DTI.setDriveEnable(1);
-        // TODO: Do this in AMPS instead of Relative Current
-        float max_accumulator_input = 0; //TODO: in nodes
+        // Do this one in AMPS instead of Relative Current
+        // 30A Max Regen, 15A Continuous
+        float accumulator_input_amps = 0; 
         float steering_angle = 0; //TODO: in nodes
         // must be > 5 kph
-        if(rpm > 250 && brake > 0.05 && abs(steering_angle) < tune.getMaxRegenSteeringAngle()) {// make sure revs are high enough for significant backemf
-
+        bool regen_ok = rpm > 250 && brake > 0.05 && throttle == 0 && abs(steering_angle) < tune.getMaxRegenSteeringAngle();
+        bool max_regen_ok = regen_ok && rpm > tune.getRegenDumpMinRPM() && brake > 0.75 && !sysCheck->warn_battery_temp(Car, tune) && !sysCheck->limit_battery_temp(Car, tune);
+        if(max_regen_ok) {// make sure revs are high enough for significant backemf
+            // only for hard braking requests, dump energy back into accumulator
+            accumulator_input_amps = tune.getRegenDumpAmps();
+        } else if(regen_ok){
+            // 250 - 2000 RPM interpolate from 0 to 15A based on RPM
+            // 2000 - 3000 RPM is 15A 
+            if (rpm < tune.getRegenRMSMaxRPM()) accumulator_input_amps = 15*(rpm-250)/(tune.getRegenRMSMaxRPM()-250);
+            else accumulator_input_amps = tune.getRegenRMSAmps(); // TODO: Put this interpolation diagram in the tuning software
+        } else {
+            accumulator_input_amps = 0;
         }
 
-        Car.DTI.setCurrent(-1 * max_accumulator_input * tune.getActiveRegenPower());
+        Car.DTI.setCurrent(-1 * accumulator_input_amps * tune.getActiveRegenPower(settings.regen_level));
         lastDTIMessage = millis();
     }
     return DRIVE_REGEN;
@@ -1065,17 +1087,18 @@ void loop(){
         handleDashPanelInputs();    
         handleDriverInputs(*tune);
         handlePingResponse();
-        // if(msg.id == 0x6969){
-            
-        // }
+        handleECUTuning(*tune);
     }
     
     // Get ping values for all systems
     tryPingRequests({Pedals_Ping_Request, Steering_Wheel_Ping_Request, Dash_Panel_Ping_Request, ACU_Ping_Request}, *Car);
     checkPingTimeout();
     sendPingValues();
+
+
     sendVDMInfo();
-    
+
+    if(mode == DYNAMIC_TC) computeTractionControl();
     
     // System Checks
     sysCheck->hardware_system_critical(*Car, *active_faults, tune);
@@ -1086,12 +1109,15 @@ void loop(){
     #if defined(PRINT_DBG)
         // printStatus();
     #endif
+
+    float soc = Car->ACU1.getSOC();
+    float power = Car->ACU1.getTSVoltage() * Car->DTI.getACCurrent();
     
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
 
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
    
-    tune->settings.power_level = active_limits->size() ? LIMIT : tune->settings.power_level; // limit power in overheat conditions
+    settings.power_level = active_limits->size() ? LIMIT : settings.power_level; // limit power in overheat conditions
 
    // state machine operation
     switch (state) {
