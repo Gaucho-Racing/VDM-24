@@ -26,22 +26,22 @@
                                     
 */
 // TORQUE MAP PROFILES 
-const uint8_t LINEAR = 0;
-const uint8_t TQ_MAP_1 = 1;
-const uint8_t TQ_MAP_2 = 2;
-const uint8_t TQ_MAP_3 = 3;
+const uint8_t LINEAR_TORQUE = 0;
+const uint8_t TORQUE_MAP_1 = 1;
+const uint8_t TORQUE_MAP_2 = 2;
+const uint8_t TORQUE_MAP_3 = 3;
 
 // POWER LEVELS
 const uint8_t LIMIT = 0;
 const uint8_t LOW_PWR = 1;
-const uint8_t MEDIUM_PWR = 2;
+const uint8_t MID_PWR = 2;
 const uint8_t HIGH_PWR = 3;
 
 // REGEN LEVELS
-const uint8_t REGEN_0 = 0;
-const uint8_t REGEN_1 = 1;
-const uint8_t REGEN_2 = 2;
-const uint8_t REGEN_3 = 3;
+const uint8_t REGEN_OFF = 0;
+const uint8_t REGEN_LOW = 1;
+const uint8_t REGEN_MID = 2;
+const uint8_t REGEN_HIGH = 3;
 
 struct TorqueProfile{
     float K;
@@ -80,23 +80,19 @@ void readSDCard(std::vector<TorqueProfile>& TorqueProfilesData, std::vector<floa
                 iss >> k >> p >> b;
                 TorqueProfilesData[i] = TorqueProfile(k, p, b);
             }   
-            delay(250);
             Serial.println("TORQUE PROFILES INITIALIZED");
             for(int i = 0; i < 4; i++){
                 float cmax;
                 iss >> cmax;
                 PowerLevelsData[i] = cmax;
             }   
-            delay(250);
             Serial.println("CURRENT LIMITS INITIALIZED");
             for(int i = 0; i < 4; i++){
                 float r;
                 iss >> r;
                 RegenLevelsData[i] = r;
             }
-            delay(250);
             Serial.println("REGEN LEVELS INITIALIZED");
-            delay(250);
             Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
             Serial.println("STARTING CAR WITH SETTINGS: ");
             Serial.print("THROTTLE MAP: ");
@@ -409,9 +405,8 @@ void sendDashPopup(int8_t error_code, int8_t secs){
 / /_/ / /___/ /_/ / /_/ / ___ |/ /___
 \____/_____/\____/_____/_/  |_/_____/
 */
-#define PRINT_DBG true; //TODO: COMMENT THIS LINE FOR SPEED
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
-enum Mode {PIT, LAUNCH, STANDARD, DYNAMIC_TC, ENDURANCE};
+enum Mode {STANDARD, DYNAMIC_TC, ENDURANCE};
 // STEERING WHEEL SETTINGS
 struct SWSettings {
     uint8_t power_level; // 0 - 3
@@ -476,9 +471,12 @@ void handleDriverInputs(Tune& tune){
 void sendVDMInfo(){
     // TODO:
     byte* sys_check_data = sysCheck->getSysCheckFrame();
-    Serial.println(sys_check_data[0]);
+    // Serial.println(sys_check_data[0]);
     // write system check data
     // write VDM State and mode data
+    // write can, error, and tcm status
+    // write throttle map, power level, and regen level
+
 
 
 }
@@ -596,6 +594,21 @@ float Kp = 0.2;   // Proportional gain
 float Ki = 0.02;  // Integral gain
 float Kd = 0.1;   // Derivative gain
 
+// MOTOR MODEL
+const float L_INDUCTANCE = 225.5e-6;
+const float R_RESISTANCE = 0.01548;
+const float KB_BACK_EMF = 0.6870;
+const float KM_TORQUE_CONSTANT = 0.6870;
+const float J_INERTIA = 0.0421;
+const float B_DAMPING = 3.97e-6;
+const float FC = 0.0;
+const float VEHICLE_MASS = 300;
+const float WHEEL_RADIUS = 0.1778;
+const float G = 9.81;
+const float Q_W_BALANCE_FACTOR = 0.5;
+const float GEAR_RATIO = 3.42;
+
+
 // System variables
 float tc_multiplier = 1;
 float loss, previousLoss = 0;
@@ -656,11 +669,15 @@ void computeTractionControl(iCANflex& Car) {
         lastTractionCompute = millis(); 
 
         // Optionally log or display the PID parameters and multiplier for tuning and monitoring
-        Serial.print("Slip Ratio: "); Serial.println(slipRatio);
-        Serial.print("PID Output: "); Serial.println(pidOutput);
-        Serial.print("Throttle Multiplier: "); Serial.println(tc_multiplier);
+        // Serial.print("Slip Ratio: "); Serial.println(slipRatio);
+        // Serial.print("PID Output: "); Serial.println(pidOutput);
+        // Serial.print("Throttle Multiplier: "); Serial.println(tc_multiplier);
     }
 }
+
+
+
+
 
 /*
     _______   ____________  ________  __   
@@ -677,6 +694,9 @@ void computeTractionControl(iCANflex& Car) {
 
 */
 
+
+
+
 /*
    ______________  ____________   __  ______   ________  _______   ________
   / ___/_  __/   |/_  __/ ____/  /  |/  /   | / ____/ / / /  _/ | / / ____/
@@ -692,14 +712,14 @@ void computeTractionControl(iCANflex& Car) {
 */
 
 void handleDashPanelInputs(){
-    if(msg.id == Button_Event ){
+    if(msg.id == Button_Event ){ //TODO: CHeck for BRAKE PRESSED
         if(msg.buf[0]){ // TS_ACTIVE
             if(state == GLV_ON){
                 if(millis() - lastPrechargeTime > 5000){
                     state = TS_PRECHARGE;
                     CAN_message_t message;
                     message.flags.extended = true;
-                    message.id = 0x66;
+                    message.id = ACU_Control;
                     message.len = 8;
                     message.buf[0] = 1;
                     can1.write(message);
@@ -711,7 +731,7 @@ void handleDashPanelInputs(){
             // shut off car entirely
             CAN_message_t message;
             message.flags.extended = true;
-            message.id = 0x66;
+            message.id = ACU_Control;
             message.len = 8;
             message.buf[0] = 0;
             can1.write(message);
@@ -854,7 +874,7 @@ State drive_standby(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
     }
 
     float throttle = getThrottle1(Car.PEDALS.getAPPS1(), tune);
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0;//TODO: Fix
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0; //TODO: Fix
     
     // only if no violation, and throttle is pressed, go to DRIVE
 
@@ -926,6 +946,7 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
         if(torque_multiplier > 1) torque_multiplier = 1; // clipping
         if(torque_multiplier < 0) torque_multiplier = 0;
         float r_current = torque_multiplier*100;
+        if(settings.throttle_map == LINEAR_TORQUE) r_current = throttle*100;
         if(mode == DYNAMIC_TC) r_current *= tc_multiplier;
         Car.DTI.setRCurrent(r_current);
         lastDTIMessage = millis();
@@ -936,7 +957,9 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
 
 
 State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune){
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2; // TODO: Change to AnalogRead from pin
+    if(settings.regen_level == REGEN_OFF) return DRIVE_STANDBY;
+
+    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0; // TODO: Change to BSE 
     float throttle = getThrottle1(Car.PEDALS.getAPPS1(), tune);
     if(throttle > 0.05) return DRIVE_ACTIVE;
     if(brake < 0.05) return DRIVE_STANDBY;
@@ -945,12 +968,13 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune){
     
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         Car.DTI.setDriveEnable(1);
+        Car.DTI.setMaxCurrent(tune.getActiveCurrentLimit(settings.power_level));
         // Do this one in AMPS instead of Relative Current
-        // 30A Max Regen, 15A Continuous
+        // 30A Max Regen, 15A Continuous/RMS
         float accumulator_input_amps = 0; 
         float steering_angle = 0; //TODO: in nodes
         // must be > 5 kph
-        bool regen_ok = rpm > 250 && brake > 0.05 && throttle == 0 && abs(steering_angle) < tune.getMaxRegenSteeringAngle();
+        bool regen_ok = Car.ACU1.getSOC() < 85 && rpm > 250 && brake > 0.05 && throttle == 0 && abs(steering_angle) < tune.getMaxRegenSteeringAngle();
         bool max_regen_ok = regen_ok && rpm > tune.getRegenDumpMinRPM() && brake > 0.75 && !sysCheck->warn_battery_temp(Car, tune) && !sysCheck->limit_battery_temp(Car, tune);
         if(max_regen_ok) {// make sure revs are high enough for significant backemf
             // only for hard braking requests, dump energy back into accumulator
@@ -977,7 +1001,7 @@ THIS STATE WILL HANDLE ERRORS THAT OCCUR DURING THE OPERATION OF THE VEHICLE.
 THIS STATE WILL BE ENTERED WHENEVER A CRITICAL SYSTEMS FAILURE OCCURS OR WHEN THE
 DRIVER REQUESTS TO STOP THE VEHICLE.
 
-THE VEHICLE REMAINS IN THIS STATE UNTIL THE VIOLATION IS RESOLVED 
+THE VEHICLE REMAINS IN THIS STATE UNTIL ALL VIOLATIONS ARE RESOLVED 
 
 */
 State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& t), std::unordered_set<bool (*)(const iCANflex& c, Tune& t)>& active_faults){
@@ -1026,9 +1050,7 @@ std::unordered_map<State, std::string> state_to_string = {
                 {ERROR, "ERROR"}
 };
 std::unordered_map<Mode, std::string>mode_to_string = {
-                {LAUNCH, "LAUNCH"},
                 {ENDURANCE, "ENDURANCE"},
-                {PIT, "PIT"},
                 {STANDARD, "STANDARD"},
                 {DYNAMIC_TC, "DYNAMIC_TC"}
 }; 
@@ -1137,15 +1159,19 @@ void setup() {
 
 
     // set state  
-    state = ECU_FLASH;
+    state = GLV_ON;
     mode = STANDARD; // TODO: Energy management algorithm for endurance
 
 }
+
+//TODO: interrupts for AMS and IMD LEDs
+
 
 // MAIN LOOP
 void loop(){
     Car->readData(msg);
     if(can1.read(msg)) {
+        Serial.println("Recieved Message");
         handleDashPanelInputs();    
         handleDriverInputs(*tune);
         handlePingResponse();
@@ -1169,9 +1195,7 @@ void loop(){
     sysCheck->system_limits(*Car, *active_limits, tune);
     sysCheck->system_warnings(*Car, *active_warnings, tune);
     
-    #if defined(PRINT_DBG)
-        // printStatus();
-    #endif
+    // printStatus();
 
     float soc = Car->ACU1.getSOC();
     float power = Car->ACU1.getTSVoltage() * Car->DTI.getACCurrent();
