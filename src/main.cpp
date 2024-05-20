@@ -252,6 +252,9 @@ const uint8_t BRAKE_LIGHT_PIN = 4;
 const uint8_t BSPD_OK_PIN = 19;
 const uint8_t IMD_OK_PIN = 20;
 const uint8_t AMS_OK_PIN = 21;
+const uint8_t BSE_HIGH = A16;
+const uint8_t CURRENT_SIGNAL = A13;
+
 
 /*
 8 bytes of 8 bits:
@@ -503,7 +506,7 @@ static std::unordered_map<int, int> node_numbers = {
     {Pedals_Ping_Response, 2},
     {Steering_Wheel_Ping_Response, 3},
     {Dash_Panel_Ping_Response, 4}
-};
+}; // TODO: Fix this shit
 
 unsigned long lastPingRequestAttempt = 0;
 
@@ -512,6 +515,7 @@ unsigned long lastPingRequestAttempt = 0;
 // @param Car: iCANflex object
 void tryPingRequests(std::vector<uint32_t> request_ids, iCANflex& Car){
     if(millis()-lastPingRequestAttempt > 1000/PING_REQ_FREQENCY){
+        // Serial.println("Sending Ping Requests");
         for(uint32_t request_id : request_ids){
             unsigned long mills=millis();
             unsigned long micro=micros();
@@ -547,11 +551,16 @@ void handlePingResponse(){
 
 void sendPingValues(){
     if(millis()-lastPingSend > 1000/PING_VALUE_SEND_FREQENCY){
-        for(auto const& e : ping_response_times){
+        for(auto e : ping_response_times){
             msg.buf[0] = node_numbers[e.first];
             for(int j=0; j<4; j++){
                 msg.buf[4-j]=(byte)(e.second >> (j*8));
             }
+            // for(int j=0; j<8; j++){
+            //     Serial.print(msg.buf[j], HEX);
+            //     Serial.print(" ");
+            // }
+            // Serial.println("");
             msg.len = 8;
             msg.id = VDM_Ping_Values;
             can1.write(msg);
@@ -1107,8 +1116,14 @@ void printStatus(){
         Serial.println("BRAKES: ");
         Serial.print("Brake Pressure: ");
         Serial.println((Car->PEDALS.getBrakePressureF() + Car->PEDALS.getBrakePressureR())/2.0);
+        Serial.print("CURRENT_LIMIT: ");
+        Serial.print(tune->getActiveCurrentLimit(settings.power_level));
+        Serial.println(" A ");
         Serial.println("==================================");
-        lastPrintTime = millis();
+        Serial.println("POWER DRAW: ");
+        Serial.println(Car->DTI.getACCurrent()* Car->ACU1.getTSVoltage());
+        Serial.println("🏎️ GAUCHO RACING 🏎️");
+        lastPrintTime = millis();   
     }
 }
 
@@ -1146,7 +1161,10 @@ void setup() {
     pinMode(AMS_OK_PIN, INPUT);
     pinMode(BSPD_OK_PIN, INPUT);
     pinMode(IMD_OK_PIN, INPUT);
-    pinMode(BRAKE_LIGHT_PIN, INPUT);    
+    pinMode(BRAKE_LIGHT_PIN, OUTPUT);
+    pinMode(BSE_HIGH, INPUT);    //TODO: Work on these
+    pinMode(CURRENT_SIGNAL, INPUT);
+
     //TODO: BRAKE CURRENT PIN 
 
     active_faults = new std::unordered_set<bool (*)(const iCANflex&, Tune&)>(); 
@@ -1162,27 +1180,44 @@ void setup() {
     state = GLV_ON;
     mode = STANDARD; // TODO: Energy management algorithm for endurance
 
+
+
+    // FOR MOTOR TEST:
+    tune->setPowerLevelData(0, 50);// TODO: FOR MOTOR TESTING ONLY
+    
+
 }
 
 //TODO: interrupts for AMS and IMD LEDs
+unsigned long last96 = millis();
 
 
 // MAIN LOOP
 void loop(){
     Car->readData(msg);
     if(can1.read(msg)) {
-        Serial.println("Recieved Message");
         handleDashPanelInputs();    
         handleDriverInputs(*tune);
         handlePingResponse();
         handleECUTuning(*tune);
     }
+
+    // if(millis() - last96 > 1000/10){
+    //     byte data[8] = {0x00};
+    //     data[7] = millis() %100;
+    //     CAN_message_t message;
+    //     message.flags.extended = true;  
+    //     message.id = 0x96;
+    //     message.len = 8;
+    //     memcpy(message.buf, data, 8);
+    //     can1.write(message);
+    //     last96 = millis();
+    // }
     
     // Get ping values for all systems
     tryPingRequests({Pedals_Ping_Request, Steering_Wheel_Ping_Request, Dash_Panel_Ping_Request, ACU_Ping_Request}, *Car);
     checkPingTimeout();
-    sendPingValues();
-
+    sendPingValues();  
 
     sendVDMInfo();
 
@@ -1195,7 +1230,7 @@ void loop(){
     sysCheck->system_limits(*Car, *active_limits, tune);
     sysCheck->system_warnings(*Car, *active_warnings, tune);
     
-    // printStatus();
+    printStatus();
 
     float soc = Car->ACU1.getSOC();
     float power = Car->ACU1.getTSVoltage() * Car->DTI.getACCurrent();
