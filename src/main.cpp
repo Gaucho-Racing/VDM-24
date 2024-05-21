@@ -452,7 +452,7 @@ const uint8_t PING_REQ_FREQENCY = 10; // Hz
 const uint8_t PING_VALUE_SEND_FREQENCY = 10; // Hz
 const uint8_t VDM_INFO_SEND_FREQENCY = 10; // Hz
 const uint8_t TRACTION_CONTROL_FREQENCY = 100; // Hz
-const uint8_t DEBUG_PRINT_FREQUENCY = 10; // Hz
+const uint8_t DEBUG_PRINT_FREQUENCY = 1; // Hz
 
 const unsigned long PING_TIMEOUT = 3000000; // microseconds 
 
@@ -724,16 +724,20 @@ void handleDashPanelInputs(){
     if(msg.id == Button_Event ){ //TODO: CHeck for BRAKE PRESSED
         if(msg.buf[0]){ // TS_ACTIVE
             if(state == GLV_ON){
-                if(millis() - lastPrechargeTime > 5000){
+                Serial.println("got message");
+                // if(millis() - lastPrechargeTime > 5000){
                     state = TS_PRECHARGE;
                     CAN_message_t message;
                     message.flags.extended = true;
                     message.id = ACU_Control;
                     message.len = 8;
                     message.buf[0] = 1;
-                    can1.write(message);
+                    // for( int i = 0; i < 10; i++){
+                        can1.write(message);
+                        // delay(10);
+                    // }
                     lastPrechargeTime = millis();
-                }
+                // }
             }
         }
         else if(msg.buf[1]){ // TS_OFF
@@ -1091,38 +1095,32 @@ void printStatus(){
         Serial.println(active_warnings->size());
         Serial.println("==================================");
         Serial.println("PING TIME: ");
-        Serial.print("ACU Ping: ");
-        Serial.println(ping_response_times[ACU_Ping_Response]);
-        Serial.print("Pedals Ping: ");
+        Serial.print("ACU:      ");
+        // if (timeout_nodes.find(1) != timeout_nodes.end()) Serial.print("UNRESPONSIVE");
+        Serial.print(ping_response_times[ACU_Ping_Response]);
+        Serial.print(" | Pedals:    ");
+        // if (timeout_nodes.find(2) != timeout_nodes.end()) Serial.println("UNRESPONSIVE");
         Serial.println(ping_response_times[Pedals_Ping_Response]);
-        Serial.print("SteeringWheel Ping: ");
-        Serial.println(ping_response_times[Steering_Wheel_Ping_Response]);
-        Serial.print("DashPanel Ping: ");
+        Serial.print("Steering: ");
+        // if (timeout_nodes.find(3) != timeout_nodes.end()) Serial.print("UNRESPONSIVE");
+        Serial.print(ping_response_times[Steering_Wheel_Ping_Response]);
+        Serial.print(" | DashPanel: ");
+        // if (timeout_nodes.find(4) != timeout_nodes.end()) Serial.println("UNRESPONSIVE");
         Serial.println(ping_response_times[Dash_Panel_Ping_Response]);
-        Serial.println("==================================");
-        Serial.print("UNRESPONSIVE NODES: ");
+        Serial.print("Unresponsive nodes: ");
         Serial.println(timeout_nodes.size());
-        for(int node : timeout_nodes){
-            Serial.print(node_to_string.find(node)->second.c_str());
-            Serial.print(" | ");
-        }
-        Serial.println();
         Serial.println("==================================");
-        Serial.println("PEDALS: ");
         Serial.print("APPS1: ");
-        Serial.println(getThrottle1(Car->PEDALS.getAPPS1(), *tune));
-        Serial.print("APPS2: ");
+        Serial.print(getThrottle1(Car->PEDALS.getAPPS1(), *tune));
+        Serial.print("| APPS2: ");
         Serial.println(getThrottle2(Car->PEDALS.getAPPS2(), *tune));
-        Serial.println("BRAKES: ");
-        Serial.print("Brake Pressure: ");
-        Serial.println((Car->PEDALS.getBrakePressureF() + Car->PEDALS.getBrakePressureR())/2.0);
         Serial.print("CURRENT_LIMIT: ");
         Serial.print(tune->getActiveCurrentLimit(settings.power_level));
         Serial.println(" A ");
         Serial.println("==================================");
         Serial.println("POWER DRAW: ");
         Serial.println(Car->DTI.getACCurrent()* Car->ACU1.getTSVoltage());
-        Serial.println("🏎️ GAUCHO RACING 🏎️");
+        Serial.println("🏎️ GAUCHO RACING 💀");
         lastPrintTime = millis();   
     }
 }
@@ -1183,7 +1181,7 @@ void setup() {
 
 
     // FOR MOTOR TEST:
-    tune->setPowerLevelData(0, 50);// TODO: FOR MOTOR TESTING ONLY
+    tune->setPowerLevelData(0, 10);// TODO: FOR MOTOR TESTING ONLY
     
 
 }
@@ -1192,15 +1190,86 @@ void setup() {
 unsigned long last96 = millis();
 
 
+
+
+
+
+
+
+
+#define SERIAL_BUFFER_SIZE 256;
+
+bool motor_on = false;
+const int MAX_AMPS = 10;
+int incomingValue = 0;
+
 // MAIN LOOP
 void loop(){
     Car->readData(msg);
+
+    // FOR TEST BENCH ONLY:
+
+    // if( millis() % 2000 == 0){
+    //     if(motor_on) {
+    //         Serial.print("MOTOR ON: REQUESTING ");
+    //         Serial.print(incomingValue/9.0 * MAX_AMPS);
+    //         Serial.println(" AMPS");
+        
+    //     }
+    //     else Serial.println("MOTOR_OFF");
+    // }
+    
+    if(millis() %10 == 0){
+
+        // if(can1.read(msg)){
+        //     Serial.print("ID: ");
+        //     Serial.println(msg.id, HEX);
+        //     for(int i = 0; i < msg.len; i++){
+        //         Serial.print(msg.buf[i], HEX);
+        //         Serial.print(" ");
+        //     }
+        //     Serial.println("");
+        // }
+        if(motor_on){
+            Car->DTI.setMaxCurrent(MAX_AMPS);
+            Car->DTI.setDriveEnable(1);
+            Car->DTI.setRCurrent(incomingValue/9.0* 100);
+        }
+        else {
+            Car->DTI.setRCurrent(0);
+            Car->DTI.setDriveEnable(0);
+        }
+        
+    }
+    
+    
+ 
+
+    if (Serial.available()) {
+        // Read the incoming byte
+        incomingValue = Serial.parseInt();
+        // Perform an action based on the value received (example)
+        if (incomingValue >= 2 && incomingValue <= 9) {
+            Serial.print("Starting Motor at ");
+            Serial.print(incomingValue/9.0 * MAX_AMPS);
+            Serial.println(" Amps");
+            motor_on = true;
+        } else if(incomingValue == 1){
+            motor_on = false;
+            Serial.println("Stopping Motor");
+        }
+    }
+
+/*
+
     if(can1.read(msg)) {
         handleDashPanelInputs();    
         handleDriverInputs(*tune);
         handlePingResponse();
         handleECUTuning(*tune);
     }
+
+  
 
     // if(millis() - last96 > 1000/10){
     //     byte data[8] = {0x00};
@@ -1225,12 +1294,12 @@ void loop(){
     if(tc_multiplier < 1) sendDashPopup(0x07, 1);
 
     // System Checks
-    sysCheck->hardware_system_critical(*Car, *active_faults, tune);
-    sysCheck->system_faults(*Car, *active_faults, tune);
-    sysCheck->system_limits(*Car, *active_limits, tune);
-    sysCheck->system_warnings(*Car, *active_warnings, tune);
+    // sysCheck->hardware_system_critical(*Car, *active_faults, tune);
+    // sysCheck->system_faults(*Car, *active_faults, tune);
+    // sysCheck->system_limits(*Car, *active_limits, tune);
+    // sysCheck->system_warnings(*Car, *active_warnings, tune);
     
-    printStatus();
+    // printStatus();
 
     float soc = Car->ACU1.getSOC();
     float power = Car->ACU1.getTSVoltage() * Car->DTI.getACCurrent();
@@ -1278,6 +1347,7 @@ void loop(){
             state = drive_regen(*Car, BSE_APPS_violation, *tune);
             break;
     }
+    */
     
 }
 
