@@ -409,7 +409,7 @@ void sendDashPopup(int8_t error_code, int8_t secs){
 \____/_____/\____/_____/_/  |_/_____/
 */
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
-enum Mode {STANDARD, DYNAMIC_TC, ENDURANCE};
+enum Mode {STANDARD, DYNAMIC_TC};
 // STEERING WHEEL SETTINGS
 struct SWSettings {
     uint8_t power_level; // 0 - 3
@@ -461,7 +461,7 @@ unsigned long lastPrechargeTime = 0;
 unsigned long lastDTIMessage = 0;
 unsigned long lastPingSend = 0; // last send on 0xF2
 
-
+#define SERIAL_BUFFER_SIZE 256;
 
 
 void handleDriverInputs(Tune& tune){
@@ -887,7 +887,7 @@ State drive_standby(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
     }
 
     float throttle = getThrottle1(Car.PEDALS.getAPPS1(), tune);
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0; //TODO: Fix
+    float brake = analogRead(CURRENT_SIGNAL); //TODO: Fix
     
     // only if no violation, and throttle is pressed, go to DRIVE
 
@@ -1063,7 +1063,6 @@ std::unordered_map<State, std::string> state_to_string = {
                 {ERROR, "ERROR"}
 };
 std::unordered_map<Mode, std::string>mode_to_string = {
-                {ENDURANCE, "ENDURANCE"},
                 {STANDARD, "STANDARD"},
                 {DYNAMIC_TC, "DYNAMIC_TC"}
 }; 
@@ -1160,10 +1159,9 @@ void setup() {
     pinMode(BSPD_OK_PIN, INPUT);
     pinMode(IMD_OK_PIN, INPUT);
     pinMode(BRAKE_LIGHT_PIN, OUTPUT);
-    pinMode(BSE_HIGH, INPUT);    //TODO: Work on these
+    pinMode(BSE_HIGH, INPUT);    
     pinMode(CURRENT_SIGNAL, INPUT);
 
-    //TODO: BRAKE CURRENT PIN 
 
     active_faults = new std::unordered_set<bool (*)(const iCANflex&, Tune&)>(); 
     active_warnings = new std::unordered_set<bool (*)(const iCANflex&, Tune&)>();
@@ -1175,142 +1173,56 @@ void setup() {
 
 
     // set state  
-    state = GLV_ON;
+    state = ECU_FLASH;
     mode = STANDARD; // TODO: Energy management algorithm for endurance
-
-
-
-    // FOR MOTOR TEST:
-    tune->setPowerLevelData(0, 10);// TODO: FOR MOTOR TESTING ONLY
     
-
 }
 
 //TODO: interrupts for AMS and IMD LEDs
-unsigned long last96 = millis();
 
 
-
-
-
-
-
-
-
-#define SERIAL_BUFFER_SIZE 256;
-
-bool motor_on = false;
-const int MAX_AMPS = 10;
-int incomingValue = 0;
 
 // MAIN LOOP
 void loop(){
-    Car->readData(msg);
-
-    // FOR TEST BENCH ONLY:
-
-    // if( millis() % 2000 == 0){
-    //     if(motor_on) {
-    //         Serial.print("MOTOR ON: REQUESTING ");
-    //         Serial.print(incomingValue/9.0 * MAX_AMPS);
-    //         Serial.println(" AMPS");
-        
-    //     }
-    //     else Serial.println("MOTOR_OFF");
-    // }
+    // printStatus();
     
-    if(millis() %10 == 0){
+    Car->readData(msg); // Call receive() on every node in the network API (Nodes.h)
 
-        // if(can1.read(msg)){
-        //     Serial.print("ID: ");
-        //     Serial.println(msg.id, HEX);
-        //     for(int i = 0; i < msg.len; i++){
-        //         Serial.print(msg.buf[i], HEX);
-        //         Serial.print(" ");
-        //     }
-        //     Serial.println("");
-        // }
-        if(motor_on){
-            Car->DTI.setMaxCurrent(MAX_AMPS);
-            Car->DTI.setDriveEnable(1);
-            Car->DTI.setRCurrent(incomingValue/9.0* 100);
-        }
-        else {
-            Car->DTI.setRCurrent(0);
-            Car->DTI.setDriveEnable(0);
-        }
-        
-    }
+    // System Checks
+    sysCheck->hardware_system_critical(*Car, *active_faults, tune);
+    sysCheck->system_faults(*Car, *active_faults, tune);
+    sysCheck->system_limits(*Car, *active_limits, tune);
+    sysCheck->system_warnings(*Car, *active_warnings, tune);
     
+    state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
     
- 
+    digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
+    settings.power_level = active_limits->size() ? LIMIT : settings.power_level; // limit power in overheat conditions
 
-    if (Serial.available()) {
-        // Read the incoming byte
-        incomingValue = Serial.parseInt();
-        // Perform an action based on the value received (example)
-        if (incomingValue >= 2 && incomingValue <= 9) {
-            Serial.print("Starting Motor at ");
-            Serial.print(incomingValue/9.0 * MAX_AMPS);
-            Serial.println(" Amps");
-            motor_on = true;
-        } else if(incomingValue == 1){
-            motor_on = false;
-            Serial.println("Stopping Motor");
-        }
-    }
 
-/*
+    // send outgoing CAN Messages
+    tryPingRequests({Pedals_Ping_Request, Steering_Wheel_Ping_Request, Dash_Panel_Ping_Request, ACU_Ping_Request}, *Car);
+    checkPingTimeout();
+    sendPingValues(); 
+    sendVDMInfo(); 
 
     if(can1.read(msg)) {
-        handleDashPanelInputs();    
+        // process incoming CAN Messages
+        handleDashPanelInputs();   
         handleDriverInputs(*tune);
         handlePingResponse();
         handleECUTuning(*tune);
     }
 
-  
-
-    // if(millis() - last96 > 1000/10){
-    //     byte data[8] = {0x00};
-    //     data[7] = millis() %100;
-    //     CAN_message_t message;
-    //     message.flags.extended = true;  
-    //     message.id = 0x96;
-    //     message.len = 8;
-    //     memcpy(message.buf, data, 8);
-    //     can1.write(message);
-    //     last96 = millis();
-    // }
-    
-    // Get ping values for all systems
-    tryPingRequests({Pedals_Ping_Request, Steering_Wheel_Ping_Request, Dash_Panel_Ping_Request, ACU_Ping_Request}, *Car);
-    checkPingTimeout();
-    sendPingValues();  
-
-    sendVDMInfo();
-
+    // traction control
     if(mode == DYNAMIC_TC) computeTractionControl(*Car);
     if(tc_multiplier < 1) sendDashPopup(0x07, 1);
 
-    // System Checks
-    // sysCheck->hardware_system_critical(*Car, *active_faults, tune);
-    // sysCheck->system_faults(*Car, *active_faults, tune);
-    // sysCheck->system_limits(*Car, *active_limits, tune);
-    // sysCheck->system_warnings(*Car, *active_warnings, tune);
-    
-    // printStatus();
+    // brake light
+    if(analogRead(BSE_HIGH) > 1000) digitalWrite(BRAKE_LIGHT_PIN, HIGH); //TODO: Correct ADC 10 bit
+    else digitalWrite(BRAKE_LIGHT_PIN, LOW);
 
-    float soc = Car->ACU1.getSOC();
-    float power = Car->ACU1.getTSVoltage() * Car->DTI.getACCurrent();
-    
-    state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
-
-    digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
-   
-    settings.power_level = active_limits->size() ? LIMIT : settings.power_level; // limit power in overheat conditions
-
-   // state machine operation
+    // state machine operation
     switch (state) {
         // ERROR
         case ERROR:
@@ -1347,7 +1259,39 @@ void loop(){
             state = drive_regen(*Car, BSE_APPS_violation, *tune);
             break;
     }
-    */
+
+
+
+
+    // FOR PRELIMINARY MOTOR TEST BENCH ONLY
+    //     if(millis() %10 == 0){
+
+    //     if(motor_on){
+    //         Car->DTI.setMaxCurrent(MAX_AMPS);
+    //         Car->DTI.setDriveEnable(1);
+    //         Car->DTI.setRCurrent(-1*incomingValue/9.0* 100);
+    //     }
+    //     else {
+    //         Car->DTI.setRCurrent(0);
+    //         Car->DTI.setDriveEnable(0);
+    //     }
+    // }
+    // if (Serial.available()) {
+    //     // Read the incoming byte
+    //     incomingValue = Serial.parseInt();
+    //     // Perform an action based on the value received (example)
+    //     if (incomingValue >= 2 && incomingValue <= 7) {
+    //         Serial.print("Requesting -");
+    //         Serial.print(incomingValue/7.0 * MAX_AMPS);
+    //         Serial.println(" Amps");
+    //         motor_on = true;
+    //     } else if(incomingValue == 1){
+    //         motor_on = false;
+    //         Serial.println("Stopping Motor");
+    //     }
+    // }
+
+    
     
 }
 
