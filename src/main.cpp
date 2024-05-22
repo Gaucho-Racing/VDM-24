@@ -141,7 +141,7 @@ class Tune {
         uint8_t temp_inverter_warn = 60; // celsius
         uint8_t temp_inverter_limit = 65; // celsius
         uint8_t temp_inverter_critical = 70; // celsius
-        uint16_t rev_limit = 5500;// RPM      public:
+        uint16_t rev_limit = 5500;// RPM      
 
         uint16_t apps_zero_1 = 50100;
         uint16_t apps_zero_2 = 41810;
@@ -217,19 +217,14 @@ class Tune {
 
 
         TorqueProfile getActiveTorqueProfile(int8_t pos){ return TorqueProfilesData[pos]; }        
-        float getActiveCurrentLimit(int8_t pos){ return PowerLevelsData[pos];}
-        float getActiveRegenPower(int8_t pos){ return RegenLevelsData[pos];}
+        float getActiveCurrentLimit(int8_t pos){ return PowerLevelsData[pos];} // Returns the active current limit in Amperes
+        float getActiveRegenPower(int8_t pos){ return RegenLevelsData[pos];} 
         int revLimit(){ return rev_limit; } 
         void setTorqueProfileData(uint8_t index, TorqueProfile tp){ TorqueProfilesData[index] = tp; }
         void setPowerLevelData(uint8_t index, float power){ PowerLevelsData[index] = power; }
         void setRegenLevelData(uint8_t index, float regen){ RegenLevelsData[index] = regen; }
 };
 
-
-
-void handleECUTuning(Tune& tune){
-    // TODO:
-}
 
 
 
@@ -339,14 +334,14 @@ class SystemsCheck {
         // BYTE 0 ---------------------------------------------------------------------------
         // bit 0
 
-        bool warn_can_failure(const iCANflex& Car){ // TODO: Fix
-            // return Pedals_Ping > 1000000 || ACU_Ping > 1000000 || /*BCM_Age > 1000000 || */ DashPanel_Ping > 1000000 || SteeringWheel_Ping > 1000000 /*|| DTI_Age > 1000000*/;
-            return false;
-        }   
-        // bit 1
-        bool critical_can_failure(const iCANflex& Car){ // TODO: Fix
-            return false;
-        }
+        // bool warn_can_failure(const iCANflex& Car){ 
+        //     // return Pedals_Ping > 1000000 || ACU_Ping > 1000000 || /*BCM_Age > 1000000 || */ DashPanel_Ping > 1000000 || SteeringWheel_Ping > 1000000 /*|| DTI_Age > 1000000*/;
+        //     return false;
+        // }   
+        // // bit 1
+        // bool critical_can_failure(const iCANflex& Car){
+        //     return false;
+        // }
 
 
 
@@ -362,7 +357,7 @@ class SystemsCheck {
         // check voltage < 7V (this one is 16V 8 bit ADC)
         static bool SDC_opened(const iCANflex& Car, Tune& t){ return Car.ACU1.getSDCVoltage() < 112; } 
         // bit 6
-        // bool SystemsCheck::max_current(const iCANflex& Car){return Car.DTI.getDCCurrent() > Car.DTI.getDCCurrentLim();} //TODO: Relay data from ACU Polling
+        // bool SystemsCheck::max_current(const iCANflex& Car){return Car.DTI.getDCCurrent() > Car.DTI.getDCCurrentLim();} 
 
         // BYTE 1 ---------------------------------------------------------------------------
         // bit 0, 1, 2
@@ -387,17 +382,13 @@ class SystemsCheck {
         static bool limit_mcu_temp(const iCANflex& Car, Tune& t){return Car.DTI.getInvTemp() > t.getInverterLimitTemp() && Car.DTI.getInvTemp() < t.getInverterCriticalTemp();}
         static bool critical_mcu_temp(const iCANflex& Car, Tune& t) {return Car.DTI.getInvTemp() > t.getInverterCriticalTemp();}
         // bit 6
-        static bool TCM_fault(const iCANflex& Car, Tune& t) {return false;} // TODO: do
+        // static bool TCM_fault(const iCANflex& Car, Tune& t) {return false;} // TODO: do
         // bit 7 empty for now
-
-        // TODO: add more system checks
 
 
 };
 
-void sendDashPopup(int8_t error_code, int8_t secs){
-    // TODO:
-}
+
 
 
 
@@ -453,15 +444,51 @@ const uint8_t PING_VALUE_SEND_FREQENCY = 10; // Hz
 const uint8_t VDM_INFO_SEND_FREQENCY = 10; // Hz
 const uint8_t TRACTION_CONTROL_FREQENCY = 100; // Hz
 const uint8_t DEBUG_PRINT_FREQUENCY = 1; // Hz
+const uint8_t DASH_PANEL_LED_FREQUENCY = 10; // Hz    
 
 const unsigned long PING_TIMEOUT = 3000000; // microseconds 
 
 
 unsigned long lastPrechargeTime = 0;
 unsigned long lastDTIMessage = 0;
+unsigned long lastDashLEDMessage = 0;
 unsigned long lastPingSend = 0; // last send on 0xF2
 
 #define SERIAL_BUFFER_SIZE 256;
+
+
+
+
+/*
+   _________    _   __   __________  __  _____  _____  ___   _______________  ______________  _   __
+  / ____/   |  / | / /  / ____/ __ \/  |/  /  |/  / / / / | / /  _/ ____/   |/_  __/  _/ __ \/ | / /
+ / /   / /| | /  |/ /  / /   / / / / /|_/ / /|_/ / / / /  |/ // // /   / /| | / /  / // / / /  |/ / 
+/ /___/ ___ |/ /|  /  / /___/ /_/ / /  / / /  / / /_/ / /|  // // /___/ ___ |/ / _/ // /_/ / /|  /  
+\____/_/  |_/_/ |_/   \____/\____/_/  /_/_/  /_/\____/_/ |_/___/\____/_/  |_/_/ /___/\____/_/ |_/   
+                                                                                                    
+*/
+
+
+void writeMessage(unsigned int id, uint8_t* data, unsigned char len){
+    CAN_message_t message;
+    message.flags.extended = true;
+    message.id = id;
+    message.len = len;
+    memcpy(message.buf, data, len);
+    can1.write(message);
+}
+
+
+
+void sendDashPopup(int8_t error_code, int8_t secs, uint8_t tq = 0, uint16_t mc = 0, uint8_t r = 0){
+    // TODO:
+}
+
+
+void handleECUTuning(Tune& tune){
+    // TODO:
+}
+
 
 
 void handleDriverInputs(Tune& tune){
@@ -469,19 +496,75 @@ void handleDriverInputs(Tune& tune){
         settings.power_level = msg.buf[0];
         settings.throttle_map = msg.buf[1];
         settings.regen_level = msg.buf[2];
+        sendDashPopup(0x9, 5, settings.throttle_map, tune.getActiveCurrentLimit(settings.power_level), settings.regen_level);
     }
 }
+
+
 void sendVDMInfo(){
     // TODO:
     byte* sys_check_data = sysCheck->getSysCheckFrame();
-    // Serial.println(sys_check_data[0]);
-    // write system check data
-    // write VDM State and mode data
-    // write can, error, and tcm status
-    // write throttle map, power level, and regen level
+}
+
+void sendDashLED(uint8_t AMS, uint8_t IMD){
+    if(millis()- lastDashLEDMessage >= 1000/DASH_PANEL_LED_FREQUENCY){
+        uint8_t data[8] = {AMS, IMD, 0, 0, 0, 0, 0, 0};
+        writeMessage(LED_Outputs, data, 8);
+        lastDashLEDMessage = millis();  
+    }
+
+}
 
 
 
+
+void handleDashPanelInputs(){
+    float brake = analogRead(BSE_HIGH); // TODO: Fix
+    if(msg.id == Button_Event){
+        if(msg.buf[0]){ // TS_ACTIVE
+            if(brake < 1000) {
+                sendDashPopup(0x3, 3);
+                return;
+            }
+            if(state == GLV_ON){
+                if(millis() - lastPrechargeTime > 5000){ // 5 second minimum between precharge attempts
+                    state = TS_PRECHARGE;
+                    CAN_message_t message;
+                    message.flags.extended = true;
+                    message.id = ACU_Control;
+                    message.len = 8;
+                    message.buf[0] = 1;
+                    can1.write(message);
+                    lastPrechargeTime = millis();
+                }
+            }
+        }
+        else if(msg.buf[1]){ // TS_OFF
+            // shut off car entirely
+            CAN_message_t message;
+            message.flags.extended = true;
+            message.id = ACU_Control;
+            message.len = 8;
+            message.buf[0] = 0;
+            can1.write(message);
+            state = GLV_ON;
+        }
+        else if(msg.buf[2]) { // RTD_ON
+            if(brake < 1000){
+                sendDashPopup(0x3, 3);
+                return;
+            }
+            if(state == PRECHARGE_COMPLETE){
+                state = DRIVE_STANDBY;
+                //TODO: play rtd sound
+            }
+        }
+        else if(msg.buf[3]){  // RTD_OFF
+            if(state == DRIVE_STANDBY) {
+                state = PRECHARGE_COMPLETE;
+            }
+        }
+    }
 }
 
 
@@ -512,7 +595,7 @@ unsigned long lastPingRequestAttempt = 0;
 
 // Will try to send a ping request to the nodes in the list
 // @param request_ids: list of request ids to request a ping response from
-// @param Car: iCANflex object
+// @param Car: iCANflex object defined by GR 24 Nodes API
 void tryPingRequests(std::vector<uint32_t> request_ids, iCANflex& Car){
     if(millis()-lastPingRequestAttempt > 1000/PING_REQ_FREQENCY){
         // Serial.println("Sending Ping Requests");
@@ -524,12 +607,7 @@ void tryPingRequests(std::vector<uint32_t> request_ids, iCANflex& Car){
                 data[3-i]=(byte)(mills >> (i*8));
                 data[7-i]=(byte)(micro >> (i*8));
             }
-            CAN_message_t message;
-            message.flags.extended = true;  
-            message.id = request_id;
-            message.len = 8;
-            memcpy(message.buf, data, 8);
-            can1.write(message);
+            writeMessage(request_id, data, 8);
             lastPingRequestAttempt=millis();
         }
     }   
@@ -556,14 +634,10 @@ void sendPingValues(){
             for(int j=0; j<4; j++){
                 msg.buf[4-j]=(byte)(e.second >> (j*8));
             }
-            // for(int j=0; j<8; j++){
-            //     Serial.print(msg.buf[j], HEX);
-            //     Serial.print(" ");
-            // }
-            // Serial.println("");
             msg.len = 8;
             msg.id = VDM_Ping_Values;
             can1.write(msg);
+            // memcpy(msg.buf, 0x0, 8); // clear buffer
         }
         lastPingSend = millis();
     }
@@ -686,26 +760,6 @@ void computeTractionControl(iCANflex& Car) {
 
 
 
-
-
-/*
-    _______   ____________  ________  __   
-   / ____/ | / / ____/ __ \/ ____/\ \/ /   
-  / __/ /  |/ / __/ / /_/ / / __   \  /    
- / /___/ /|  / /___/ _, _/ /_/ /   / /     
-/_____/_/ |_/_____/_/ |_|\____/   /_/      
-    __  ______    _   _____   ______________  __________   ________
-   /  |/  /   |  / | / /   | / ____/ ____/  |/  / ____/ | / /_  __/
-  / /|_/ / /| | /  |/ / /| |/ / __/ __/ / /|_/ / __/ /  |/ / / /   
- / /  / / ___ |/ /|  / ___ / /_/ / /___/ /  / / /___/ /|  / / /    
-/_/  /_/_/  |_/_/ |_/_/  |_\____/_____/_/  /_/_____/_/ |_/ /_/     
-                                                                                                          
-
-*/
-
-
-
-
 /*
    ______________  ____________   __  ______   ________  _______   ________
   / ___/_  __/   |/_  __/ ____/  /  |/  /   | / ____/ / / /  _/ | / / ____/
@@ -720,49 +774,7 @@ void computeTractionControl(iCANflex& Car) {
                                                                                                                             
 */
 
-void handleDashPanelInputs(){
-    if(msg.id == Button_Event ){ //TODO: CHeck for BRAKE PRESSED
-        if(msg.buf[0]){ // TS_ACTIVE
-            if(state == GLV_ON){
-                Serial.println("got message");
-                // if(millis() - lastPrechargeTime > 5000){
-                    state = TS_PRECHARGE;
-                    CAN_message_t message;
-                    message.flags.extended = true;
-                    message.id = ACU_Control;
-                    message.len = 8;
-                    message.buf[0] = 1;
-                    // for( int i = 0; i < 10; i++){
-                        can1.write(message);
-                        // delay(10);
-                    // }
-                    lastPrechargeTime = millis();
-                // }
-            }
-        }
-        else if(msg.buf[1]){ // TS_OFF
-            // shut off car entirely
-            CAN_message_t message;
-            message.flags.extended = true;
-            message.id = ACU_Control;
-            message.len = 8;
-            message.buf[0] = 0;
-            can1.write(message);
-            state = GLV_ON;
-        }
-        else if(msg.buf[2]) {// RTD_ON
-            if(state == PRECHARGE_COMPLETE){
-                state = DRIVE_STANDBY;
-                //TODO: play rtd sound
-            }
-        }
-        else if(msg.buf[3]){ // RTD_OFF
-            if(state == DRIVE_STANDBY) {
-                state = TS_PRECHARGE;
-            }
-        }
-    }
-}
+
 
 State sendToError(bool (*erFunc)(const iCANflex& Car, Tune& tune)) {
    errorCheck = erFunc; 
@@ -853,9 +865,7 @@ State precharge_complete(iCANflex& Car){
 STARTUP STAGE 4:  READY TO DRIVE
 
 READY TO DRIVE SUB STATES
-- DRIVE_NULL
-- DRIVE_TORQUE
-- DRIVE_REGEN
+
 
 */
 
@@ -929,27 +939,26 @@ THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED
 */
 
 State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
-
     float throttle = getThrottle1(Car.PEDALS.getAPPS1(), tune);
     float a2 = getThrottle2(Car.PEDALS.getAPPS2(), tune);
     float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0; // TODO: All the Braking stuff is wrong
     
-    // APPS GRADIENT VIOLATION
+    // ACCELERATOR GRADIENT PLAUSIBILITY VIOLATION
     if(abs(throttle-a2) > 0.1){
         sendDashPopup(0x02, 3);
         return DRIVE_STANDBY;
     } 
-    // APPS BSE VIOLATION
+    // APPS X BSE VIOLATION
     if((brake > 0.05 && throttle > 0.25)) {
         sendDashPopup(0x01, 1);
         BSE_APPS_violation = true;
-        return DRIVE_STANDBY;
+        return DRIVE_STANDBY; // Put car into neutral state, no engine power
     }
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         Car.DTI.setDriveEnable(1);
         Car.DTI.setMaxCurrent(tune.getActiveCurrentLimit(settings.power_level));  
-        // TORQUE MAPPING FOR DRIVING AND STABILITY AND NONLINEAR THROTTLE CONTROL
-        // python calcs: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100) 
+        // TORQUE MAPPING FOR DRIVING AND STABILITY VIA NONLINEAR THROTTLE CONTROL
+        // THROTTLE CURVE EQUATION: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100) 
         TorqueProfile tp = tune.getActiveTorqueProfile(settings.throttle_map);
         float k = tp.K;
         float p = tp.P;
@@ -964,15 +973,14 @@ State drive_active(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune) {
         Car.DTI.setRCurrent(r_current);
         lastDTIMessage = millis();
     }
-    
-    return DRIVE_ACTIVE;
+    return DRIVE_ACTIVE; // stay in the drive state
 }
 
 
 State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune){
     if(settings.regen_level == REGEN_OFF) return DRIVE_STANDBY;
 
-    float brake = (Car.PEDALS.getBrakePressureF() + Car.PEDALS.getBrakePressureR())/2.0; // TODO: Change to BSE 
+    float brake = analogRead(CURRENT_SIGNAL); // TODO: Change to BSE 
     float throttle = getThrottle1(Car.PEDALS.getAPPS1(), tune);
     if(throttle > 0.05) return DRIVE_ACTIVE;
     if(brake < 0.05) return DRIVE_STANDBY;
@@ -1001,7 +1009,7 @@ State drive_regen(iCANflex& Car, bool& BSE_APPS_violation, Tune& tune){
             accumulator_input_amps = 0;
         }
 
-        Car.DTI.setCurrent(-1 * accumulator_input_amps * tune.getActiveRegenPower(settings.regen_level));
+        Car.DTI.setBrakeCurrent(-1 * accumulator_input_amps * tune.getActiveRegenPower(settings.regen_level));
         lastDTIMessage = millis();
     }
     return DRIVE_REGEN;
@@ -1050,7 +1058,6 @@ State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& 
 */
 
 unsigned long lastPrintTime = 0;
-
 std::unordered_map<State, std::string> state_to_string = {
                 {ECU_FLASH, "ECU_FLASH"},
                 {GLV_ON, "GLV_ON"},
@@ -1174,11 +1181,9 @@ void setup() {
 
     // set state  
     state = ECU_FLASH;
-    mode = STANDARD; // TODO: Energy management algorithm for endurance
+    mode = STANDARD; 
     
 }
-
-//TODO: interrupts for AMS and IMD LEDs
 
 
 
@@ -1198,6 +1203,12 @@ void loop(){
     
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, (state == ERROR) ? LOW : HIGH);
     settings.power_level = active_limits->size() ? LIMIT : settings.power_level; // limit power in overheat conditions
+
+
+    if(settings.power_level == LIMIT) sendDashPopup(0xA, 5);
+
+    // AMS and IMD LEDs
+    sendDashLED(active_faults->find(sysCheck->AMS_fault) != active_faults->end(), active_faults->find(sysCheck->IMD_fault) != active_faults->end());
 
 
     // send outgoing CAN Messages
