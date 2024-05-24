@@ -53,8 +53,15 @@ struct TorqueProfile{
 
 
 
+/*
+Reads the SD card in the Microcontroller to initialize the Vehicles Parameters and Performance Tune with Race Presets.
 
-void readSDCard(std::vector<TorqueProfile>& TorqueProfilesData, std::vector<float>& PowerLevelsData, std::vector<float>& RegenLevelsData){
+@param TorqueProfilesData: a reference to vector of 4 TorqueProfile objects
+@param PowerLevelsData: a reference to vector of 4 floats representing the current limits for each power level
+@param RegenLevelsData: a reference to vector of 4 floats representing the regen levels for each regen level
+@param t: a Tune object reference for initializing other vehicle parameters
+*/
+void readSDCard(std::vector<TorqueProfile>& TorqueProfilesData, std::vector<float>& PowerLevelsData, std::vector<float>& RegenLevelsData, Tune& t){
     Serial.println("Initializing SD Card...");
             while(!SD.begin(BUILTIN_SDCARD)){
                 Serial.println("Waiting for SD Card to initialize...");
@@ -73,7 +80,7 @@ void readSDCard(std::vector<TorqueProfile>& TorqueProfilesData, std::vector<floa
             ecu_tune.close();
             Serial.println("");
 
-            std::stringstream iss(tune.c_str()); // const so put into FLASH MEMORY
+            std::stringstream iss(tune.c_str());
             // read in torque profiles, regen profiles, and traction profiles
             for(int i = 0; i < 4; i++){
                 float k, p, b;
@@ -118,7 +125,10 @@ void readSDCard(std::vector<TorqueProfile>& TorqueProfilesData, std::vector<floa
             Serial.println("--------------------------");
 }
 
-
+/*
+A class to store the vehicle's performance tune and settings. 
+This includes the power limits, torque mappings, regen settings, error limits, and other vehicle parameters.
+*/
 class Tune {
     private:
         std::vector<TorqueProfile> TorqueProfilesData; // see above
@@ -160,7 +170,7 @@ class Tune {
             TorqueProfilesData = std::vector<TorqueProfile>(4);
             PowerLevelsData = std::vector<float>(4);
             RegenLevelsData = std::vector<float>(4);
-            readSDCard(TorqueProfilesData, PowerLevelsData, RegenLevelsData);            
+            readSDCard(TorqueProfilesData, PowerLevelsData, RegenLevelsData, *this);            
 
         }
 
@@ -251,16 +261,10 @@ const uint8_t BSE_HIGH = A16;
 const uint8_t CURRENT_SIGNAL = A13;
 
 
-/*
-8 bytes of 8 bits:
-[can warn][can failure][AMS][IMD][BSPD][SDC][][]
-[warn motor][limit motor][crit motor][warn batt][limit batt][crit batt][rev limit][] temps motor and battery, Revs
-[warn water][limit water][crit water][warn mcu][limit mcu][crit mcu][TCM Status][] // water temp DTI temp, TCM
-[][][][][][][][] 
-[][][][][][][][] 
-*/
+
 // error severity: warning -> limit -> critical
 
+// A class to statically check for system faults and warnings. 
 class SystemsCheck {
     private:    
 
@@ -274,6 +278,14 @@ class SystemsCheck {
 
         byte* getSysCheckFrame(){
             return SYS_CHECK_CAN_FRAME;
+            /*
+            8 bytes of 8 bits:
+            [can warn][can failure][AMS][IMD][BSPD][SDC][][]
+            [warn motor][limit motor][crit motor][warn batt][limit batt][crit batt][rev limit][] temps motor and battery, Revs
+            [warn water][limit water][crit water][warn mcu][limit mcu][crit mcu][TCM Status][] // water temp DTI temp, TCM
+            [][][][][][][][] 
+            [][][][][][][][] 
+            */
         }
         
         void hardware_system_critical(const iCANflex& Car, std::unordered_set<bool (*)(const iCANflex&, Tune& t)> &af, Tune* t){
@@ -373,7 +385,7 @@ class SystemsCheck {
         // bit 7 
 
         // BYTE 2 ---------------------------------------------------------------------------
-        // bit 0, 1, 2
+        // bit 0, 1, 2 NOTE: COOLANT TEMP SENSOR NOT FUNCTIONAL
         // static bool warn_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.get() > t.getBatteryWarnTemp() && Car..getWaterTemp() < t.getCoolantLimitTemp();} //TODO: Implement in NODES
         // static bool limit_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getCoolantLimitTemp() && Car.ACU1.getWaterTemp() < t.getCoolantCriticalTemp();}
         // static bool critical_water_temp(const iCANflex& Car, Tune& t){return Car.ACU1.getWaterTemp() > t.getCoolantCriticalTemp();}
@@ -401,7 +413,7 @@ class SystemsCheck {
 */
 enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
 enum Mode {STANDARD, DYNAMIC_TC};
-// STEERING WHEEL SETTINGS
+// A struct to represent the current settings of the vehicle determined by the position of inputs on Steering Wheel.
 struct SWSettings {
     uint8_t power_level; // 0 - 3
     uint8_t throttle_map; // 0-3
@@ -409,11 +421,12 @@ struct SWSettings {
     SWSettings(){}  
 };  
 
-iCANflex* Car;
-SystemsCheck* sysCheck;
-Tune* tune;
+iCANflex* Car; // Controller Area Network Object for the Vehicles CAN Bus
+SystemsCheck* sysCheck; // Static System Check
+Tune* tune; // Global System Tuning Profile
 
-// namespace std { // THIS HASH DOES NOT WORK DO NOT USE
+// THIS HASH FUNCTION DOES NOT WORK: DO NOT USE
+// namespace std { 
 //     template <>
 //     struct hash<bool (*)(const iCANflex&, Tune& t)> {
 //         size_t operator()(bool (*f)(const iCANflex&, Tune& t)) const noexcept{
@@ -422,10 +435,10 @@ Tune* tune;
 //     };
 // };
 
-std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_faults;
-std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_warnings;
-std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_limits;
-bool (*errorCheck)(const iCANflex& Car, Tune&); 
+std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_faults; // hashset of active system faults as function pointers
+std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_warnings; // hashset of active system warnings as function pointers
+std::unordered_set<bool (*)(const iCANflex&, Tune& t)> *active_limits; // hashset of active system limits as function pointers
+bool (*errorCheck)(const iCANflex& Car, Tune&); // global function pointer to error causing the ISR
 
 std::unordered_set<int> timeout_nodes;
 
@@ -449,10 +462,12 @@ const uint8_t DASH_PANEL_LED_FREQUENCY = 10; // Hz
 const unsigned long PING_TIMEOUT = 3000000; // microseconds 
 
 
-unsigned long lastPrechargeTime = 0;
-unsigned long lastDTIMessage = 0;
-unsigned long lastDashLEDMessage = 0;
-unsigned long lastPingSend = 0; // last send on 0xF2
+unsigned long lastPrechargeTime = 0; // last precharge request in millis
+unsigned long lastDTIMessage = 0; // last inverter message in millis    
+unsigned long lastDashLEDMessage = 0; // last dash panel led message in millis
+unsigned long lastPingSend = 0; // last send on 0xF2 in millis
+unsigned long lastPingRequestAttempt = 0; // last request for all Pings in millis
+
 
 #define SERIAL_BUFFER_SIZE 256;
 
@@ -577,13 +592,14 @@ static std::unordered_map<int, unsigned long> ping_response_times = { // TODO: B
     {Steering_Wheel_Ping_Response, 0},
     {Dash_Panel_Ping_Response, 0}
 };
-
+// last response time as {id, time} in milliseconds
 static std::unordered_map<int, unsigned long> last_response_times = {
     {ACU_Ping_Response, 0},
     {Pedals_Ping_Response, 0},
     {Steering_Wheel_Ping_Response, 0},
     {Dash_Panel_Ping_Response, 0}
 };
+// node numbers as {id, number}
 static std::unordered_map<int, int> node_numbers = {
     {ACU_Ping_Response, 1},
     {Pedals_Ping_Response, 2},
@@ -591,7 +607,6 @@ static std::unordered_map<int, int> node_numbers = {
     {Dash_Panel_Ping_Response, 4}
 }; // TODO: Fix this shit
 
-unsigned long lastPingRequestAttempt = 0;
 
 // Will try to send a ping request to the nodes in the list
 // @param request_ids: list of request ids to request a ping response from
