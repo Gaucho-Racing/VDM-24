@@ -411,7 +411,7 @@ class SystemsCheck {
 / /_/ / /___/ /_/ / /_/ / ___ |/ /___
 \____/_____/\____/_____/_/  |_/_____/
 */
-enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
+enum State {ECU_FLASH, GLV_ON, TS_PRECHARGE, TS_DISCHARGE_OFF, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR};
 enum Mode {STANDARD, DYNAMIC_TC};
 // A struct to represent the current settings of the vehicle determined by the position of inputs on Steering Wheel.
 struct SWSettings {
@@ -567,7 +567,7 @@ void handleDashPanelInputs(){
             message.len = 8;
             message.buf[0] = 0;
             can1.write(message);
-            state = GLV_ON;
+            state = TS_DISCHARGE_OFF;
         }
         else if(msg.buf[2]) { // RTD_ON
             if(brake < 1000){
@@ -855,6 +855,9 @@ State ts_precharge(iCANflex& Car) {
     if(Car.ACU1.getPrecharging()){
         return PRECHARGING;
     }
+    else if(Car.ACU1.getPrechargeDone()){
+        return PRECHARGE_COMPLETE;
+    }
     return TS_PRECHARGE;
 }
 // -- PRECHARGING STAGE 2
@@ -1060,6 +1063,16 @@ State error(iCANflex& Car, Tune& t, bool (*errorCheck)(const iCANflex& c, Tune& 
     
 }
 
+State ts_discharge_off(iCANflex& Car){
+    if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
+        Car.DTI.setRCurrent(0);
+        Car.DTI.setDriveEnable(0);
+        lastDTIMessage = millis();
+    }
+    if(Car.ACU1.getTSVoltage() < 60) return GLV_ON;
+    return TS_DISCHARGE_OFF;
+
+}
 
 
 
@@ -1318,6 +1331,9 @@ void loop(){
         case DRIVE_REGEN:
             state = drive_regen(*Car, BSE_APPS_violation, *tune);
             break;
+        // turning off TS
+        case TS_DISCHARGE_OFF:
+            state = ts_discharge_off(*Car);
     }
 
 
