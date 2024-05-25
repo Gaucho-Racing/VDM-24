@@ -1,6 +1,7 @@
+
 #include "imxrt.h"
 #include "Arduino.h"
-#include "Nodes.h"
+#include "NodesA.h"
 #include <unordered_set>
 #include <cstddef>
 #include "SD.h"
@@ -22,8 +23,9 @@
                                                  
 */
 
-FlexCAN_T4<CAN3, RX_SIZE_256, TX_SIZE_16> can_primary;
-FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can_data;
+
+FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can_primary;
+FlexCAN_T4<CAN3, RX_SIZE_256, TX_SIZE_16> can_data;
 CAN_message_t msg;
 CAN_message_t msg2;
 Inverter DTI = Inverter(22, can_primary);
@@ -652,7 +654,7 @@ Sends a message to the Dash Panel to update the LED status of the buttons and wa
 void sendDashLED(uint8_t AMS, uint8_t IMD, Color TSColor, Color RTDColor){
     if(millis()- lastDashLEDMessage >= 1000/DASH_PANEL_LED_FREQUENCY){
         uint8_t tsr = TSColor == RED ? 255 : 0;
-        uint8_t tsg = TSColor == GREEN ? 255 : 0;
+        uint8_t tsg = TSColor == GREEN ? 355 : 0;
         uint8_t rtr = RTDColor == RED ? 255 : 0;    
         uint8_t rtg = RTDColor == GREEN ? 255 : 0;
         uint8_t data[8] = {AMS, IMD, tsr, tsg, rtr, rtg, 0, 0};
@@ -1376,11 +1378,11 @@ void setup() {
 
 // MAIN LOOP
 void loop(){
-    // printDebug();
+    printDebug();
     
 
     // System Checks
-    // sysCheck->hardware_system_critical(*active_faults, tune);
+    sysCheck->hardware_system_critical(*active_faults, tune);
     // sysCheck->system_faults(*active_faults, tune);
     // sysCheck->system_limits(*active_limits, tune);
     // sysCheck->system_warnings(*active_warnings, tune);
@@ -1391,7 +1393,7 @@ void loop(){
     settings.power_level = active_limits->size() ? LIMIT : settings.power_level; // limit power in overheat conditions
 
 
-    if(settings.power_level == LIMIT) sendDashPopup(0xA, 5);
+    // if(settings.power_level == LIMIT) sendDashPopup(0xA, 5);
 
     // AMS and IMD LEDs and Dash LEDs
     bool AMS_led = active_faults->find(sysCheck->AMS_fault) != active_faults->end();
@@ -1410,13 +1412,7 @@ void loop(){
     // readData(msg); // Call receive() on every node in the network API (Nodes.h)
 /*
     if(can_primary.read(msg)) {
-        // process incoming CAN Messages
-        // if(msg.id == Button_Event) Serial.println("Got something");
-        if (msg.id == Button_Event && msg.buf[0]) Serial.println("Got something");      
-        handleDashPanelInputs();   
-        // handleDriverInputs(*tune);
-        // handlePingResponse();
-        // handleECUTuning(*tune);
+        
     }
     */
 
@@ -1429,6 +1425,11 @@ void loop(){
     DASHBOARD.receive(msg.id, msg.buf);
     ENERGY_METER.receive(msg.id, msg.buf);
     STEERING_WHEEL.receive(msg.id, msg.buf);
+    // process incoming CAN Messages    
+    handleDashPanelInputs();   
+    handleDriverInputs(*tune);
+    handlePingResponse();
+    handleECUTuning(*tune);
   }
   if(can_data.read(msg2)){
     WFL.receive(msg.id, msg.buf);

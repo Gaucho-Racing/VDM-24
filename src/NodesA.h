@@ -1,3 +1,4 @@
+
 // Nikunj Parasar 
 // Created: 10/20/2023
 // GAUCHO RACING CAN NODES SOFTWARE (FLEXCAN_T4)
@@ -30,13 +31,10 @@
 #endif
 
 
+
 //not touching this hoe.
 struct Inverter {
-    byte data[5][8]={{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},  
-                    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 
-                    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},  
-                    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},  
-                    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}; 
+    byte data[5][8]; 
     
     /*
     example data packets from CAN bus:
@@ -77,7 +75,6 @@ struct Inverter {
         }
         return 1;
     }
-
     void send(long OutId, long data, int dataLength){    //Sends 8 bytes with that Id and that data shifted left all the way
         byte stuff[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
         for(int i=0; i<dataLength; i++)
@@ -144,10 +141,10 @@ struct Inverter {
 
 
 struct VDM{    
-    byte data[6][8] = {{0x00}};
-    byte dataOut[8] = {0x00};
+    byte data[6][8];
+    byte dataOut[8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
-    FlexCAN_T4FD<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
+    FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
     // not needed as it is stupid and recieve function passes through buf and id so goog FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can2; //this should be the data can
     CAN_message_t msg;
     CANFD_message_t msgFD;
@@ -155,7 +152,7 @@ struct VDM{
 
 
 
-    VDM(FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> &can, FlexCAN_T4FD<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can2){
+    VDM(FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> &can, FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can2){
         can = Can1;
         can2 = Can2;
     }
@@ -171,7 +168,6 @@ struct VDM{
         }
         return 1;
     }
-
 
     unsigned long getAge() const {return(millis() - receiveTime);} //time since last data packet
 
@@ -288,7 +284,6 @@ struct VDM{
 
     //IDK what the other recieving stuff is but its ther in the spreadsheet if needed to be implemented later
 
-
 };
 
 
@@ -305,20 +300,16 @@ enum HubSensorArray{
 };
 
 struct Wheel {
-    byte data[5][8] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},  
-                {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 
-                {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},  
-                {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},  
-                {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}; 
+    byte data[5][8]; 
 
     HubSensorArray location;
 
-    FlexCAN_T4FD<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
+    FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
     CAN_message_t msg;
     unsigned long receiveTime = 0;
     unsigned long id_range[2];
     String loc_cstr;
-    Wheel(FlexCAN_T4FD<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can, HubSensorArray loc) : location(loc){
+    Wheel(FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can, HubSensorArray loc) : location(loc){
         can = Can2; //set reference
         switch(location){
             case WHEEL_FR:
@@ -359,8 +350,6 @@ struct Wheel {
         }
         return 1;
     }
-
-
     float getSuspensionTravel() const {return data[0][0];}
     float getWheelSpeed() const {return((long)data[0][1] << 8) + data[0][2];}
     float getTirePressure() const {return data[0][3];}
@@ -396,15 +385,13 @@ struct Wheel {
 
 
 struct Central_IMU {
-    byte data[3][8] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},  //Accel
-                {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //Gyro
-                {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}; //Mag
+    byte data[3][8]; //Mag
 
-    FlexCAN_T4FD<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
+    FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
     CANFD_message_t msg;
     unsigned long receiveTime = 0;
 
-    Central_IMU(FlexCAN_T4FD<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can){
+    Central_IMU(FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can2;
     }
 
@@ -419,7 +406,6 @@ struct Central_IMU {
         }
         return 1;
     }
-
     float getAccelX() const {return ((long)data[0][0] << 8) + data[0][1];}
     float getAccelY() const {return ((long)data[0][2] << 8) + data[0][3];}
     float getAccelZ() const {return ((long)data[0][4] << 8) + data[0][5];}
@@ -432,21 +418,16 @@ struct Central_IMU {
     
     unsigned long getAge() const {return(millis() - receiveTime);} //time since last data packet
 
-    
-
 };
 
 
 struct GPS {
-    byte data[4][8] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},  //Latitude
-                {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //Longitude
-                {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //Other
-                {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}; //Other 2
-    FlexCAN_T4FD<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
+    byte data[4][8];
+    FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
     CANFD_message_t msg;
     unsigned long receiveTime = 0;
 
-    GPS(FlexCAN_T4FD<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can){
+    GPS(FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can2;
     }
 
@@ -474,9 +455,8 @@ struct GPS {
 
 
 struct Pedals{
-    byte data[2][8] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},  
-                       {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}; 
-    byte dataOut[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    byte data[2][8]; 
+    byte dataOut[8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     CAN_message_t msg;
     unsigned long receiveTime = 0;
@@ -534,8 +514,8 @@ struct Pedals{
 
 struct ACU {
     //condensed cell data and bunch of other stuff
-    byte data[50][8] = {{0x00}}; //40 ids
-    byte dataOut[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    byte data[50][8]; //40 ids
+    byte dataOut[8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     CAN_message_t msg;
     uint32_t receiveTime = 0;
@@ -562,8 +542,6 @@ struct ACU {
         }
         return 1;
     }
-
-
     //voltages and temps for specific cells (range 0 to 127)
     float getCellVoltage_n(size_t cell_n) const {
         if(cell_n < 0 || cell_n > 127) Serial.println("Battery Cell number out of range [0,127]");
@@ -682,12 +660,12 @@ struct ACU {
 /* -----------------------------------------------------------------------------------------------------------------*/
 
 struct TCM {//FIX THIS STUFF (NOT TOO IMPORTANT)
-    byte data[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    byte dataOut[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    FlexCAN_T4FD<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
+    byte data[8];
+    byte dataOut[8];
+    FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
     CANFD_message_t msg;
     unsigned long receiveTime = 0;
-    TCM(FlexCAN_T4FD<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can){
+    TCM(FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can2;
     }
 
@@ -703,15 +681,13 @@ struct TCM {//FIX THIS STUFF (NOT TOO IMPORTANT)
         }
         return 1;
     }
-
     byte getCloudStatus() const {return data[0];}
     unsigned long getAge() const {return(millis() - receiveTime);} //time since last data packet
-
 };
 
 struct Dash {
-    byte data[3][8] = {{0x00}};
-    byte dataOut[8] = {0x00};
+    byte data[3][8];
+    byte dataOut[8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     CAN_message_t msg;
     unsigned long receiveTime = 0;
@@ -730,16 +706,12 @@ struct Dash {
         }
         return 1;
     }
-
-    unsigned long getAge() const {return(millis() - receiveTime);} //time since last data packet
-
     bool getTS_Active() const {return data[1][0];}
     bool getTS_Off() const {return data[1][1];}
     bool getRTD_On() const {return data[1][2];}
     bool getRTD_Off() const {return data[1][3];}
     bool getAMS_LED() const {return data[1][4];}
     bool getIMD_LED() const {return data[1][5];}
-
     private:
     void send(long id){
         for(int i = 0; i < 8; i++) msg.buf[i] = dataOut[i];
@@ -748,13 +720,12 @@ struct Dash {
         Can1.write(msg);
         for(int i = 0; i < 8; i++) msg.buf[i] = 0x00;   //Wipe the buffer so leaks into future messages
     }
-
 };
 
 
 
 struct Energy_Meter {
-    byte data[2][8] = {0x00};
+    byte data[2][8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     CAN_message_t msg;
     unsigned long receiveTime = 0;
@@ -777,7 +748,6 @@ struct Energy_Meter {
         }
         return 1;
     }
-
     long LSB_to_MSB(long LSB) const{
         long MSB=0;
         for(int i=0; i<32; i++){
@@ -809,8 +779,8 @@ struct Energy_Meter {
 
 
 struct SteeringWheel {
-    byte data[2][8] = {{0x00}};
-    byte dataOut[8] = {0x00};
+    byte data[2][8];
+    byte dataOut[8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     CAN_message_t msg;
     unsigned long receiveTime = 0;
@@ -852,8 +822,6 @@ struct SteeringWheel {
         Can1.write(msg);
         for(int i = 0; i < 8; i++) msg.buf[i] = 0x00;   //Wipe the buffer so leaks into future messages
     }
-    
-
 };
 
 
