@@ -61,69 +61,69 @@ Reads the SD card in the Microcontroller to initialize the Vehicles Parameters a
 @param RegenLevelsData: a reference to vector of 4 floats representing the regen levels for each regen level
 @param t: a Tune object reference for initializing other vehicle parameters
 */
-void readSDCard(std::vector<TorqueProfile>& TorqueProfilesData, std::vector<float>& PowerLevelsData, std::vector<float>& RegenLevelsData, Tune& t){
-    Serial.println("Initializing SD Card...");
-            while(!SD.begin(BUILTIN_SDCARD)){
-                Serial.println("Waiting for SD Card to initialize...");
-            }
+// void readSDCard(std::vector<TorqueProfile>& TorqueProfilesData, std::vector<float>& PowerLevelsData, std::vector<float>& RegenLevelsData, Tune& t){
+//     Serial.println("Initializing SD Card...");
+//             while(!SD.begin(BUILTIN_SDCARD)){
+//                 Serial.println("Waiting for SD Card to initialize...");
+//             }
             
-            Serial.println("SD INITIALIZATION SUCCESSFUL");
-            File ecu_tune;
-            ecu_tune = SD.open("gr24.ecu");
-            Serial.print("Reading ECU FLASH....");
-            String tune;
-            while(ecu_tune.available()){
-                Serial.print("..");
-                tune += (char)ecu_tune.read(); 
-            }
-            Serial.println(tune.length());
-            ecu_tune.close();
-            Serial.println("");
+//             Serial.println("SD INITIALIZATION SUCCESSFUL");
+//             File ecu_tune;
+//             ecu_tune = SD.open("gr24.ecu");
+//             Serial.print("Reading ECU FLASH....");
+//             String tune;
+//             while(ecu_tune.available()){
+//                 Serial.print("..");
+//                 tune += (char)ecu_tune.read(); 
+//             }
+//             Serial.println(tune.length());
+//             ecu_tune.close();
+//             Serial.println("");
 
-            std::stringstream iss(tune.c_str());
-            // read in torque profiles, regen profiles, and traction profiles
-            for(int i = 0; i < 4; i++){
-                float k, p, b;
-                iss >> k >> p >> b;
-                TorqueProfilesData[i] = TorqueProfile(k, p, b);
-            }   
-            Serial.println("TORQUE PROFILES INITIALIZED");
-            for(int i = 0; i < 4; i++){
-                float cmax;
-                iss >> cmax;
-                PowerLevelsData[i] = cmax;
-            }   
-            Serial.println("CURRENT LIMITS INITIALIZED");
-            for(int i = 0; i < 4; i++){
-                float r;
-                iss >> r;
-                RegenLevelsData[i] = r;
-            }
-            Serial.println("REGEN LEVELS INITIALIZED");
-            Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
-            Serial.println("STARTING CAR WITH SETTINGS: ");
-            Serial.print("THROTTLE MAP: ");
-            for (int i = 0; i < 4; i++) {
-                Serial.print(TorqueProfilesData[i].K); 
-                Serial.print(" ");
-                Serial.print(TorqueProfilesData[i].P);
-                Serial.print(" ");
-                Serial.println(TorqueProfilesData[i].B);
-            }
-            Serial.print("POWER LEVELS: ");
-            for (int i = 0; i < 4; i++) {
-                Serial.print(PowerLevelsData[i]); 
-                Serial.print(" ");
-            }
-            Serial.println("");
-            Serial.print("REGEN LEVELS: ");
-            for (int i = 0; i < 4; i++) {
-                Serial.print(RegenLevelsData[i]); 
-                Serial.print(" ");
-            }
-            Serial.println("");
-            Serial.println("--------------------------");
-}
+//             std::stringstream iss(tune.c_str());
+//             // read in torque profiles, regen profiles, and traction profiles
+//             for(int i = 0; i < 4; i++){
+//                 float k, p, b;
+//                 iss >> k >> p >> b;
+//                 TorqueProfilesData[i] = TorqueProfile(k, p, b);
+//             }   
+//             Serial.println("TORQUE PROFILES INITIALIZED");
+//             for(int i = 0; i < 4; i++){
+//                 float cmax;
+//                 iss >> cmax;
+//                 PowerLevelsData[i] = cmax;
+//             }   
+//             Serial.println("CURRENT LIMITS INITIALIZED");
+//             for(int i = 0; i < 4; i++){
+//                 float r;
+//                 iss >> r;
+//                 RegenLevelsData[i] = r;
+//             }
+//             Serial.println("REGEN LEVELS INITIALIZED");
+//             Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
+//             Serial.println("STARTING CAR WITH SETTINGS: ");
+//             Serial.print("THROTTLE MAP: ");
+//             for (int i = 0; i < 4; i++) {
+//                 Serial.print(TorqueProfilesData[i].K); 
+//                 Serial.print(" ");
+//                 Serial.print(TorqueProfilesData[i].P);
+//                 Serial.print(" ");
+//                 Serial.println(TorqueProfilesData[i].B);
+//             }
+//             Serial.print("POWER LEVELS: ");
+//             for (int i = 0; i < 4; i++) {
+//                 Serial.print(PowerLevelsData[i]); 
+//                 Serial.print(" ");
+//             }
+//             Serial.println("");
+//             Serial.print("REGEN LEVELS: ");
+//             for (int i = 0; i < 4; i++) {
+//                 Serial.print(RegenLevelsData[i]); 
+//                 Serial.print(" ");
+//             }
+//             Serial.println("");
+//             Serial.println("--------------------------");
+// }
 
 /*
 A class to store the vehicle's performance tune and settings. 
@@ -153,10 +153,10 @@ class Tune {
         uint8_t temp_inverter_critical = 70; // celsius
         uint16_t rev_limit = 5500;// RPM      
 
-        uint16_t apps_zero_1 = 50100;
-        uint16_t apps_zero_2 = 41810;
-        uint16_t apps_floor_1 = 44256; 
-        uint16_t apps_floor_2 = 38750;
+        uint16_t apps_zero_1 = 14070;
+        uint16_t apps_zero_2 = 28440;
+        uint16_t apps_floor_1 = 9965; 
+        uint16_t apps_floor_2 = 20280;
 
         float max_regen_steering_angle = 0.5; // radians
         float regen_rms_amps = 15;
@@ -170,7 +170,7 @@ class Tune {
             TorqueProfilesData = std::vector<TorqueProfile>(4);
             PowerLevelsData = std::vector<float>(4);
             RegenLevelsData = std::vector<float>(4);
-            readSDCard(TorqueProfilesData, PowerLevelsData, RegenLevelsData, *this);            
+            // readSDCard(TorqueProfilesData, PowerLevelsData, RegenLevelsData, *this);            
 
         }
 
@@ -264,7 +264,7 @@ const uint8_t CURRENT_SIGNAL = A13;
 
 // error severity: warning -> limit -> critical
 
-// A class to statically check for system faults and warnings. 
+// A class to statically check for system faults and warnings and gives dynamic CAN frames using bit masking. 
 class SystemsCheck {
     private:    
 
@@ -456,7 +456,7 @@ const uint8_t PING_REQ_FREQENCY = 10; // Hz
 const uint8_t PING_VALUE_SEND_FREQENCY = 10; // Hz
 const uint8_t VDM_INFO_SEND_FREQENCY = 10; // Hz
 const uint8_t TRACTION_CONTROL_FREQENCY = 100; // Hz
-const uint8_t DEBUG_PRINT_FREQUENCY = 1; // Hz
+const uint8_t DEBUG_PRINT_FREQUENCY = 4; // Hz
 const uint8_t DASH_PANEL_LED_FREQUENCY = 10; // Hz    
 
 const unsigned long PING_TIMEOUT = 3000000; // microseconds 
@@ -467,6 +467,11 @@ unsigned long lastDTIMessage = 0; // last inverter message in millis
 unsigned long lastDashLEDMessage = 0; // last dash panel led message in millis
 unsigned long lastPingSend = 0; // last send on 0xF2 in millis
 unsigned long lastPingRequestAttempt = 0; // last request for all Pings in millis
+
+
+enum Color {RED, GREEN, BLUE};
+Color TSState = RED;
+Color RTDState = RED;
 
 
 #define SERIAL_BUFFER_SIZE 256;
@@ -521,9 +526,9 @@ void sendVDMInfo(){
     byte* sys_check_data = sysCheck->getSysCheckFrame();
 }
 
-void sendDashLED(uint8_t AMS, uint8_t IMD){
+void sendDashLED(uint8_t AMS, uint8_t IMD, Color TSColor, Color RTDColor){
     if(millis()- lastDashLEDMessage >= 1000/DASH_PANEL_LED_FREQUENCY){
-        uint8_t data[8] = {AMS, IMD, 0, 0, 0, 0, 0, 0};
+        uint8_t data[8] = {AMS, IMD, 0, 0, 0, 0, 0, 0}; // TODO: put back
         writeMessage(LED_Outputs, data, 8);
         lastDashLEDMessage = millis();  
     }
@@ -537,10 +542,10 @@ void handleDashPanelInputs(){
     float brake = analogRead(BSE_HIGH); // TODO: Fix
     if(msg.id == Button_Event){
         if(msg.buf[0]){ // TS_ACTIVE
-            if(brake < 1000) {
-                sendDashPopup(0x3, 3);
-                return;
-            }
+            // if(brake < 1000) {
+            //     sendDashPopup(0x3, 3);
+            //     return;
+            // }
             if(state == GLV_ON){
                 if(millis() - lastPrechargeTime > 5000){ // 5 second minimum between precharge attempts
                     state = TS_PRECHARGE;
@@ -608,7 +613,7 @@ static std::unordered_map<int, int> node_numbers = {
 }; // TODO: Fix this shit
 
 
-// Will try to send a ping request to the nodes in the list
+// Will try to send a ping request to the nodes in the list of request IDs
 // @param request_ids: list of request ids to request a ping response from
 // @param Car: iCANflex object defined by GR 24 Nodes API
 void tryPingRequests(std::vector<uint32_t> request_ids, iCANflex& Car){
@@ -638,7 +643,7 @@ unsigned long calculatePing() {
 void handlePingResponse(){
     if(msg.id == ACU_Ping_Response || msg.id == Pedals_Ping_Response || msg.id == Steering_Wheel_Ping_Response || msg.id == Dash_Panel_Ping_Response){
         ping_response_times[msg.id] = calculatePing();
-        last_response_times[msg.id] = millis();
+        last_response_times[msg.id] = micros();
     }
 }
 
@@ -661,11 +666,11 @@ void sendPingValues(){
 void checkPingTimeout(){
     for(auto e : last_response_times){
         if(micros() - e.second > PING_TIMEOUT){
-            timeout_nodes.insert(node_numbers[e.first]);
+            timeout_nodes.insert(e.first);
         }
         else{
-            if(timeout_nodes.find(node_numbers[e.first]) != timeout_nodes.end()){
-                timeout_nodes.erase(node_numbers[e.first]);
+            if(timeout_nodes.find(e.first) != timeout_nodes.end()){
+                timeout_nodes.erase(e.first);
             }
         }
     }
@@ -1094,58 +1099,83 @@ std::unordered_map<int, std::string>node_to_string = {
     {3, "Steering Wheel"},
     {4, "Dash Panel"} //TODO: BCM, TCM
 };
-void printStatus(){
-    if(millis() - lastPrintTime > 1000/DEBUG_PRINT_FREQUENCY){
-        Serial.println("==================================");
-        Serial.print("CLOCK TIME: ");
-        Serial.println(millis());
-        Serial.print("STATE: ");
-        State currentState = state;
-        Serial.print(state_to_string.find(currentState)->second.c_str());
-        Serial.print(" | ");
-        Mode currentMode = mode;
-        Serial.print("MODE: ");
-        Serial.println(mode_to_string.find(currentMode)->second.c_str());
-        Serial.println("==================================");
-        Serial.println("SYSTEM HEALTH: ");
-        Serial.print("Critical Faults: ");
-        Serial.println(active_faults->size());
-        Serial.print("Limits: ");
-        Serial.println(active_limits->size());
-        Serial.print("Warnings: ");
-        Serial.println(active_warnings->size());
-        Serial.println("==================================");
-        Serial.println("PING TIME: ");
-        Serial.print("ACU:      ");
-        // if (timeout_nodes.find(1) != timeout_nodes.end()) Serial.print("UNRESPONSIVE");
-        Serial.print(ping_response_times[ACU_Ping_Response]);
-        Serial.print(" | Pedals:    ");
-        // if (timeout_nodes.find(2) != timeout_nodes.end()) Serial.println("UNRESPONSIVE");
-        Serial.println(ping_response_times[Pedals_Ping_Response]);
-        Serial.print("Steering: ");
-        // if (timeout_nodes.find(3) != timeout_nodes.end()) Serial.print("UNRESPONSIVE");
-        Serial.print(ping_response_times[Steering_Wheel_Ping_Response]);
-        Serial.print(" | DashPanel: ");
-        // if (timeout_nodes.find(4) != timeout_nodes.end()) Serial.println("UNRESPONSIVE");
-        Serial.println(ping_response_times[Dash_Panel_Ping_Response]);
-        Serial.print("Unresponsive nodes: ");
-        Serial.println(timeout_nodes.size());
-        Serial.println("==================================");
-        Serial.print("APPS1: ");
-        Serial.print(getThrottle1(Car->PEDALS.getAPPS1(), *tune));
-        Serial.print("| APPS2: ");
-        Serial.println(getThrottle2(Car->PEDALS.getAPPS2(), *tune));
-        Serial.print("CURRENT_LIMIT: ");
-        Serial.print(tune->getActiveCurrentLimit(settings.power_level));
-        Serial.println(" A ");
-        Serial.println("==================================");
-        Serial.println("POWER DRAW: ");
-        Serial.println(Car->DTI.getACCurrent()* Car->ACU1.getTSVoltage());
-        Serial.println("🏎️ GAUCHO RACING 💀");
-        lastPrintTime = millis();   
-    }
+
+
+String vehicleStatus(){
+    String output = "|                       STATUS:                          |\n";
+    output += "| CLOCK: " + String(millis()) + " ms ";
+    output += "| STATE: ";
+    State currentState = state;
+    output += state_to_string.find(currentState)->second.c_str();
+    output += " | MODE: ";
+    Mode currentMode = mode;
+    output += mode_to_string.find(currentMode)->second.c_str();
+    output += "     |\n";
+    output += "----------------------------------------------------------";
+    return output;
 }
 
+String vehicleHealth(){
+    String output = "|                      SYSTEM HEALTH:                    |\n";
+    output += "| CRITICAL: " + String(active_faults->size()) + " | LIMIT: " + String(active_limits->size()) + " | WARN: " + String(active_warnings->size()) + "          |\n";
+    output += "----------------------------------------------------------";
+    return output;
+}
+
+String vehicleNetwork(){
+    String output = "|          NETWORK SPEED: (microseconds)                 |\n";
+    output += "| ACU: " + String(ping_response_times[ACU_Ping_Response]) + " | Pedals: " + String(ping_response_times[Pedals_Ping_Response]) + " | Steering: " + String(ping_response_times[Steering_Wheel_Ping_Response]) + " | DashPanel: " + String(ping_response_times[Dash_Panel_Ping_Response]) + "  |\n";
+    output += "| UNRESPONSIVE NODES: " + String(timeout_nodes.size()) + "                                  |\n";
+    output += "----------------------------------------------------------";
+    return output;
+}
+
+String vehicleSettings(){
+    String output = "|                     VEHICLE SETTINGS:                  |\n";
+    output += "| POWER LEVEL: ";
+    if (settings.power_level == LIMIT) output += "LIMIT     ";
+    else if (settings.power_level == LOW_PWR) output += "LOW       ";
+    else if (settings.power_level == MID_PWR) output += "MID       ";
+    else if (settings.power_level == HIGH_PWR) output += "HIGH      ";
+    output += "\n| THROTTLE MAP: ";
+    if (settings.throttle_map == LINEAR_TORQUE) output += "LINEAR    ";
+    else if (settings.throttle_map == TORQUE_MAP_1) output += "MAP 1     ";
+    else if (settings.throttle_map == TORQUE_MAP_2) output += "MAP 2     ";
+    else if (settings.throttle_map == TORQUE_MAP_3) output += "MAP 3     ";
+    output += "\n| REGEN LEVEL: ";
+    if (settings.regen_level == REGEN_OFF) output += "OFF       \n";
+    else if (settings.regen_level == REGEN_LOW) output += "LOW       \n";
+    else if (settings.regen_level == REGEN_MID) output += "MID       \n";
+    else if (settings.regen_level == REGEN_HIGH) output += "HIGH      \n";
+    output += "----------------------------------------------------------";
+    return output;
+}
+
+String vehiclePowerData(){
+    String output = "|                     POWER DATA:                        |\n";
+    int raw1 = Car->PEDALS.getAPPS1();
+    output += "| APPS1: RAW: " + String(raw1) + ", SCALED: " + String(getThrottle1(raw1, *tune)) + "               \n";
+    int raw2 = Car->PEDALS.getAPPS2();
+    output += "| APPS2: RAW: " + String(raw2) + ", SCALED: " + String(getThrottle2(raw2, *tune)) + "               \n";
+    output += "| INVERTER CURRENT LIMIT: " + String(tune->getActiveCurrentLimit(settings.power_level)) + " A            \n";
+    output += "| POWER DRAW: " + String(Car->DTI.getACCurrent() * Car->ACU1.getTSVoltage()) + "W                          \n";
+    output += "----------------------------------------------------------\n";
+    return output;
+}
+
+void printDebug(){
+    if(millis() - lastPrintTime > 1000/DEBUG_PRINT_FREQUENCY){
+        Serial.println("----------------------------------------------------------");
+        Serial.println("|                     GR24 EV VEHICLE DEBUG              |");
+        Serial.println("----------------------------------------------------------");
+        Serial.println(vehicleStatus());
+        Serial.println(vehicleHealth());
+        Serial.println(vehicleNetwork());
+        Serial.println(vehicleSettings());
+        Serial.println(vehiclePowerData());
+        lastPrintTime = millis();
+    }
+}
 
 
 /*
@@ -1204,15 +1234,15 @@ void setup() {
 
 // MAIN LOOP
 void loop(){
-    // printStatus();
+    printDebug();
     
     Car->readData(msg); // Call receive() on every node in the network API (Nodes.h)
 
     // System Checks
-    sysCheck->hardware_system_critical(*Car, *active_faults, tune);
-    sysCheck->system_faults(*Car, *active_faults, tune);
-    sysCheck->system_limits(*Car, *active_limits, tune);
-    sysCheck->system_warnings(*Car, *active_warnings, tune);
+    // sysCheck->hardware_system_critical(*Car, *active_faults, tune);
+    // sysCheck->system_faults(*Car, *active_faults, tune);
+    // sysCheck->system_limits(*Car, *active_limits, tune);
+    // sysCheck->system_warnings(*Car, *active_warnings, tune);
     
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
     
@@ -1222,8 +1252,10 @@ void loop(){
 
     if(settings.power_level == LIMIT) sendDashPopup(0xA, 5);
 
-    // AMS and IMD LEDs
-    sendDashLED(active_faults->find(sysCheck->AMS_fault) != active_faults->end(), active_faults->find(sysCheck->IMD_fault) != active_faults->end());
+    // AMS and IMD LEDs and Dash LEDs
+    bool AMS_led = active_faults->find(sysCheck->AMS_fault) != active_faults->end();
+    bool IMD_led = active_faults->find(sysCheck->IMD_fault) != active_faults->end();
+    sendDashLED(AMS_led, IMD_led, TSState, RTDState);
 
 
     // send outgoing CAN Messages
