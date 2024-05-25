@@ -606,18 +606,25 @@ Color RTDState = RED;
                                                                                                     
 */
 
+#define PRIMARY_CAN_BUS 1
+#define DATA_CAN_BUS 2
 
-void writeMessage(unsigned int id, uint8_t* data, unsigned char len){
+void writeMessage(unsigned int id, uint8_t* data, unsigned char len, uint8_t bus){
     CAN_message_t message;
     message.flags.extended = true;
     message.id = id;
     message.len = len;
     memcpy(message.buf, data, len);
-    can_primary.write(message);
+    if(bus == PRIMARY_CAN_BUS) can_primary.write(message);
+    else if (bus == DATA_CAN_BUS) can_data.write(message);
+    else Serial.println("Invalid CAN Bus");
 }
 
 
+/*
+Send A message to the dashboard panek to display a popup message
 
+*/
 void sendDashPopup(int8_t error_code, int8_t secs, uint8_t tq = 0, uint16_t mc = 0, uint8_t r = 0){
     // TODO:
 }
@@ -658,7 +665,7 @@ void sendDashLED(uint8_t AMS, uint8_t IMD, Color TSColor, Color RTDColor){
         uint8_t rtr = RTDColor == RED ? 255 : 0;    
         uint8_t rtg = RTDColor == GREEN ? 255 : 0;
         uint8_t data[8] = {AMS, IMD, tsr, tsg, rtr, rtg, 0, 0};
-        writeMessage(LED_Outputs, data, 8);
+        writeMessage(LED_Outputs, data, 8, PRIMARY_CAN_BUS);
         lastDashLEDMessage = millis();  
     }
 
@@ -679,23 +686,15 @@ void handleDashPanelInputs(){
             State s = state;
             if(s == GLV_ON){
                     state = TS_PRECHARGE;
-                    CAN_message_t message;
-                    message.flags.extended = true;
-                    message.id = ACU_Control;
-                    message.len = 8;
-                    message.buf[0] = 1;
-                    can_primary.write(message);                
+                    uint8_t data[8] = {1, 0, 0, 0, 0, 0, 0, 0};
+                    writeMessage(ACU_Control, data, 8, PRIMARY_CAN_BUS);          
             }
         }
         else if(msg.buf[1]){ // TS_OFF
             Serial.println("Got TS Off");
             // shut off car entirely
-            CAN_message_t message;
-            message.flags.extended = true;
-            message.id = ACU_Control;
-            message.len = 8;
-            message.buf[0] = 0;
-            can_primary.write(message);
+            uint8_t data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+            writeMessage(ACU_Control, data, 8, PRIMARY_CAN_BUS);
             state = TS_DISCHARGE_OFF;
         }
         else if(msg.buf[2]) { // RTD_ON
@@ -756,7 +755,7 @@ void tryPingRequests(std::vector<uint32_t> request_ids){
                 data[3-i]=(byte)(mills >> (i*8));
                 data[7-i]=(byte)(micro >> (i*8));
             }
-            writeMessage(request_id, data, 8);
+            writeMessage(request_id, data, 8, PRIMARY_CAN_BUS);
             lastPingRequestAttempt=millis();
         }
     }   
@@ -1409,35 +1408,29 @@ void loop(){
     sendPingValues(); 
     sendVDMInfo(); 
     
-    // readData(msg); // Call receive() on every node in the network API (Nodes.h)
-/*
-    if(can_primary.read(msg)) {
-        
-    }
-    */
 
-   if(can_primary.read(msg)){
-    DTI.receive(msg.id, msg.buf);
-    ECU.receive(msg.id, msg.buf);
-    PEDALS.receive(msg.id, msg.buf);
-    ACU1.receive(msg.id, msg.buf);
-    TCM1.receive(msg.id, msg.buf);
-    DASHBOARD.receive(msg.id, msg.buf);
-    ENERGY_METER.receive(msg.id, msg.buf);
-    STEERING_WHEEL.receive(msg.id, msg.buf);
-    // process incoming CAN Messages    
-    handleDashPanelInputs();   
-    handleDriverInputs(*tune);
-    handlePingResponse();
-    handleECUTuning(*tune);
-  }
-  if(can_data.read(msg2)){
-    WFL.receive(msg.id, msg.buf);
-    WFR.receive(msg.id, msg.buf);
-    WRL.receive(msg.id, msg.buf);
-    WRR.receive(msg.id, msg.buf);
-    GPS1.receive(msg.id, msg.buf);
-  }
+    if(can_primary.read(msg)){
+        DTI.receive(msg.id, msg.buf);
+        ECU.receive(msg.id, msg.buf);
+        PEDALS.receive(msg.id, msg.buf);
+        ACU1.receive(msg.id, msg.buf);
+        TCM1.receive(msg.id, msg.buf);
+        DASHBOARD.receive(msg.id, msg.buf);
+        ENERGY_METER.receive(msg.id, msg.buf);
+        STEERING_WHEEL.receive(msg.id, msg.buf);
+        // process incoming CAN Messages    
+        handleDashPanelInputs();   
+        handleDriverInputs(*tune);
+        handlePingResponse();
+        handleECUTuning(*tune);
+    }
+    if(can_data.read(msg2)){
+        WFL.receive(msg.id, msg.buf);
+        WFR.receive(msg.id, msg.buf);
+        WRL.receive(msg.id, msg.buf);
+        WRR.receive(msg.id, msg.buf);
+        GPS1.receive(msg.id, msg.buf);
+    }
 
     // traction control
     if(mode == DYNAMIC_TC) computeTractionControl();
