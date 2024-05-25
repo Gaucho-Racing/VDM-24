@@ -469,8 +469,8 @@ unsigned long lastPingSend = 0; // last send on 0xF2 in millis
 unsigned long lastPingRequestAttempt = 0; // last request for all Pings in millis
 
 
-enum Color {RED, GREEN, BLUE};
-Color TSState = RED;
+enum Color {RED, GREEN, OFF};// green means press, red means dont press
+Color TSState = GREEN;
 Color RTDState = RED;
 
 
@@ -1225,7 +1225,7 @@ void setup() {
 
 
     // set state  
-    state = ECU_FLASH;
+    state = GLV_ON;
     mode = STANDARD; 
     
 }
@@ -1255,6 +1255,8 @@ void loop(){
     // AMS and IMD LEDs and Dash LEDs
     bool AMS_led = active_faults->find(sysCheck->AMS_fault) != active_faults->end();
     bool IMD_led = active_faults->find(sysCheck->IMD_fault) != active_faults->end();
+    TSState = (state == GLV_ON) ? GREEN : RED;
+    RTDState = (state == PRECHARGE_COMPLETE) ? GREEN : RED;
     sendDashLED(AMS_led, IMD_led, TSState, RTDState);
 
 
