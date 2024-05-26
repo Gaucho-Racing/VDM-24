@@ -384,8 +384,9 @@ const uint8_t BRAKE_LIGHT_PIN = 4;
 const uint8_t BSPD_OK_PIN = 19;
 const uint8_t IMD_OK_PIN = 20;
 const uint8_t AMS_OK_PIN = 21;
-const uint8_t BSE_HIGH = A16;
+const uint8_t BSE_HIGH = A12;
 const uint8_t CURRENT_SIGNAL = A13;
+// const uiint8_t SDC_RESET = B8;
 
 
 
@@ -490,11 +491,11 @@ class SystemsCheck {
         // 2.4v is ok - ADC: 744
         // 1v = 310
         // bits 2, 3, 4, 5, 
-        static bool AMS_fault(VehicleTuneController& t){ return analogRead(AMS_OK_PIN) < 700 || analogRead(AMS_OK_PIN) > 790; }
+        static bool AMS_fault(VehicleTuneController& t){ return digitalRead(AMS_OK_PIN) != HIGH ;}
         static bool IMD_fault(VehicleTuneController& t){ return analogRead(IMD_OK_PIN) < 700 || analogRead(IMD_OK_PIN) > 790; }
-        static bool BSPD_fault(VehicleTuneController& t){ return analogRead(BSPD_OK_PIN) < 700 || analogRead(BSPD_OK_PIN) > 790; }
+        static bool BSPD_fault(VehicleTuneController& t){ return digitalRead(BSPD_OK_PIN) != HIGH ;}
         // check voltage < 7V (this one is 16V 8 bit ADC)
-        static bool SDC_opened(VehicleTuneController& t){ return ACU1.getSDCVoltage() < 112; }
+        static bool SDC_opened(VehicleTuneController& t){ /*return ACU1.getPrechargeDone() && ACU1.getSDCVoltage() < 7;*/ return false; }
  
         // bit 6
         // bool SystemsCheck::max_current(const ){return DTI.getDCCurrent() > DTI.getDCCurrentLim();} 
@@ -682,14 +683,14 @@ void sendDashLED(uint8_t AMS, uint8_t IMD, Color TSColor, Color RTDColor){
 
 
 void handleDashPanelInputs(){
-    float brake = analogRead(BSE_HIGH); // TODO: Fix
+    float brake = analogRead(BSE_HIGH);
     if(msg.id == Button_Event){
         if(msg.buf[0]){ // TS_ACTIVE
         // ! NEED BRAKE TO START CAR
-            // if(brake < 1000) {
-            //     sendDashPopup(0x3, 3);
-            //     return;
-            // }
+            if(brake < 500) {
+                sendDashPopup(0x3, 3);
+                return;
+            }
             State s = state;
             if(s == GLV_ON){
                     state = TS_PRECHARGE;
@@ -704,10 +705,10 @@ void handleDashPanelInputs(){
             state = TS_DISCHARGE_OFF;
         }
         else if(msg.buf[2]) { // RTD_ON
-            // if(brake < 1000){
-            //     sendDashPopup(0x3, 3);
-            //     return;
-            // }
+            if(brake < 500){
+                sendDashPopup(0x3, 3);
+                return;
+            }
             if(state == PRECHARGE_COMPLETE){
                 state = DRIVE_STANDBY;
                 //TODO: play rtd sound
@@ -789,10 +790,16 @@ void sendPingValues(){
             for(int j=0; j<4; j++){
                 message.buf[4-j]=(byte)(e.second >> (j*8));
             }
+            // print the entire buffer
+            // for(int i=0; i<8; i++){
+            //     Serial.print(message.buf[i], HEX);
+            //     Serial.print(" ");
+            // }
+            // Serial.println();
             message.len = 8;
             message.id = VDM_Ping_Values;
+            message.flags.extended = true;
             can_primary.write(message);
-            // memcpy(msg.buf, 0x0, 8); // clear buffer
         }
         lastPingSend = millis();
     }
@@ -1007,7 +1014,7 @@ State precharging(){
     }
 
     if(ACU1.getPrechargeDone()) return PRECHARGE_COMPLETE;
-    return PRECHARGE_COMPLETE;
+    return PRECHARGING;
 }
 
 // -- PRECHARGING STAGE 3
@@ -1058,13 +1065,12 @@ State drive_standby(bool& BSE_APPS_violation, VehicleTuneController& tune) {
     }
 
     float throttle = getThrottle1(PEDALS.getAPPS1(), tune);
-    // float brake = analogRead(CURRENT_SIGNAL); //TODO: Fix
     // ! CHANGE TO REAL BSE
-    float brake = 0;
+    float brake = analogRead(BSE_HIGH);
     // only if no violation, and throttle is pressed, go to DRIVE
 
     if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_ACTIVE;
-    if(!BSE_APPS_violation && throttle == 0 && brake > 0.05 && DTI.getERPM() > 250) return DRIVE_REGEN;//TODO: Fix
+    if(!BSE_APPS_violation && throttle == 0 && brake > 500 && DTI.getERPM() > 250) return DRIVE_REGEN;//TODO: Fix
 
     if(BSE_APPS_violation) {
         // SEND CAN WARNING TO DASH
@@ -1102,9 +1108,8 @@ THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED
 State drive_active(bool& BSE_APPS_violation, VehicleTuneController& tune) {
     float throttle = getThrottle1(PEDALS.getAPPS1(), tune);
     float a2 = getThrottle2(PEDALS.getAPPS2(), tune);
-    // float brake = analogRead(CURRENT_SIGNAL); // TODO: All the Braking stuff is wrong
+    float brake = analogRead(BSE_HIGH); 
     // ! CHANGE TO REAL BSE
-    float brake = 0;
     if (throttle < 0.05) return DRIVE_STANDBY;
     // ACCELERATOR GRADIENT PLAUSIBILITY VIOLATION
     if(abs(throttle-a2) > 0.1){
@@ -1112,7 +1117,7 @@ State drive_active(bool& BSE_APPS_violation, VehicleTuneController& tune) {
         return DRIVE_STANDBY;
     } 
     // APPS X BSE VIOLATION
-    if((brake > 0.05 && throttle > 0.25)) {
+    if((brake > 500 && throttle > 0.25)) {
         sendDashPopup(0x01, 1);
         BSE_APPS_violation = true;
         return DRIVE_STANDBY; // Put car into neutral state, no engine power
@@ -1142,12 +1147,11 @@ State drive_active(bool& BSE_APPS_violation, VehicleTuneController& tune) {
 State drive_regen(bool& BSE_APPS_violation, VehicleTuneController& tune){
     if(settings.regen_level == REGEN_OFF) return DRIVE_STANDBY;
 
-    // float brake = analogRead(CURRENT_SIGNAL); // TODO: Change to BSE 
+    float brake = analogRead(BSE_HIGH); 
     // ! CHANGE TO REAL BSE
-    float brake = 0;
     float throttle = getThrottle1(PEDALS.getAPPS1(), tune);
     if(throttle > 0.05) return DRIVE_ACTIVE;
-    if(brake < 0.05) return DRIVE_STANDBY;
+    if(brake < 500) return DRIVE_STANDBY;
 
     float rpm = DTI.getERPM()/10.0;
     
@@ -1283,8 +1287,14 @@ String vehicleHealth(){
 
 String vehicleNetwork(){
     String output = "|          NETWORK SPEED: (microseconds)                 |\n";
-    output += "| ACU: " + String(ping_response_times[ACU_Ping_Response]) + " | Pedals: " + String(ping_response_times[Pedals_Ping_Response]) + " | Steering: " + String(ping_response_times[Steering_Wheel_Ping_Response]) + " | DashPanel: " + String(ping_response_times[Dash_Panel_Ping_Response]) + "  |\n";
-    output += "| UNRESPONSIVE NODES: " + String(timeout_nodes.size()) + "                                  |\n";
+    if(timeout_nodes.find(ACU_Ping_Response) != timeout_nodes.end()) output += "| ACU: COOKED 💀🔥 \n";
+    else output += "| ACU: " + String(ping_response_times[ACU_Ping_Response]) + "\n" ;
+    if(timeout_nodes.find(Pedals_Ping_Response) != timeout_nodes.end()) output += "| Pedals: COOKED 💀🔥 \n";
+    else output += "| Pedals: " + String(ping_response_times[Pedals_Ping_Response]) + "\n" ;
+    if(timeout_nodes.find(Steering_Wheel_Ping_Response) != timeout_nodes.end()) output += "| Steering: COOKED 💀🔥 \n";
+    else output += "| Steering: " + String(ping_response_times[Steering_Wheel_Ping_Response]) + "\n" ;
+    if(timeout_nodes.find(Dash_Panel_Ping_Response) != timeout_nodes.end()) output += "| DashPanel: COOKED 💀🔥 \n";
+    else output += "| DashPanel: " + String(ping_response_times[Dash_Panel_Ping_Response]) + "  \n";
     output += "----------------------------------------------------------";
     return output;
 }
@@ -1316,7 +1326,8 @@ String vehiclePowerData(){
     output += "| APPS1: RAW: " + String(raw1) + ", SCALED: " + String(getThrottle1(raw1, *tune)) + "               \n";
     int raw2 = PEDALS.getAPPS2();
     output += "| APPS2: RAW: " + String(raw2) + ", SCALED: " + String(getThrottle2(raw2, *tune)) + "               \n";
-    output += "| INVERTER CURRENT LIMIT: " + String(tune->getActiveCurrentLimit(settings.power_level)) + " A            \n";
+    output += "| BSE: " + String(analogRead(BSE_HIGH)) + "               \n";
+    output += "| INVERTER CURRENT LIMIT: " + String(tune->getPowerLevelsData()[settings.power_level] )+ " A            \n";
     output += "| POWER DRAW: " + String(DTI.getACCurrent() * ACU1.getTSVoltage()) + "W                          \n";
     output += "----------------------------------------------------------\n";
     return output;
@@ -1392,7 +1403,13 @@ void setup() {
     mode = STANDARD; 
 
     // ! FOR MOTOR TEST BENCH ONLY
-    settings.power_level = MID_PWR;
+    // ! UNCOMMENT FOR NOMINAL VEHICLE OPERATION
+    tune->setPowerLevelData(LIMIT, 0);
+    tune->setPowerLevelData(LOW_PWR,2);
+    tune->setPowerLevelData(MID_PWR, 20);
+    tune->setPowerLevelData(HIGH_PWR, 50);
+
+    settings.power_level = LOW_PWR;
     DTI.setMaxCurrent(tune->getActiveCurrentLimit(settings.power_level));
     
 }
@@ -1407,7 +1424,7 @@ void loop(){
     // System Checks
     // ! SYSTEM CHECKS ARE SUPRESSED FOR MOTOR TEST BENCH
     // ! UNCOMMENT FOR NOMINAL VEHICLE OPERATION
-    sysCheck->hardware_system_critical(*active_faults, tune); 
+    // sysCheck->hardware_system_critical(*active_faults, tune); 
     // sysCheck->system_faults(*active_faults, tune);
     // sysCheck->system_limits(*active_limits, tune);
     // sysCheck->system_warnings(*active_warnings, tune);
@@ -1422,11 +1439,11 @@ void loop(){
     // Serial.println(analogRead(IMD_OK_PIN)*3.3/(1024.0));
 
     // AMS and IMD LEDs and Dash LEDs
-    bool AMS_led = active_faults->find(sysCheck->AMS_fault) == active_faults->end();
-    bool IMD_led = active_faults->find(sysCheck->IMD_fault) == active_faults->end();
+    bool AMS_led = active_faults->find(sysCheck->AMS_fault) != active_faults->end();
+    bool IMD_led = active_faults->find(sysCheck->IMD_fault) != active_faults->end();
     TSState = (state == GLV_ON) ? GREEN : RED;
     RTDState = (state == PRECHARGE_COMPLETE) ? GREEN : RED;
-    sendDashLED(AMS_led, IMD_led, TSState, RTDState);
+    sendDashLED(AMS_led, IMD_led, TSState, RTDState); // ! Latching?
 
 
     // send outgoing CAN Messages
@@ -1435,6 +1452,7 @@ void loop(){
     sendPingValues(); 
     sendVDMInfo(); 
     
+    // Serial.println(ACU1.getSDCVoltage());
 
     if(can_primary.read(msg)){
         DTI.receive(msg.id, msg.buf);
@@ -1464,7 +1482,7 @@ void loop(){
     if(tc_multiplier < 1) sendDashPopup(0x07, 1);
 
     // brake light
-    if(analogRead(BSE_HIGH) > 1000) digitalWrite(BRAKE_LIGHT_PIN, HIGH); //TODO: Correct ADC 10 bit
+    if(analogRead(BSE_HIGH) > 500) digitalWrite(BRAKE_LIGHT_PIN, HIGH);
     else digitalWrite(BRAKE_LIGHT_PIN, LOW);
 
     // state machine operation
