@@ -494,7 +494,8 @@ class SystemsCheck {
         static bool IMD_fault(VehicleTuneController& t){ return analogRead(IMD_OK_PIN) < 700 || analogRead(IMD_OK_PIN) > 790; }
         static bool BSPD_fault(VehicleTuneController& t){ return analogRead(BSPD_OK_PIN) < 700 || analogRead(BSPD_OK_PIN) > 790; }
         // check voltage < 7V (this one is 16V 8 bit ADC)
-        static bool SDC_opened(VehicleTuneController& t){ return ACU1.getSDCVoltage() < 112; } 
+        static bool SDC_opened(VehicleTuneController& t){ return ACU1.getSDCVoltage() < 112; }
+ 
         // bit 6
         // bool SystemsCheck::max_current(const ){return DTI.getDCCurrent() > DTI.getDCCurrentLim();} 
 
@@ -580,7 +581,7 @@ const uint8_t PING_VALUE_SEND_FREQENCY = 10; // Hz
 const uint8_t VDM_INFO_SEND_FREQENCY = 10; // Hz
 const uint8_t TRACTION_CONTROL_FREQENCY = 100; // Hz
 const uint8_t DEBUG_PRINT_FREQUENCY = 4; // Hz
-const uint8_t DASH_PANEL_LED_FREQUENCY = 10; // Hz    
+const uint8_t DASH_PANEL_LED_FREQUENCY = 20; // Hz    
 
 const unsigned long PING_TIMEOUT = 3000000; // microseconds 
 
@@ -664,14 +665,15 @@ Sends a message to the Dash Panel to update the LED status of the buttons and wa
 @param RTDColor - Color to set RTD active Button LED
 */
 void sendDashLED(uint8_t AMS, uint8_t IMD, Color TSColor, Color RTDColor){
-    if(millis()- lastDashLEDMessage >= 1000/DASH_PANEL_LED_FREQUENCY){
+    if(millis() - lastDashLEDMessage >= 1000/DASH_PANEL_LED_FREQUENCY){
         uint8_t tsr = TSColor == RED ? 255 : 0;
-        uint8_t tsg = TSColor == GREEN ? 355 : 0;
+        uint8_t tsg = TSColor == GREEN ? 1 : 0;
         uint8_t rtr = RTDColor == RED ? 255 : 0;    
-        uint8_t rtg = RTDColor == GREEN ? 255 : 0;
-        uint8_t data[8] = {AMS, IMD, tsr, tsg, rtr, rtg, 0, 0};
+        uint8_t rtg = RTDColor == GREEN ? 1 : 0;
+        int b = (abs((int16_t)(uint8_t)(millis() >> 4) - 128) << 1);
+        uint8_t data[8] = {AMS * 255, IMD * 255, tsr, tsg*b, rtr, rtg*b, 0, 0};
         writeMessage(LED_Outputs, data, 8, PRIMARY_CAN_BUS);
-        lastDashLEDMessage = millis();  
+        lastDashLEDMessage = millis();
     }
 
 }
@@ -683,11 +685,11 @@ void handleDashPanelInputs(){
     float brake = analogRead(BSE_HIGH); // TODO: Fix
     if(msg.id == Button_Event){
         if(msg.buf[0]){ // TS_ACTIVE
+        // ! NEED BRAKE TO START CAR
             // if(brake < 1000) {
             //     sendDashPopup(0x3, 3);
             //     return;
             // }
-            Serial.println("Got TS Active");
             State s = state;
             if(s == GLV_ON){
                     state = TS_PRECHARGE;
@@ -696,7 +698,6 @@ void handleDashPanelInputs(){
             }
         }
         else if(msg.buf[1]){ // TS_OFF
-            Serial.println("Got TS Off");
             // shut off car entirely
             uint8_t data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
             writeMessage(ACU_Control, data, 8, PRIMARY_CAN_BUS);
@@ -992,6 +993,7 @@ State ts_precharge() {
         return PRECHARGING;
     }
     else if(ACU1.getPrechargeDone()){
+        ACU1.resetPrechargeDone();
         return PRECHARGE_COMPLETE;
     }
     return TS_PRECHARGE;
@@ -1056,8 +1058,9 @@ State drive_standby(bool& BSE_APPS_violation, VehicleTuneController& tune) {
     }
 
     float throttle = getThrottle1(PEDALS.getAPPS1(), tune);
-    float brake = analogRead(CURRENT_SIGNAL); //TODO: Fix
-    
+    // float brake = analogRead(CURRENT_SIGNAL); //TODO: Fix
+    // ! CHANGE TO REAL BSE
+    float brake = 0;
     // only if no violation, and throttle is pressed, go to DRIVE
 
     if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_ACTIVE;
@@ -1099,8 +1102,10 @@ THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED
 State drive_active(bool& BSE_APPS_violation, VehicleTuneController& tune) {
     float throttle = getThrottle1(PEDALS.getAPPS1(), tune);
     float a2 = getThrottle2(PEDALS.getAPPS2(), tune);
-    float brake = (PEDALS.getBrakePressureF() + PEDALS.getBrakePressureR())/2.0; // TODO: All the Braking stuff is wrong
-    
+    // float brake = analogRead(CURRENT_SIGNAL); // TODO: All the Braking stuff is wrong
+    // ! CHANGE TO REAL BSE
+    float brake = 0;
+    if (throttle < 0.05) return DRIVE_STANDBY;
     // ACCELERATOR GRADIENT PLAUSIBILITY VIOLATION
     if(abs(throttle-a2) > 0.1){
         sendDashPopup(0x02, 3);
@@ -1137,7 +1142,9 @@ State drive_active(bool& BSE_APPS_violation, VehicleTuneController& tune) {
 State drive_regen(bool& BSE_APPS_violation, VehicleTuneController& tune){
     if(settings.regen_level == REGEN_OFF) return DRIVE_STANDBY;
 
-    float brake = analogRead(CURRENT_SIGNAL); // TODO: Change to BSE 
+    // float brake = analogRead(CURRENT_SIGNAL); // TODO: Change to BSE 
+    // ! CHANGE TO REAL BSE
+    float brake = 0;
     float throttle = getThrottle1(PEDALS.getAPPS1(), tune);
     if(throttle > 0.05) return DRIVE_ACTIVE;
     if(brake < 0.05) return DRIVE_STANDBY;
@@ -1380,6 +1387,8 @@ void setup() {
 
     // set state  
     state = ECU_FLASH;
+    //! FOR TEST ONLY - DELETE LATER
+    // state = DRIVE_STANDBY;
     mode = STANDARD; 
 
     // ! FOR MOTOR TEST BENCH ONLY
@@ -1399,9 +1408,9 @@ void loop(){
     // ! SYSTEM CHECKS ARE SUPRESSED FOR MOTOR TEST BENCH
     // ! UNCOMMENT FOR NOMINAL VEHICLE OPERATION
     sysCheck->hardware_system_critical(*active_faults, tune); 
-    sysCheck->system_faults(*active_faults, tune);
-    sysCheck->system_limits(*active_limits, tune);
-    sysCheck->system_warnings(*active_warnings, tune);
+    // sysCheck->system_faults(*active_faults, tune);
+    // sysCheck->system_limits(*active_limits, tune);
+    // sysCheck->system_warnings(*active_warnings, tune);
     
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
     
@@ -1410,11 +1419,11 @@ void loop(){
 
 
     // if(settings.power_level == LIMIT) sendDashPopup(0xA, 5);
-
+    // Serial.println(analogRead(IMD_OK_PIN)*3.3/(1024.0));
 
     // AMS and IMD LEDs and Dash LEDs
-    bool AMS_led = active_faults->find(sysCheck->AMS_fault) != active_faults->end();
-    bool IMD_led = active_faults->find(sysCheck->IMD_fault) != active_faults->end();
+    bool AMS_led = active_faults->find(sysCheck->AMS_fault) == active_faults->end();
+    bool IMD_led = active_faults->find(sysCheck->IMD_fault) == active_faults->end();
     TSState = (state == GLV_ON) ? GREEN : RED;
     RTDState = (state == PRECHARGE_COMPLETE) ? GREEN : RED;
     sendDashLED(AMS_led, IMD_led, TSState, RTDState);

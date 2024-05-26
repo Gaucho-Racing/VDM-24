@@ -593,6 +593,8 @@ struct ACU {
     float getGLVVoltage() const {return 0.0625 * ((uint16_t)data[1][6]);}
     float getSOC() const {return 0.5 * data[1][7];} //state of charge
 
+    void resetPrechargeDone() {data[1][2] &= 0b11101111;}
+
     // Powertrain Cooling
     float getFan1Speed() const {return 0.5 * data[2][0];}
     float getFan2Speed() const {return 0.5 * data[2][1];}
