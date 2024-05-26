@@ -42,7 +42,6 @@ Dash DASHBOARD = Dash(can_primary);
 Energy_Meter ENERGY_METER = Energy_Meter(can_primary);
 SteeringWheel STEERING_WHEEL = SteeringWheel(can_primary);
 byte IMU[3][8] = {0x00};
-int i = 0;
 
 
 
@@ -88,84 +87,14 @@ struct TorqueProfile{
 
 
 
-/*
-Reads the SD card in the Microcontroller to initialize the Vehicles Parameters and Performance Tune with Race Presets.
 
-@param TorqueProfilesData: a reference to vector of 4 TorqueProfile objects
-@param PowerLevelsData: a reference to vector of 4 floats representing the current limits for each power level
-@param RegenLevelsData: a reference to vector of 4 floats representing the regen levels for each regen level
-@param t: a Tune object reference for initializing other vehicle parameters
-*/
-// void readSDCard(std::vector<TorqueProfile>& TorqueProfilesData, std::vector<float>& PowerLevelsData, std::vector<float>& RegenLevelsData, Tune& t){
-//     Serial.println("Initializing SD Card...");
-//             while(!SD.begin(BUILTIN_SDCARD)){
-//                 Serial.println("Waiting for SD Card to initialize...");
-//             }
-            
-//             Serial.println("SD INITIALIZATION SUCCESSFUL");
-//             File ecu_tune;
-//             ecu_tune = SD.open("gr24.ecu");
-//             Serial.print("Reading ECU FLASH....");
-//             String tune;
-//             while(ecu_tune.available()){
-//                 Serial.print("..");
-//                 tune += (char)ecu_tune.read(); 
-//             }
-//             Serial.println(tune.length());
-//             ecu_tune.close();
-//             Serial.println("");
-
-//             std::stringstream iss(tune.c_str());
-//             // read in torque profiles, regen profiles, and traction profiles
-//             for(int i = 0; i < 4; i++){
-//                 float k, p, b;
-//                 iss >> k >> p >> b;
-//                 TorqueProfilesData[i] = TorqueProfile(k, p, b);
-//             }   
-//             Serial.println("TORQUE PROFILES INITIALIZED");
-//             for(int i = 0; i < 4; i++){
-//                 float cmax;
-//                 iss >> cmax;
-//                 PowerLevelsData[i] = cmax;
-//             }   
-//             Serial.println("CURRENT LIMITS INITIALIZED");
-//             for(int i = 0; i < 4; i++){
-//                 float r;
-//                 iss >> r;
-//                 RegenLevelsData[i] = r;
-//             }
-//             Serial.println("REGEN LEVELS INITIALIZED");
-//             Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
-//             Serial.println("STARTING CAR WITH SETTINGS: ");
-//             Serial.print("THROTTLE MAP: ");
-//             for (int i = 0; i < 4; i++) {
-//                 Serial.print(TorqueProfilesData[i].K); 
-//                 Serial.print(" ");
-//                 Serial.print(TorqueProfilesData[i].P);
-//                 Serial.print(" ");
-//                 Serial.println(TorqueProfilesData[i].B);
-//             }
-//             Serial.print("POWER LEVELS: ");
-//             for (int i = 0; i < 4; i++) {
-//                 Serial.print(PowerLevelsData[i]); 
-//                 Serial.print(" ");
-//             }
-//             Serial.println("");
-//             Serial.print("REGEN LEVELS: ");
-//             for (int i = 0; i < 4; i++) {
-//                 Serial.print(RegenLevelsData[i]); 
-//                 Serial.print(" ");
-//             }
-//             Serial.println("");
-//             Serial.println("--------------------------");
-// }
 
 /*
 A class to store the vehicle's performance tune and settings. 
 This includes the power limits, torque mappings, regen settings, error limits, and other vehicle parameters.
 The tune should be initialized via SD card and can be modified in other functions using the set methods. 
 */
-class Tune {
+class VehicleTuneController {
     private:
         std::vector<TorqueProfile> TorqueProfilesData; // Actual Torque profiles with Data for Torque Map
         std::vector<float> PowerLevelsData; // Actual max current value in Amperes
@@ -201,13 +130,11 @@ class Tune {
         float regen_dump_min_rpm = 3000; // RPM minimum for regen dump current
 
     public:
-        Tune(){
+        VehicleTuneController(){
             // init from sd card
             TorqueProfilesData = std::vector<TorqueProfile>(4);
             PowerLevelsData = std::vector<float>(4);
             RegenLevelsData = std::vector<float>(4);
-            // readSDCard(TorqueProfilesData, PowerLevelsData, RegenLevelsData, *this);            
-
         }
 
         // REGEN STUFF
@@ -265,7 +192,7 @@ class Tune {
         
         // ERROR THRESHOLDS
         // get the maximum CAN ping time in microseconds
-        uint8_t getMaxCANPing(){ return MaxCANPing; }
+        uint8_t getMaxCANPing() const { return MaxCANPing; }
         // get the motor warning temperature in degrees celsius
         uint8_t getMotorWarnTemp(){ return temp_motor_warn; }
         // get the motor limit temperature in degrees celsius
@@ -332,32 +259,110 @@ class Tune {
         // @param temp degrees celsius
         void setInverterCriticalTemp(uint8_t temp){ temp_inverter_critical = temp; }
 
-        // get the active torque profile for a given position in the vehicles Tune (as K, P, B)
+        // get the active torque profile for a given position in the vehicles VehicleTuneController (as K, P, B)
         // @param pos position of the torque profile corr. to SW
         TorqueProfile getActiveTorqueProfile(int8_t pos){ return TorqueProfilesData[pos]; }      
-        // get the active current limit for a given position in the vehicles Tune (in AMPS)
+        // get the active current limit for a given position in the vehicles VehicleTuneController (in AMPS)
         // @param pos position of the current limit corr. to SW  
         float getActiveCurrentLimit(int8_t pos){ return PowerLevelsData[pos];} 
-        // get the active regen power for a given position in the vehicles Tune (in percentile)
+        // get the active regen power for a given position in the vehicles VehicleTuneController (in percentile)
         // @param pos position of the regen power corr. to SW
         float getActiveRegenPower(int8_t pos){ return RegenLevelsData[pos];} 
         // get rev limiter cuttoff
         int revLimit(){ return rev_limit; } 
-        // set the Torque Profile for a given position in the vehicles Tune
+
+        // get torque profile data
+        std::vector<TorqueProfile> getTorqueProfilesData() const { return TorqueProfilesData; }
+        // get power level data
+        std::vector<float> getPowerLevelsData() const { return PowerLevelsData; }
+        // get regen level data
+        std::vector<float> getRegenLevelsData() const { return RegenLevelsData; }
+        // set the Torque Profile for a given position in the vehicles VehicleTuneController
         // @param index position of the torque profile corr. to SW
         // @param tp TorqueProfile object
         void setTorqueProfileData(uint8_t index, TorqueProfile tp){ TorqueProfilesData[index] = tp; }
-        // set the Power Level for a given position in the vehicles Tune
+        // set the Power Level for a given position in the vehicles VehicleTuneController
         // @param index position of the current limit corr. to SW
         // @param power float value in Amperes
         void setPowerLevelData(uint8_t index, float power){ PowerLevelsData[index] = power; }
-        // set the Regen Level for a given position in the vehicles Tune
+        // set the Regen Level for a given position in the vehicles VehicleTuneController
         // @param index position of the regen power corr. to SW
         // @param regen float value in percentile
         void setRegenLevelData(uint8_t index, float regen){ RegenLevelsData[index] = regen; }
+    
 };
 
 
+
+/*
+Reads the SD card in the Microcontroller to initialize the Vehicles Parameters and Performance VehicleTuneController with Race Presets.
+
+*/
+void readSDCard(VehicleTuneController& t){
+    Serial.println("Initializing SD Card...");
+            while(!SD.begin(BUILTIN_SDCARD)){
+                Serial.println("Waiting for SD Card to initialize...");
+            }
+            
+            Serial.println("SD INITIALIZATION SUCCESSFUL");
+            File ecu_tune;
+            ecu_tune = SD.open("gr24.txt");
+            Serial.print("Reading ECU FLASH....");
+            String tune;
+            while(ecu_tune.available()){
+                Serial.print("..");
+                tune += (char)ecu_tune.read(); 
+            }
+            Serial.println(tune.length());
+            Serial.println(tune);
+            ecu_tune.close();
+            Serial.println("");
+/*
+            std::stringstream iss(tune.c_str());
+            // read in torque profiles, regen profiles, and traction profiles
+            for(int i = 0; i < 4; i++){
+                float k, p, b;
+                iss >> k >> p >> b;
+                t.setTorqueProfileData(i, TorqueProfile(k, p, b));
+            }   
+            Serial.println("TORQUE PROFILES INITIALIZED");
+            for(int i = 0; i < 4; i++){
+                float cmax;
+                iss >> cmax;
+                t.setPowerLevelData(i, cmax);
+            }   
+            Serial.println("CURRENT LIMITS INITIALIZED");
+            for(int i = 0; i < 4; i++){
+                float r;
+                iss >> r;
+                t.setRegenLevelData(i, r);
+            }
+            Serial.println("REGEN LEVELS INITIALIZED");
+            Serial.println("ECU FLASH COMPLETE. GR24 TUNE DOWNLOADED.");
+            Serial.println("STARTING CAR WITH SETTINGS: ");
+            Serial.print("THROTTLE MAP: ");
+            for (int i = 0; i < 4; i++) {
+                Serial.print(t.getTorqueProfilesData()[i].K); 
+                Serial.print(" ");
+                Serial.print(t.getTorqueProfilesData()[i].P );
+                Serial.print(" ");
+                Serial.println(t.getTorqueProfilesData()[i].B);
+            }
+            Serial.print("POWER LEVELS: ");
+            for (int i = 0; i < 4; i++) {
+                Serial.print(t.getRegenLevelsData()[i]); 
+                Serial.print(" ");
+            }
+            Serial.println("");
+            Serial.print("REGEN LEVELS: ");
+            for (int i = 0; i < 4; i++) {
+                Serial.print(t.getRegenLevelsData()[i]); 
+                Serial.print(" ");
+            }
+            Serial.println("");
+            Serial.println("--------------------------");
+            */
+}
 
 
 /*
@@ -410,7 +415,7 @@ class SystemsCheck {
             */
         }
         
-        void hardware_system_critical(std::unordered_set<bool (*)(Tune& t)> &af, Tune* t){
+        void hardware_system_critical(std::unordered_set<bool (*)(VehicleTuneController& t)> &af, VehicleTuneController* t){
             if(SDC_opened(*t)) af.insert(SDC_opened);  
             SYS_CHECK_CAN_FRAME[0] = SDC_opened(*t) ? (SYS_CHECK_CAN_FRAME[0] | 0b00000100) : (SYS_CHECK_CAN_FRAME[0] & 0b11111011);
             if(AMS_fault(*t)) af.insert(AMS_fault);
@@ -424,7 +429,7 @@ class SystemsCheck {
         }
 
         // NOTE: OPEN THE SOFTWARE LATCH IF the Inverter is not responding or there are critical system faults. 
-        void system_faults(std::unordered_set<bool (*)(Tune& t)> &af, Tune* t){
+        void system_faults(std::unordered_set<bool (*)(VehicleTuneController& t)> &af, VehicleTuneController* t){
             if(critical_motor_temp(*t)) af.insert(critical_motor_temp);
             SYS_CHECK_CAN_FRAME[1] = critical_motor_temp(*t) ? (SYS_CHECK_CAN_FRAME[1] | 0b00100000) : (SYS_CHECK_CAN_FRAME[1] & 0b11011111);
             if(critical_battery_temp(*t)) af.insert(critical_battery_temp);
@@ -438,7 +443,7 @@ class SystemsCheck {
             
         }
 
-        void system_limits(std::unordered_set<bool (*)(Tune& t)> &al, Tune* t){
+        void system_limits(std::unordered_set<bool (*)(VehicleTuneController& t)> &al, VehicleTuneController* t){
             if(limit_motor_temp(*t)) al.insert(limit_motor_temp);
             SYS_CHECK_CAN_FRAME[1] = limit_motor_temp(*t) ? (SYS_CHECK_CAN_FRAME[1] | 0b01000000) : (SYS_CHECK_CAN_FRAME[1] & 0b10111111);
             if(limit_battery_temp(*t)) al.insert(limit_battery_temp);
@@ -449,7 +454,7 @@ class SystemsCheck {
             SYS_CHECK_CAN_FRAME[2] = limit_mcu_temp(*t) ? (SYS_CHECK_CAN_FRAME[2] | 0b00001000) : (SYS_CHECK_CAN_FRAME[2] & 0b11110111);
         }
 
-        void system_warnings(std::unordered_set<bool (*)(Tune& t)> &aw, Tune* t){
+        void system_warnings(std::unordered_set<bool (*)(VehicleTuneController& t)> &aw, VehicleTuneController* t){
             if(warn_motor_temp(*t)) aw.insert(warn_motor_temp);
             SYS_CHECK_CAN_FRAME[1] = warn_motor_temp(*t) ? (SYS_CHECK_CAN_FRAME[1] | 0b10000000) : (SYS_CHECK_CAN_FRAME[1] & 0b01111111);
             if(warn_battery_temp(*t)) aw.insert(warn_battery_temp);
@@ -485,38 +490,38 @@ class SystemsCheck {
         // 2.4v is ok - ADC: 744
         // 1v = 310
         // bits 2, 3, 4, 5, 
-        static bool AMS_fault(Tune& t){ return analogRead(AMS_OK_PIN) < 700 || analogRead(AMS_OK_PIN) > 790; }
-        static bool IMD_fault(Tune& t){ return analogRead(IMD_OK_PIN) < 700 || analogRead(IMD_OK_PIN) > 790; }
-        static bool BSPD_fault(Tune& t){ return analogRead(BSPD_OK_PIN) < 700 || analogRead(BSPD_OK_PIN) > 790; }
+        static bool AMS_fault(VehicleTuneController& t){ return analogRead(AMS_OK_PIN) < 700 || analogRead(AMS_OK_PIN) > 790; }
+        static bool IMD_fault(VehicleTuneController& t){ return analogRead(IMD_OK_PIN) < 700 || analogRead(IMD_OK_PIN) > 790; }
+        static bool BSPD_fault(VehicleTuneController& t){ return analogRead(BSPD_OK_PIN) < 700 || analogRead(BSPD_OK_PIN) > 790; }
         // check voltage < 7V (this one is 16V 8 bit ADC)
-        static bool SDC_opened(Tune& t){ return ACU1.getSDCVoltage() < 112; } 
+        static bool SDC_opened(VehicleTuneController& t){ return ACU1.getSDCVoltage() < 112; } 
         // bit 6
         // bool SystemsCheck::max_current(const ){return DTI.getDCCurrent() > DTI.getDCCurrentLim();} 
 
         // BYTE 1 ---------------------------------------------------------------------------
         // bit 0, 1, 2
-        static bool warn_motor_temp(Tune& t){return DTI.getMotorTemp() > t.getMotorWarnTemp() && DTI.getMotorTemp() < t.getMotorLimitTemp();}
-        static bool limit_motor_temp(Tune& t){return DTI.getMotorTemp() > t.getMotorLimitTemp() && DTI.getMotorTemp() < t.getMotorCriticalTemp();}
-        static bool critical_motor_temp(Tune& t){return DTI.getMotorTemp() > t.getMotorCriticalTemp();}
+        static bool warn_motor_temp(VehicleTuneController& t){return DTI.getMotorTemp() > t.getMotorWarnTemp() && DTI.getMotorTemp() < t.getMotorLimitTemp();}
+        static bool limit_motor_temp(VehicleTuneController& t){return DTI.getMotorTemp() > t.getMotorLimitTemp() && DTI.getMotorTemp() < t.getMotorCriticalTemp();}
+        static bool critical_motor_temp(VehicleTuneController& t){return DTI.getMotorTemp() > t.getMotorCriticalTemp();}
         // bit 3, 4, 5
-        static bool warn_battery_temp(Tune& t) {return ACU1.getMaxCellTemp() > t.getBatteryWarnTemp() && ACU1.getMaxCellTemp() < t.getBatteryLimitTemp();}
-        static bool limit_battery_temp(Tune& t) {return ACU1.getMaxCellTemp() > t.getBatteryLimitTemp() && ACU1.getMaxCellTemp() < t.getBatteryCriticalTemp();}
-        static bool critical_battery_temp(Tune& t) {return ACU1.getMaxCellTemp() > t.getBatteryCriticalTemp();}
+        static bool warn_battery_temp(VehicleTuneController& t) {return ACU1.getMaxCellTemp() > t.getBatteryWarnTemp() && ACU1.getMaxCellTemp() < t.getBatteryLimitTemp();}
+        static bool limit_battery_temp(VehicleTuneController& t) {return ACU1.getMaxCellTemp() > t.getBatteryLimitTemp() && ACU1.getMaxCellTemp() < t.getBatteryCriticalTemp();}
+        static bool critical_battery_temp(VehicleTuneController& t) {return ACU1.getMaxCellTemp() > t.getBatteryCriticalTemp();}
         // bit 6
-        static bool rev_limit_exceeded(Tune& t) {return DTI.getERPM()/10 > t.revLimit();}
+        static bool rev_limit_exceeded(VehicleTuneController& t) {return DTI.getERPM()/10 > t.revLimit();}
         // bit 7 
 
         // BYTE 2 ---------------------------------------------------------------------------
         // bit 0, 1, 2 NOTE: COOLANT TEMP SENSOR NOT FUNCTIONAL
-        // static bool warn_water_temp(Tune& t){return ACU1.get() > t.getBatteryWarnTemp() && .getWaterTemp() < t.getCoolantLimitTemp();} //TODO: Implement in NODES
-        // static bool limit_water_temp(Tune& t){return ACU1.getWaterTemp() > t.getCoolantLimitTemp() && ACU1.getWaterTemp() < t.getCoolantCriticalTemp();}
-        // static bool critical_water_temp(Tune& t){return ACU1.getWaterTemp() > t.getCoolantCriticalTemp();}
+        // static bool warn_water_temp(VehicleTuneController& t){return ACU1.get() > t.getBatteryWarnTemp() && .getWaterTemp() < t.getCoolantLimitTemp();} //TODO: Implement in NODES
+        // static bool limit_water_temp(VehicleTuneController& t){return ACU1.getWaterTemp() > t.getCoolantLimitTemp() && ACU1.getWaterTemp() < t.getCoolantCriticalTemp();}
+        // static bool critical_water_temp(VehicleTuneController& t){return ACU1.getWaterTemp() > t.getCoolantCriticalTemp();}
         // bit 3, 4, 5
-        static bool warn_mcu_temp(Tune& t) {return DTI.getInvTemp() > t.getInverterWarnTemp() && DTI.getInvTemp() < t.getInverterLimitTemp();}
-        static bool limit_mcu_temp(Tune& t){return DTI.getInvTemp() > t.getInverterLimitTemp() && DTI.getInvTemp() < t.getInverterCriticalTemp();}
-        static bool critical_mcu_temp(Tune& t) {return DTI.getInvTemp() > t.getInverterCriticalTemp();}
+        static bool warn_mcu_temp(VehicleTuneController& t) {return DTI.getInvTemp() > t.getInverterWarnTemp() && DTI.getInvTemp() < t.getInverterLimitTemp();}
+        static bool limit_mcu_temp(VehicleTuneController& t){return DTI.getInvTemp() > t.getInverterLimitTemp() && DTI.getInvTemp() < t.getInverterCriticalTemp();}
+        static bool critical_mcu_temp(VehicleTuneController& t) {return DTI.getInvTemp() > t.getInverterCriticalTemp();}
         // bit 6
-        // static bool TCM_fault(Tune& t) {return false;} // TODO: do
+        // static bool TCM_fault(VehicleTuneController& t) {return false;} // TODO: do
         // bit 7 empty for now
 
 
@@ -545,22 +550,22 @@ struct SWSettings {
 
 // iCANflex* Car; // Controller Area Network Object for the Vehicles CAN Bus
 SystemsCheck* sysCheck; // Static System Check
-Tune* tune; // Global System Tuning Profile
+VehicleTuneController* tune; // Global System Tuning Profile
 
 // THIS HASH FUNCTION DOES NOT WORK: DO NOT USE
 // namespace std { 
 //     template <>
-//     struct hash<bool (*)(Tune& t)> {
-//         size_t operator()(bool (*f)(Tune& t)) const noexcept{
+//     struct hash<bool (*)(VehicleTuneController& t)> {
+//         size_t operator()(bool (*f)(VehicleTuneController& t)) const noexcept{
 //             return reinterpret_cast<size_t>(f);
 //         }
 //     };
 // };
 
-std::unordered_set<bool (*)(Tune& t)> *active_faults; // hashset of active system faults as function pointers
-std::unordered_set<bool (*)(Tune& t)> *active_warnings; // hashset of active system warnings as function pointers
-std::unordered_set<bool (*)(Tune& t)> *active_limits; // hashset of active system limits as function pointers
-bool (*errorCheck)(Tune&); // global function pointer to error causing the ISR
+std::unordered_set<bool (*)(VehicleTuneController& t)> *active_faults; // hashset of active system faults as function pointers
+std::unordered_set<bool (*)(VehicleTuneController& t)> *active_warnings; // hashset of active system warnings as function pointers
+std::unordered_set<bool (*)(VehicleTuneController& t)> *active_limits; // hashset of active system limits as function pointers
+bool (*errorCheck)(VehicleTuneController&); // global function pointer to error causing the ISR
 
 std::unordered_set<int> timeout_nodes;
 
@@ -630,13 +635,13 @@ void sendDashPopup(int8_t error_code, int8_t secs, uint8_t tq = 0, uint16_t mc =
 }
 
 
-void handleECUTuning(Tune& tune){
+void handleECUTuning(VehicleTuneController& tune){
     // TODO:
 }
 
 
 
-void handleDriverInputs(Tune& tune){
+void handleDriverInputs(VehicleTuneController& tune){
     if(msg.id == 0x11002){
         settings.power_level = msg.buf[0];
         settings.throttle_map = msg.buf[1];
@@ -925,7 +930,7 @@ void computeTractionControl() {
 
 
 
-State sendToError(bool (*erFunc)(Tune& tune)) {
+State sendToError(bool (*erFunc)(VehicleTuneController& tune)) {
    errorCheck = erFunc; 
    return ERROR;
 }
@@ -938,11 +943,13 @@ This will be the first state that the car will enter.
 This is essential for the car to operate as the ECU flash contains the 
 torque profiles, regen profiles, and traction control profiles.
 */
-State ecu_flash() {
+State ecu_flash(VehicleTuneController* t) {
     // DTI.setDriveEnable(0);
     // DTI.setRCurrent(0);
     // flash the ecu
-    return ECU_FLASH;
+    readSDCard(*t);
+    Serial.println("ECU Flash Complete");
+    return GLV_ON;
 
 }
 
@@ -1024,7 +1031,7 @@ READY TO DRIVE SUB STATES
 
 
 
-float getThrottle1(uint16_t a1, Tune& tune){
+float getThrottle1(uint16_t a1, VehicleTuneController& tune){
     float throttle =  1.0 - ((a1 - tune.getAPPSFloor1()*1.0)/(tune.getAPPSZero1()-tune.getAPPSFloor1()));
     if (throttle < 0.05) return 0;
     else if (throttle > 1 && throttle < 1.1) return 1;
@@ -1032,7 +1039,7 @@ float getThrottle1(uint16_t a1, Tune& tune){
     else return throttle;
 }
 
-float getThrottle2(uint16_t a2,  Tune& tune){
+float getThrottle2(uint16_t a2,  VehicleTuneController& tune){
     float throttle =  1.0 - ((a2 - tune.getAPPSFloor2()*1.0)/(tune.getAPPSZero2()-tune.getAPPSFloor2()));
     if (throttle < 0.05) return 0;
     else if (throttle > 1 && throttle < 1.1) return 1;
@@ -1040,7 +1047,7 @@ float getThrottle2(uint16_t a2,  Tune& tune){
     else return throttle;
 }
 
-State drive_standby(bool& BSE_APPS_violation, Tune& tune) {
+State drive_standby(bool& BSE_APPS_violation, VehicleTuneController& tune) {
     
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         DTI.setRCurrent(0);
@@ -1089,7 +1096,7 @@ THIS IS FOR A GENERALLY SMOOTHER TORQUE PROFILE AND DRIVABILITY.
 THE DRIVE_TORQUE STATE IS ALSO RESPONSIBLE FOR CHECKING THE APPS AND BSE FOR VIOLATIONS AS WELL AS 
 THE GRADIENTS OF THE TWO APPS SIGNALS TO MAKE SURE THAT THEY ARE NOT COMPROMISED. 
 */
-State drive_active(bool& BSE_APPS_violation, Tune& tune) {
+State drive_active(bool& BSE_APPS_violation, VehicleTuneController& tune) {
     float throttle = getThrottle1(PEDALS.getAPPS1(), tune);
     float a2 = getThrottle2(PEDALS.getAPPS2(), tune);
     float brake = (PEDALS.getBrakePressureF() + PEDALS.getBrakePressureR())/2.0; // TODO: All the Braking stuff is wrong
@@ -1107,7 +1114,6 @@ State drive_active(bool& BSE_APPS_violation, Tune& tune) {
     }
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         DTI.setDriveEnable(1);
-        DTI.setMaxCurrent(tune.getActiveCurrentLimit(settings.power_level));  
         // TORQUE MAPPING FOR DRIVING AND STABILITY VIA NONLINEAR THROTTLE CONTROL
         // THROTTLE CURVE EQUATION: z = np.clip((x - (1-x)*(x + b)*((y/5500.0)**p)*k )*100, 0, 100) 
         TorqueProfile tp = tune.getActiveTorqueProfile(settings.throttle_map);
@@ -1128,7 +1134,7 @@ State drive_active(bool& BSE_APPS_violation, Tune& tune) {
 }
 
 
-State drive_regen(bool& BSE_APPS_violation, Tune& tune){
+State drive_regen(bool& BSE_APPS_violation, VehicleTuneController& tune){
     if(settings.regen_level == REGEN_OFF) return DRIVE_STANDBY;
 
     float brake = analogRead(CURRENT_SIGNAL); // TODO: Change to BSE 
@@ -1140,7 +1146,6 @@ State drive_regen(bool& BSE_APPS_violation, Tune& tune){
     
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         DTI.setDriveEnable(1);
-        DTI.setMaxCurrent(tune.getActiveCurrentLimit(settings.power_level));
         // Do this one in AMPS instead of Relative Current
         // 30A Max Regen, 15A Continuous/RMS
         float accumulator_input_amps = 0; 
@@ -1176,7 +1181,7 @@ DRIVER REQUESTS TO STOP THE VEHICLE.
 THE VEHICLE REMAINS IN THIS STATE UNTIL ALL VIOLATIONS ARE RESOLVED 
 
 */
-State error(Tune& t, bool (*errorCheck)(Tune& t), std::unordered_set<bool (*)(Tune& t)>& active_faults){
+State error(VehicleTuneController& t, bool (*errorCheck)(VehicleTuneController& t), std::unordered_set<bool (*)(VehicleTuneController& t)>& active_faults){
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         DTI.setRCurrent(0);
         DTI.setDriveEnable(0);
@@ -1258,8 +1263,14 @@ String vehicleStatus(){
 
 String vehicleHealth(){
     String output = "|                      SYSTEM HEALTH:                    |\n";
-    output += "| CRITICAL: " + String(active_faults->size()) + " | LIMIT: " + String(active_limits->size()) + " | WARN: " + String(active_warnings->size()) + "          |\n";
-    output += "----------------------------------------------------------";
+    output += "| CRITICAL: " + String(active_faults->size()) + " | LIMIT: " + String(active_limits->size()) + " | WARN: " + String(active_warnings->size()) + "          \n| HARDWARE FAULTS: ";
+    for(auto e : *active_faults){
+        if(e == SystemsCheck::AMS_fault) output += "AMS | ";
+        if(e == SystemsCheck::IMD_fault) output += "IMD | ";
+        if(e == SystemsCheck::BSPD_fault) output += "BSPD | ";
+        if(e == SystemsCheck::SDC_opened) output += "SDC ";
+    }
+    output += "\n ----------------------------------------------------------";
     return output;
 }
 
@@ -1340,7 +1351,7 @@ void setup() {
     // begin();
     
     sysCheck = new SystemsCheck();  
-    tune = new Tune();
+    tune = new VehicleTuneController();
     can_primary.begin();
     can_primary.setBaudRate(1000000);
     msg.flags.extended = 1;
@@ -1358,9 +1369,9 @@ void setup() {
     pinMode(CURRENT_SIGNAL, INPUT);
 
 
-    active_faults = new std::unordered_set<bool (*)(Tune&)>(); 
-    active_warnings = new std::unordered_set<bool (*)(Tune&)>();
-    active_limits = new std::unordered_set<bool (*)(Tune&)>();
+    active_faults = new std::unordered_set<bool (*)(VehicleTuneController&)>(); 
+    active_warnings = new std::unordered_set<bool (*)(VehicleTuneController&)>();
+    active_limits = new std::unordered_set<bool (*)(VehicleTuneController&)>();
 
     active_faults->clear();
     active_warnings->clear();
@@ -1368,8 +1379,12 @@ void setup() {
 
 
     // set state  
-    state = GLV_ON;
+    state = ECU_FLASH;
     mode = STANDARD; 
+
+    // ! FOR MOTOR TEST BENCH ONLY
+    settings.power_level = MID_PWR;
+    DTI.setMaxCurrent(tune->getActiveCurrentLimit(settings.power_level));
     
 }
 
@@ -1381,10 +1396,12 @@ void loop(){
     
 
     // System Checks
-    sysCheck->hardware_system_critical(*active_faults, tune);
-    // sysCheck->system_faults(*active_faults, tune);
-    // sysCheck->system_limits(*active_limits, tune);
-    // sysCheck->system_warnings(*active_warnings, tune);
+    // ! SYSTEM CHECKS ARE SUPRESSED FOR MOTOR TEST BENCH
+    // ! UNCOMMENT FOR NOMINAL VEHICLE OPERATION
+    sysCheck->hardware_system_critical(*active_faults, tune); 
+    sysCheck->system_faults(*active_faults, tune);
+    sysCheck->system_limits(*active_limits, tune);
+    sysCheck->system_warnings(*active_warnings, tune);
     
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
     
@@ -1393,6 +1410,7 @@ void loop(){
 
 
     // if(settings.power_level == LIMIT) sendDashPopup(0xA, 5);
+
 
     // AMS and IMD LEDs and Dash LEDs
     bool AMS_led = active_faults->find(sysCheck->AMS_fault) != active_faults->end();
@@ -1449,7 +1467,7 @@ void loop(){
 
         // STARTUP 
         case ECU_FLASH:
-            state = ecu_flash();
+            state = ecu_flash(tune);
             break;
         case GLV_ON:
             state = glv_on();
