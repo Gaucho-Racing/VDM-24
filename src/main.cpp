@@ -306,10 +306,11 @@ String vehicleHealth(){
     String output = "|                      SYSTEM HEALTH:                    |\n";
     output += "| CRITICAL: " + String(active_faults->size()) + " | LIMIT: " + String(active_limits->size()) + " | WARN: " + String(active_warnings->size()) + "          \n| HARDWARE FAULTS: ";
     for(auto e : *active_faults){
-        if(e == SystemsCheck::AMS_fault) output += "AMS | ";
-        if(e == SystemsCheck::IMD_fault) output += "IMD | ";
-        if(e == SystemsCheck::BSPD_fault) output += "BSPD | ";
-        if(e == SystemsCheck::SDC_opened) output += "SDC ";
+        Serial.println("here");
+        if(e == sysCheck->AMS_fault) output += "AMS | ";
+        if(e == sysCheck->IMD_fault) output += "IMD | ";
+        if(e == sysCheck->BSPD_fault) output += "BSPD | ";
+        if(e == sysCheck->SDC_opened) output += "SDC ";
     }
     output += "\n ----------------------------------------------------------";
     return output;
@@ -365,14 +366,14 @@ String vehiclePowerData(){
 
 void printDebug(){
     if(millis() - lastPrintTime > 1000/DEBUG_PRINT_FREQUENCY){
-        Serial.println("----------------------------------------------------------");
-        Serial.println("|                     GR24 EV VEHICLE DEBUG              |");
-        Serial.println("----------------------------------------------------------");
-        Serial.println(vehicleStatus());
+        // Serial.println("----------------------------------------------------------");
+        // Serial.println("|                     GR24 EV VEHICLE DEBUG              |");
+        // Serial.println("----------------------------------------------------------");
+        // Serial.println(vehicleStatus());
         Serial.println(vehicleHealth());
-        Serial.println(vehicleNetwork());
-        Serial.println(vehicleSettings());
-        Serial.println(vehiclePowerData());
+        // Serial.println(vehicleNetwork());
+        // Serial.println(vehicleSettings());
+        // Serial.println(vehiclePowerData());
         lastPrintTime = millis();
     }
 }

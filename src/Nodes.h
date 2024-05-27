@@ -34,7 +34,7 @@
 
 //not touching this hoe.
 struct Inverter {
-    byte data[5][8]; 
+    byte data[5][8] = {0x00}; 
     
     /*
     example data packets from CAN bus:
@@ -144,7 +144,7 @@ struct Inverter {
 
 
 struct VDM{    
-    byte data[6][8];
+    byte data[6][8] = {0x00};
     byte dataOut[8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
@@ -305,7 +305,7 @@ enum HubSensorArray{
 };
 
 struct Wheel {
-    byte data[5][8]; 
+    byte data[5][8] = {0x00}; 
 
     HubSensorArray location;
 
@@ -391,7 +391,7 @@ struct Wheel {
 
 
 struct Central_IMU {
-    byte data[3][8]; //Mag
+    byte data[3][8] = {0x00}; //Mag
 
     FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
     CANFD_message_t msg;
@@ -430,7 +430,7 @@ struct Central_IMU {
 
 
 struct GPS {
-    byte data[4][8];
+    byte data[4][8] = {0x00};
     FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
     CANFD_message_t msg;
     unsigned long receiveTime = 0;
@@ -465,7 +465,7 @@ struct GPS {
 
 
 struct Pedals{
-    byte data[2][8]; 
+    byte data[2][8] = {0x00}; 
     byte dataOut[8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     CAN_message_t msg;
@@ -527,7 +527,7 @@ struct Pedals{
 
 struct ACU {
     //condensed cell data and bunch of other stuff
-    byte data[50][8]; //40 ids
+    byte data[50][8] = {0x00}; //40 ids
     byte dataOut[8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     CAN_message_t msg;
@@ -677,7 +677,7 @@ struct ACU {
 /* -----------------------------------------------------------------------------------------------------------------*/
 
 struct TCM {//FIX THIS STUFF (NOT TOO IMPORTANT)
-    byte data[8];
+    byte data[8] = {0x00};
     byte dataOut[8];
     FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> Can2;
     CANFD_message_t msg;
@@ -705,7 +705,7 @@ struct TCM {//FIX THIS STUFF (NOT TOO IMPORTANT)
 };
 
 struct Dash {
-    byte data[3][8];
+    byte data[3][8] = {0x00};
     byte dataOut[8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     CAN_message_t msg;
@@ -746,7 +746,7 @@ struct Dash {
 
 
 struct Energy_Meter {
-    byte data[2][8];
+    byte data[2][8] = {0x00};
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     CAN_message_t msg;
     unsigned long receiveTime = 0;
@@ -802,7 +802,7 @@ struct Energy_Meter {
 
 
 struct SteeringWheel {
-    byte data[2][8];
+    byte data[2][8] = {0x00};
     byte dataOut[8];
     FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> Can1;
     CAN_message_t msg;

@@ -23,8 +23,8 @@
 #define BSPD_OK_PIN 19
 #define IMD_OK_PIN 20
 #define AMS_OK_PIN 21
-#define BSE_HIGH 26
-#define CURRENT_SIGNAL 27
+#define BSE_HIGH A12
+#define CURRENT_SIGNAL A13
 
 #define DTI_COMM_FREQUENCY 100 // Hz
 #define PING_REQ_FREQENCY 1 // Hz
