@@ -64,6 +64,9 @@ struct Inverter {
         can = Can1;
     }
 
+    Inverter(){
+    }
+
     bool receive(unsigned long id, byte buf[]){
         if(id >= DTI_Data_1 && id <= DTI_Data_5){
             byte digit2 = (id >> 8) & 0xF; // 0 for 0x2016, 1 for 0x2116, 2 for 0x2216, 3 for 0x2316, 4 for 0x2416
@@ -155,6 +158,8 @@ struct VDM{
     VDM(FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> &can, FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can2){
         can = Can1;
         can2 = Can2;
+    }
+    VDM(){
     }
 
     bool receive(unsigned long id, byte buf[]){
@@ -336,6 +341,7 @@ struct Wheel {
                 break;
         }
     }
+    Wheel(){}
     
 
     bool receive(unsigned long id, byte buf[]){
@@ -394,6 +400,8 @@ struct Central_IMU {
     Central_IMU(FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can2;
     }
+    Central_IMU(){
+    }
 
     bool receive(unsigned long id, byte buf[]){
         if(id >= 0x10F20 && id <= 0x1022){
@@ -430,6 +438,8 @@ struct GPS {
     GPS(FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can2;
     }
+    GPS(){
+    }
 
     bool receive(unsigned long id, byte buf[]){
         if(id >= 0x10F23 && id <= 0x10F6){
@@ -463,6 +473,9 @@ struct Pedals{
 
     Pedals(FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can1; //Is this right? //Fucked?
+    }
+
+    Pedals(){
     }
 
     bool receive(unsigned long id, byte buf[]){
@@ -523,6 +536,8 @@ struct ACU {
     
     ACU(FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can1;
+    }
+    ACU(){
     }
 
     bool receive(unsigned long id, byte buf[]){
@@ -670,6 +685,8 @@ struct TCM {//FIX THIS STUFF (NOT TOO IMPORTANT)
     TCM(FlexCAN_T4<CAN_DATA_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can2;
     }
+    TCM(){
+    }
 
     bool receive(unsigned long id, byte buf[]){
         if(id == 0x12000){
@@ -696,6 +713,8 @@ struct Dash {
 
     Dash(FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can1;
+    }
+    Dash(){
     }
 
     bool receive(unsigned long id, byte buf[]){
@@ -734,6 +753,8 @@ struct Energy_Meter {
 
     Energy_Meter(FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can1;
+    }
+    Energy_Meter(){
     }
 
     bool receive(unsigned long id, byte buf[]){
@@ -789,6 +810,8 @@ struct SteeringWheel {
 
     SteeringWheel(FlexCAN_T4<CAN_PRIMARY_BUS, RX_SIZE_256, TX_SIZE_16> &can){
         can = Can1;
+    }
+    SteeringWheel(){
     }
 
     bool receive(unsigned long id, byte buf[]){
