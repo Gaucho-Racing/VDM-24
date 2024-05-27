@@ -1329,6 +1329,7 @@ String vehiclePowerData(){
     output += "| BSE: " + String(analogRead(BSE_HIGH)) + "               \n";
     output += "| INVERTER CURRENT LIMIT: " + String(tune->getPowerLevelsData()[settings.power_level] )+ " A            \n";
     output += "| POWER DRAW: " + String(DTI.getACCurrent() * ACU1.getTSVoltage()) + "W                          \n";
+    output += "| ERPM " + String(DTI.getERPM()) + " RPM                          \n";
     output += "----------------------------------------------------------\n";
     return output;
 }
@@ -1405,11 +1406,11 @@ void setup() {
     // ! FOR MOTOR TEST BENCH ONLY
     // ! UNCOMMENT FOR NOMINAL VEHICLE OPERATION
     tune->setPowerLevelData(LIMIT, 0);
-    tune->setPowerLevelData(LOW_PWR,2);
-    tune->setPowerLevelData(MID_PWR, 20);
+    tune->setPowerLevelData(LOW_PWR,10);
+    tune->setPowerLevelData(MID_PWR, 30);
     tune->setPowerLevelData(HIGH_PWR, 50);
 
-    settings.power_level = LOW_PWR;
+    settings.power_level = MID_PWR;
     DTI.setMaxCurrent(tune->getActiveCurrentLimit(settings.power_level));
     
 }
@@ -1560,6 +1561,3 @@ void loop(){
     
     
 }
-
-
-
