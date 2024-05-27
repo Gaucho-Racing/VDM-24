@@ -47,11 +47,11 @@
 #define Pedals_Inputs 0xC8                      //Index 47
 #define Pedals_Ping_Response 0xC9               //Index 48
 #define Pedals_Ping_Request 0xCA                //Index 49
-#define VDM_States 0xF0                         //Index 50
-#define VDM_Errors 0xF1                         //Index 51
+#define VDM_Info_1 0xF0                         //Index 50
+#define VDM_Info_2 0xF1                         //Index 51
 #define VDM_Ping_Values 0xF2                    //Index 52
 #define VDM_States_and_Settings 0xF3            //Index 53
-
+#define Dash_PopUp_Alert 0xF4
 
 #define Energy_Meter_Measurements 0x100         //Index 58
 #define DTI_Control_1 0x116                     //Index 59
