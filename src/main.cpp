@@ -150,19 +150,19 @@ class VehicleTuneController {
         // REGEN STUFF
 
         // radians for max regen steering angle
-        float getMaxRegenSteeringAngle(){ return max_regen_steering_angle; } 
+        float getMaxRegenSteeringAngle() const { return max_regen_steering_angle; } 
         // Amperes for regen RMS current
-        float getRegenRMSAmps(){ return regen_rms_amps; } 
+        float getRegenRMSAmps() const{ return regen_rms_amps; } 
         // Amperes for regen dump current
-        float getRegenDumpAmps(){ return regen_dump_amps; } 
+        float getRegenDumpAmps() const { return regen_dump_amps; } 
         // RPM minimum for regen RMS current
-        float getRegenRMSMaxRPM(){ return regen_rms_max_rpm; }
+        float getRegenRMSMaxRPM() const { return regen_rms_max_rpm; }
          // RPM minimum for regen dump current 
-        float getRegenDumpMinRPM(){ return regen_dump_min_rpm; }
+        float getRegenDumpMinRPM() const { return regen_dump_min_rpm; }
 
         // set the max regen steering angle
         //@param angle in radians
-        void setMaxRegenSteeringAngle(float angle){ max_regen_steering_angle = angle; } 
+        void setMaxRegenSteeringAngle (float angle){ max_regen_steering_angle = angle; } 
         // Set the Amperes for regen RMS current
         //@param amps Amperes
         void setRegenRMSAmps(float amps){ regen_rms_amps = amps; }
@@ -179,13 +179,13 @@ class VehicleTuneController {
 
         // APPS CALIBRATION
         // get the ADC value for APPS 1 at 0% throttle
-        uint32_t getAPPSZero1(){ return apps_zero_1; } 
+        uint32_t getAPPSZero1() const { return apps_zero_1; } 
         // get the ADC value for APPS 2 at 0% throttle
-        uint32_t getAPPSZero2(){ return apps_zero_2; } 
+        uint32_t getAPPSZero2() const { return apps_zero_2; } 
         // get the ADC value for APPS 1 at 100% throttle
-        uint32_t getAPPSFloor1(){ return apps_floor_1; } 
+        uint32_t getAPPSFloor1() const { return apps_floor_1; } 
         // get the ADC value for APPS 2 at 100% throttle
-        uint32_t getAPPSFloor2(){ return apps_floor_2; }
+        uint32_t getAPPSFloor2() const { return apps_floor_2; }
 
         // set the ADC value for APPS 1 at 0% throttle 
         // @param apps ADC value
@@ -204,29 +204,29 @@ class VehicleTuneController {
         // get the maximum CAN ping time in microseconds
         uint8_t getMaxCANPing() const { return MaxCANPing; }
         // get the motor warning temperature in degrees celsius
-        uint8_t getMotorWarnTemp(){ return temp_motor_warn; }
+        uint8_t getMotorWarnTemp() const { return temp_motor_warn; }
         // get the motor limit temperature in degrees celsius
-        uint8_t getMotorLimitTemp(){ return temp_motor_limit; }
+        uint8_t getMotorLimitTemp() const { return temp_motor_limit; }
         // get the motor critical temperature in degrees celsius
-        uint8_t getMotorCriticalTemp(){ return temp_motor_critical; }
+        uint8_t getMotorCriticalTemp() const { return temp_motor_critical; }
         // get the battery warning temperature in degrees celsius
-        uint8_t getBatteryWarnTemp(){ return temp_battery_warn; }
+        uint8_t getBatteryWarnTemp() const { return temp_battery_warn; }
         // get the battery limit temperature in degrees celsius
-        uint8_t getBatteryLimitTemp(){ return temp_battery_limit; }
+        uint8_t getBatteryLimitTemp() const { return temp_battery_limit; }
         // get the battery critical temperature in degrees celsius
-        uint8_t getBatteryCriticalTemp(){ return temp_battery_critical; }
+        uint8_t getBatteryCriticalTemp() const { return temp_battery_critical; }
         // get the coolant warning temperature in degrees celsius
-        uint8_t getCoolantWarnTemp(){ return temp_coolant_warn; }
+        uint8_t getCoolantWarnTemp() const{ return temp_coolant_warn; }
         // get the coolant limit temperature in degrees celsius
-        uint8_t getCoolantLimitTemp(){ return temp_coolant_limit; }
+        uint8_t getCoolantLimitTemp() const { return temp_coolant_limit; }
         // get the coolant critical temperature in degrees celsius
-        uint8_t getCoolantCriticalTemp(){ return temp_coolant_critical; }
+        uint8_t getCoolantCriticalTemp() const { return temp_coolant_critical; }
         // get the inverter warning temperature in degrees celsius
-        uint8_t getInverterWarnTemp(){ return temp_inverter_warn; }
+        uint8_t getInverterWarnTemp() const { return temp_inverter_warn; }
         // get the inverter limit temperature in degrees celsius
-        uint8_t getInverterLimitTemp(){ return temp_inverter_limit; }
+        uint8_t getInverterLimitTemp() const { return temp_inverter_limit; }
         // get the inverter critical temperature in degrees celsius
-        uint8_t getInverterCriticalTemp(){ return temp_inverter_critical; }
+        uint8_t getInverterCriticalTemp() const { return temp_inverter_critical; }
 
 
         // set the maximum CAN ping time in microseconds
@@ -271,15 +271,15 @@ class VehicleTuneController {
 
         // get the active torque profile for a given position in the vehicles VehicleTuneController (as K, P, B)
         // @param pos position of the torque profile corr. to SW
-        TorqueProfile getActiveTorqueProfile(int8_t pos){ return TorqueProfilesData[pos]; }      
+        TorqueProfile getActiveTorqueProfile(int8_t pos) const { return TorqueProfilesData[pos]; }      
         // get the active current limit for a given position in the vehicles VehicleTuneController (in AMPS)
         // @param pos position of the current limit corr. to SW  
-        float getActiveCurrentLimit(int8_t pos){ return PowerLevelsData[pos];} 
+        float getActiveCurrentLimit(int8_t pos) const { return PowerLevelsData[pos];} 
         // get the active regen power for a given position in the vehicles VehicleTuneController (in percentile)
         // @param pos position of the regen power corr. to SW
-        float getActiveRegenPower(int8_t pos){ return RegenLevelsData[pos];} 
+        float getActiveRegenPower(int8_t pos) const { return RegenLevelsData[pos];} 
         // get rev limiter cuttoff
-        int revLimit(){ return rev_limit; } 
+        int revLimit() const { return rev_limit; } 
 
         // get torque profile data
         std::vector<TorqueProfile> getTorqueProfilesData() const { return TorqueProfilesData; }
@@ -501,26 +501,26 @@ class SystemsCheck {
         // 2.4v is ok - ADC: 744
         // 1v = 310
         // bits 2, 3, 4, 5, 
-        inline static bool AMS_fault(VehicleTuneController& t){ return digitalRead(AMS_OK_PIN) != HIGH ;}
-        inline static bool IMD_fault(VehicleTuneController& t){ return analogRead(IMD_OK_PIN) < 700 || analogRead(IMD_OK_PIN) > 790; }
-        inline static bool BSPD_fault(VehicleTuneController& t){ return digitalRead(BSPD_OK_PIN) != HIGH ;}
+        static bool AMS_fault(VehicleTuneController& t){ return digitalRead(AMS_OK_PIN) != HIGH ;}
+        static bool IMD_fault(VehicleTuneController& t){ return analogRead(IMD_OK_PIN) < 700 || analogRead(IMD_OK_PIN) > 790; }
+        static bool BSPD_fault(VehicleTuneController& t){ return digitalRead(BSPD_OK_PIN) != HIGH ;}
         // check voltage < 7V (this one is 16V 8 bit ADC)
-        inline static bool SDC_opened(VehicleTuneController& t){ /*return ACU1.getPrechargeDone() && ACU1.getSDCVoltage() < 7;*/ return false; }
+        static bool SDC_opened(VehicleTuneController& t){ /*return ACU1.getPrechargeDone() && ACU1.getSDCVoltage() < 7;*/ return false; }
  
         // bit 6
         // bool SystemsCheck::max_current(const ){return DTI.getDCCurrent() > DTI.getDCCurrentLim();} 
 
         // BYTE 1 ---------------------------------------------------------------------------
         // bit 0, 1, 2
-        inline static bool warn_motor_temp(VehicleTuneController& t){return DTI.getMotorTemp() > t.getMotorWarnTemp() && DTI.getMotorTemp() < t.getMotorLimitTemp();}
-        inline static bool limit_motor_temp(VehicleTuneController& t){return DTI.getMotorTemp() > t.getMotorLimitTemp() && DTI.getMotorTemp() < t.getMotorCriticalTemp();}
-        inline static bool critical_motor_temp(VehicleTuneController& t){return DTI.getMotorTemp() > t.getMotorCriticalTemp();}
+        static bool warn_motor_temp(VehicleTuneController& t){return DTI.getMotorTemp() > t.getMotorWarnTemp() && DTI.getMotorTemp() < t.getMotorLimitTemp();}
+        static bool limit_motor_temp(VehicleTuneController& t){return DTI.getMotorTemp() > t.getMotorLimitTemp() && DTI.getMotorTemp() < t.getMotorCriticalTemp();}
+        static bool critical_motor_temp(VehicleTuneController& t){return DTI.getMotorTemp() > t.getMotorCriticalTemp();}
         // bit 3, 4, 5
-        inline static bool warn_battery_temp(VehicleTuneController& t) {return ACU1.getMaxCellTemp() > t.getBatteryWarnTemp() && ACU1.getMaxCellTemp() < t.getBatteryLimitTemp();}
-        inline static bool limit_battery_temp(VehicleTuneController& t) {return ACU1.getMaxCellTemp() > t.getBatteryLimitTemp() && ACU1.getMaxCellTemp() < t.getBatteryCriticalTemp();}
-        inline static bool critical_battery_temp(VehicleTuneController& t) {return ACU1.getMaxCellTemp() > t.getBatteryCriticalTemp();}
+        static bool warn_battery_temp(VehicleTuneController& t) {return ACU1.getMaxCellTemp() > t.getBatteryWarnTemp() && ACU1.getMaxCellTemp() < t.getBatteryLimitTemp();}
+        static bool limit_battery_temp(VehicleTuneController& t) {return ACU1.getMaxCellTemp() > t.getBatteryLimitTemp() && ACU1.getMaxCellTemp() < t.getBatteryCriticalTemp();}
+        static bool critical_battery_temp(VehicleTuneController& t) {return ACU1.getMaxCellTemp() > t.getBatteryCriticalTemp();}
         // bit 6
-        inline static bool rev_limit_exceeded(VehicleTuneController& t) {return DTI.getERPM()/10 > t.revLimit();}
+        static bool rev_limit_exceeded(VehicleTuneController& t) {return DTI.getERPM()/10 > t.revLimit();}
         // bit 7 
 
         // BYTE 2 ---------------------------------------------------------------------------
@@ -529,9 +529,9 @@ class SystemsCheck {
         // static bool limit_water_temp(VehicleTuneController& t){return ACU1.getWaterTemp() > t.getCoolantLimitTemp() && ACU1.getWaterTemp() < t.getCoolantCriticalTemp();}
         // static bool critical_water_temp(VehicleTuneController& t){return ACU1.getWaterTemp() > t.getCoolantCriticalTemp();}
         // bit 3, 4, 5
-        inline static bool warn_mcu_temp(VehicleTuneController& t) {return DTI.getInvTemp() > t.getInverterWarnTemp() && DTI.getInvTemp() < t.getInverterLimitTemp();}
-        inline static bool limit_mcu_temp(VehicleTuneController& t){return DTI.getInvTemp() > t.getInverterLimitTemp() && DTI.getInvTemp() < t.getInverterCriticalTemp();}
-        inline static bool critical_mcu_temp(VehicleTuneController& t) {return DTI.getInvTemp() > t.getInverterCriticalTemp();}
+        static bool warn_mcu_temp(VehicleTuneController& t) {return DTI.getInvTemp() > t.getInverterWarnTemp() && DTI.getInvTemp() < t.getInverterLimitTemp();}
+        static bool limit_mcu_temp(VehicleTuneController& t){return DTI.getInvTemp() > t.getInverterLimitTemp() && DTI.getInvTemp() < t.getInverterCriticalTemp();}
+        static bool critical_mcu_temp(VehicleTuneController& t) {return DTI.getInvTemp() > t.getInverterCriticalTemp();}
         // bit 6
         // static bool TCM_fault(VehicleTuneController& t) {return false;} // TODO: do
         // bit 7 empty for now
@@ -604,10 +604,14 @@ unsigned long lastPingSend = 0; // last send on 0xF2 in millis
 unsigned long lastPingRequestAttempt = 0; // last request for all Pings in millis
 unsigned long lastInfoSend = 0;
 
-enum Color {RED, GREEN, OFF};// green means press, red means dont press
+enum Color {RED, GREEN, OFF};
+enum Style {SOLID, PULSE, FLASH};
 Color TSState = GREEN;
 Color RTDState = RED;
-
+Style TSStyle = SOLID;
+Style RTDStyle = SOLID;
+const float DASH_PULSE_FREQUENCY = 0.5;  // Frequency of the sine wave in Hz
+const unsigned long DASH_PULSE_PERIOD = 1000 / DASH_PULSE_FREQUENCY;  // Period in milliseconds
 
 #define SERIAL_BUFFER_SIZE 256;
 
@@ -805,15 +809,23 @@ Sends a message to the Dash Panel to update the LED status of the buttons and wa
 @param IMD - 0: OFF, 1: ON for LED
 @param TSColor - Color to set TS active Button LED
 @param RTDColor - Color to set RTD active Button LED
+@param TSStyle - Style to set TS active Button LED
+@param RTDStyle - Style to set RTD active Button LED
 */
-void sendDashLED(uint8_t AMS, uint8_t IMD, Color TSColor, Color RTDColor){
+void sendDashLED(uint8_t AMS, uint8_t IMD, Color TSColor, Color RTDColor, Style TSStyle, Style RTDStyle){
     if(millis() - lastDashLEDMessage >= 1000/DASH_PANEL_LED_FREQUENCY){
-        uint8_t tsr = TSColor == RED ? 255 : 0;
+        uint8_t tsr = TSColor == RED ? 1 : 0;
         uint8_t tsg = TSColor == GREEN ? 1 : 0;
-        uint8_t rtr = RTDColor == RED ? 255 : 0;    
+        uint8_t rtr = RTDColor == RED ? 1 : 0;    
         uint8_t rtg = RTDColor == GREEN ? 1 : 0;
-        int b = (abs((int16_t)(uint8_t)(millis() >> 4) - 128) << 1);
-        uint8_t data[8] = {AMS * 255, IMD * 255, tsr, tsg*b, rtr, rtg*b, 0, 0};
+        uint8_t tsstyle = 255;// SOLID
+        uint8_t rtstyle = 255; // SOLID
+        if(TSStyle == PULSE) tsstyle =  int((sin((2.0 * PI * millis()) / DASH_PULSE_PERIOD) + 1) * 127.5);
+        if(RTDStyle == PULSE) rtstyle =  int((sin((2.0 * PI * millis()) / DASH_PULSE_PERIOD) + 1) * 127.5);
+        if(TSStyle == FLASH) tsstyle = (millis()%500 < 255) ? 255 : 0;
+        if(RTDStyle == FLASH) rtstyle = (millis()%500 < 255) ? 255 : 0;
+        tsr *= tsstyle; tsg *= tsstyle; rtr *= rtstyle; rtg *= rtstyle;
+        uint8_t data[8] = {AMS * 255, IMD * 255, tsr, tsg, rtr, rtg, 0, 0};
         writeMessage(LED_Outputs, data, 8, PRIMARY_CAN_BUS);
         lastDashLEDMessage = millis();
     }
@@ -1472,18 +1484,40 @@ void loop(){
     // Serial.println(analogRead(IMD_OK_PIN)*3.3/(1024.0));
 
     // AMS and IMD LEDs and Dash LEDs
+    /*
+        - AMS and IMD based on fault
+        - TS and RTD based on state
+        - GLV ON: GREEN PULSE, RED SOLID
+        - PRECHARGING: GREEN FLASH, RED SOLID
+        - PRECHARGE_COMPLETE: RED SOLID, GREEN PULSE
+        - DRIVE_STANDBY/ACTIVE: GREEN FLASH, GREEN FLASH
+        - ERROR: RED FLASH, RED FLASH
+
+    */
     bool AMS_led = active_faults->find(sysCheck->AMS_fault) != active_faults->end();
     bool IMD_led = active_faults->find(sysCheck->IMD_fault) != active_faults->end();
-    TSState = (state == GLV_ON) ? GREEN : RED;
-    RTDState = (state == PRECHARGE_COMPLETE) ? GREEN : RED;
-    sendDashLED(AMS_led, IMD_led, TSState, RTDState); // ! Latching?
+    if(state == GLV_ON){ TSState = GREEN; TSStyle = PULSE; RTDState = RED; RTDStyle = SOLID; }
+    if (state == PRECHARGING){ TSState = GREEN; TSStyle = FLASH; RTDState = RED; RTDStyle = SOLID;}
+    if (state == PRECHARGE_COMPLETE){
+        TSState = RED; TSStyle = SOLID;
+        RTDState = GREEN; RTDStyle = PULSE;
+    }
+    if (state == DRIVE_STANDBY || state == DRIVE_ACTIVE){
+        TSState  = GREEN; TSStyle = FLASH;  
+        RTDState = GREEN; RTDStyle = FLASH;
+    }
+    if (state == ERROR){
+        TSState = RED; TSStyle = FLASH;
+        RTDState = RED; RTDStyle = FLASH;
+    }
+    sendDashLED(AMS_led, IMD_led, TSState, RTDState, TSStyle, RTDStyle); // ! Latching?
 
 
     // send outgoing CAN Messages
     tryPingRequests({Pedals_Ping_Request, Steering_Wheel_Ping_Request, Dash_Panel_Ping_Request, ACU_Ping_Request} );
     checkPingTimeout();
     sendPingValues(); 
-    sendVDMInfo(); 
+    sendVDMInfo(*tune); 
     
     // Serial.println(ACU1.getSDCVoltage());
 
