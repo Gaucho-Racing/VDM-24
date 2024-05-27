@@ -14,16 +14,7 @@
 
 std::unordered_set<int> timeout_nodes;
 
-void writeMessage(unsigned int id, uint8_t* data, unsigned char len, uint8_t bus, Vehicle& car){
-    CAN_message_t message;
-    message.flags.extended = true;
-    message.id = id;
-    message.len = len;
-    memcpy(message.buf, data, len);
-    if(bus == PRIMARY_CAN_BUS) car.can_primary.write(message);
-    else if (bus == DATA_CAN_BUS) car.can_data.write(message);
-    else Serial.println("Invalid CAN Bus");
-};
+
 
 //void sendDashPopup(int8_t error_code, int8_t secs, uint8_t tq = 0, uint16_t mc = 0, uint8_t r = 0, Vehicle& car);
 
@@ -43,7 +34,6 @@ void writeMessage(unsigned int id, uint8_t* data, unsigned char len, uint8_t bus
 
 // 
 // Send A message to the dashboard panek to display a popup message
-
 // 
 void sendDashPopup(int8_t error_code, int8_t secs, uint8_t tq = 0, uint16_t mc = 0, uint8_t r = 0){
     // TODO:
@@ -53,6 +43,18 @@ void sendDashPopup(int8_t error_code, int8_t secs, uint8_t tq = 0, uint16_t mc =
 void handleECUTuning(VehicleTuneController& tune){
     // TODO:
 }
+
+
+void writeMessage(unsigned int id, uint8_t* data, unsigned char len, uint8_t bus, Vehicle& car){
+    CAN_message_t message;
+    message.flags.extended = true;
+    message.id = id;
+    message.len = len;
+    memcpy(message.buf, data, len);
+    if(bus == PRIMARY_CAN_BUS) car.can_primary.write(message);
+    else if (bus == DATA_CAN_BUS) car.can_data.write(message);
+    else Serial.println("Invalid CAN Bus");
+};
 
 
 
