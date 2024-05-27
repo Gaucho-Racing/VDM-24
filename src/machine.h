@@ -123,7 +123,11 @@ READY TO DRIVE SUB STATES
 
 */
 
-
+bool (*errorCheck)(VehicleTuneController&); // global function pointer to error causing the ISR
+State sendToError(bool (*erFunc)(VehicleTuneController& tune)) {
+   errorCheck = erFunc; 
+   return ERROR;
+}
 
 
 float getThrottle1(uint16_t a1, VehicleTuneController& tune){

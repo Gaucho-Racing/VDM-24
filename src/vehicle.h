@@ -2,8 +2,13 @@
 #include "Arduino.h"
 #include <FlexCAN_T4.h>
 #include "Nodes.h"
+#include <unordered_set>
+#include "VehicleTuneController.h"
+#include "global.h"
 #ifndef VEHICLE_H
 #define VEHICLE_H
+
+
 
 struct sendTimes{
     unsigned long lastPrechargeTime; // last precharge request in millis
@@ -51,6 +56,10 @@ struct Vehicle{
     SteeringWheel STEERING_WHEEL = SteeringWheel(can_primary);
     byte IMU[3][8] = {0x00};
     struct sendTimes times;
+    std::unordered_set<bool (*)(VehicleTuneController& t)> *active_faults; // hashset of active system faults as function pointers
+    std::unordered_set<bool (*)(VehicleTuneController& t)> *active_warnings; // hashset of active system warnings as function pointers
+    std::unordered_set<bool (*)(VehicleTuneController& t)> *active_limits; // hashset of active system limits as function pointers
+    VehicleTuneController* tune;
     
 
 
@@ -59,6 +68,14 @@ struct Vehicle{
         this->can_primary = canprimary;
         this->can_data = candata;
         times = sendTimes();
+        active_faults = new std::unordered_set<bool (*)(VehicleTuneController&)>(); 
+        active_warnings = new std::unordered_set<bool (*)(VehicleTuneController&)>();
+        active_limits = new std::unordered_set<bool (*)(VehicleTuneController&)>();
+        tune = new VehicleTuneController();
+
+        active_faults->clear();
+        active_warnings->clear();
+        active_limits->clear();
         
     }
 
