@@ -604,9 +604,13 @@ unsigned long lastPingRequestAttempt = 0; // last request for all Pings in milli
 unsigned long lastInfoSend = 0; // last send of VDM Info in millis
 
 enum Color {RED, GREEN, OFF};// green means press, red means dont press
+enum Style {SOLID, PULSE, FLASH};
 Color TSState = GREEN;
 Color RTDState = RED;
-
+Style TSStyle = SOLID;
+Style RTDStyle = SOLID;
+const float DASH_PULSE_FREQUENCY = 0.5;  // Frequency of the sine wave in Hz
+const unsigned long DASH_PULSE_PERIOD = 1000 / DASH_PULSE_FREQUENCY;  // Period in milliseconds
 
 #define SERIAL_BUFFER_SIZE 256;
 
@@ -817,6 +821,7 @@ void sendDashLED(uint8_t AMS, uint8_t IMD, Color TSColor, Color RTDColor){
     }
 
 }
+
 
 
 void handleDashPanelInputs(){
@@ -1037,8 +1042,8 @@ State ts_precharge() {
         DTI.setDriveEnable(0);
         lastDTIMessage = millis();
     }
-    else if(ACU1.getPrechargeDone()){
-        ACU1.resetPrechargeDone();
+    else if(ACU1.getAIRPos()){
+        // ACU1.resetPrechargeDone();
         return PRECHARGE_COMPLETE;
     }
     return TS_PRECHARGE;
@@ -1355,10 +1360,10 @@ String vehiclePowerData(){
     output += "| APPS1: RAW: " + String(raw1) + ", SCALED: " + String(getThrottle1(raw1, *tune)) + "               \n";
     int raw2 = PEDALS.getAPPS2();
     output += "| APPS2: RAW: " + String(raw2) + ", SCALED: " + String(getThrottle2(raw2, *tune)) + "               \n";
-    output += "| INVERTER CURRENT LIMIT: " + String(tune->getPowerLevelsData()[settings.power_level] )+ " A            \n";
-    output += "| POWER DRAW: " + String(DTI.getACCurrent() * ACU1.getTSVoltage()) + "W                          \n";
+    output += "| INVERTER CURRENT LIMIT: " + String(tune->getPowerLevelsData()[settings.power_level] )+ " A        \n";
+    output += "| POWER DRAW: " + String(DTI.getACCurrent() * ACU1.getTSVoltage()) + "W        \n";
     output += "| RPM " + String(DTI.getERPM()/10.0) + "                           \n";
-    output += "| CURRENT: " + String(DTI.getACCurrent()) + " A                          \n";
+    output += "| CURRENT: " + String(DTI.getACCurrent()) + " Amps AC | " + String(ACU1.getAccumulatorCurrent()) + " Amps DC" + "             \n";
     output += "| TS VOLTAGE: " + String(ACU1.getTSVoltage()) + " V                          \n";
     output += "| SOC: " + String(ACU1.getSOC()) + " %                          \n";
     output += "| Vehicle Speed: " + String(mVehicleSpeedMPH()) + " MPH                       \n";
@@ -1484,6 +1489,9 @@ void loop(){
         RTDState = GREEN;
     }
     sendDashLED(AMS_led, IMD_led, TSState, RTDState); // ! Latching AMS and IMD
+
+
+    
 
 
     // send outgoing CAN Messages
