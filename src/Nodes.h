@@ -92,13 +92,13 @@ struct Inverter {
     long getERPM() const {return(((long)data[0][0] << 24) + ((long)data[0][1] << 16) + ((long)data[0][2] << 8) + data[0][3]);} //rpm/pole pairs
     float getDuty() const {return((((long)data[0][4] << 8) + data[0][5])/10);} //i think [0,100]. Related to top speed
     int getVoltIn() const {return(((long)data[0][6] << 8) + data[0][7]);}
-    float getACCurrent() const {return((((long)data[1][0] << 8) + data[1][1])/10);}
-    float getDCCurrent() const {return(((long)(data[1][2] << 8) + data[1][3])/10);}
-    float getInvTemp() const {return((((long)data[2][0] << 8) + data[2][1])/10);} //Deg C
-    float getMotorTemp() const {return((((long)data[2][2] << 8) + data[2][3])/10);} //Deg C
+    float getACCurrent() const {return(int16_t((uint16_t(data[1][0]) << 8) + data[1][1])/10.0);}
+    float getDCCurrent() const {return(((long)(uint16_t(data[1][2]) << 8) + data[1][3])/10.0);}
+    float getInvTemp() const {return((((long)data[2][0] << 8) + data[2][1])/10.0);} //Deg C
+    float getMotorTemp() const {return((((long)data[2][2] << 8) + data[2][3])/10.0);} //Deg C
     byte getFaults() const {return data[2][4];}
-    float getCurrentD() const {return((((long)data[3][0] << 24) + ((long)data[3][1] << 16) + ((long)data[3][2] << 8) + data[3][3])/100);}  //FOC current (don't need)
-    float getCurrentQ() const {return((((long)data[3][4] << 24) + ((long)data[3][5] << 16) + ((long)data[3][6] << 8) + data[3][7])/100);}  //FOC current (don't need)
+    float getCurrentD() const {return((((long)data[3][0] << 24) + ((long)data[3][1] << 16) + ((long)data[3][2] << 8) + data[3][3])/100.0);}  //FOC current (don't need)
+    float getCurrentQ() const {return((((long)data[3][4] << 24) + ((long)data[3][5] << 16) + ((long)data[3][6] << 8) + data[3][7])/100.0);}  //FOC current (don't need)
     byte getThrottleIn() const {return data[4][0];}  //Received throttle signal by the invertor
     byte getBrakeIn() const {return data[4][1];}  //Received brake signal by the invertor
     bool getD1() const {return ((data[4][2] & 0x80) == 0x80);}  //Digital input read
@@ -558,8 +558,8 @@ struct ACU {
 
     //ACU General
     float getAccumulatorVoltage() const {return 0.01 * (((uint16_t)data[0][0] << 8) + data[0][1]);}
-    float getAccumulatorCurrent() const {return 0.01 * (((uint16_t)data[0][2] << 8) + data[0][3]) - 327.68;}
-    float getMaxCellTemp() const {return (0.01 * ((long)data[0][4] << 8) + data[0][5]) - 327.68;}
+    float getAccumulatorCurrent() const {return 0.01 * (int16_t(uint16_t(data[0][2]) << 8) + data[0][3]);}
+    float getMaxCellTemp() const {return (0.01 * (int16_t(uint16_t(data[0][4]) << 8) + data[0][5]));}
     byte getACUGeneralErrors() const {return data[0][6];}
     bool getOverTempError() const {return (data[0][6] & 0b10000000);}           //Bit 0 (MSB):  Over Temp Error
     bool getOverVoltageError() const {return (data[0][6] & 0b01000000);}        //Bit 1: Over Voltage Error

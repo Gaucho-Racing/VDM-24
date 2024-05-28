@@ -24,10 +24,10 @@
 */
 
 
-FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can_primary;
-FlexCAN_T4<CAN3, RX_SIZE_256, TX_SIZE_16> can_data;
-CAN_message_t msg;
-CAN_message_t msg2;
+FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can_primary; // FlexCAN Primary Object
+FlexCAN_T4<CAN3, RX_SIZE_256, TX_SIZE_16> can_data; // FlexCAN Data Object
+CAN_message_t msg; // Primary CAN message object
+CAN_message_t msg2; // Data CAN Message object
 Inverter DTI = Inverter(22, can_primary);
 VDM ECU = VDM(can_primary, can_data);
 Wheel WFL = Wheel(can_data, WHEEL_FL);
@@ -82,7 +82,7 @@ const uint8_t VSTATE_N = 1;
 const uint8_t VSTATE_D = 2;
 const uint8_t VSTATE_E = 3;
 const uint8_t VSTATE_C = 4;
-
+// SEND MODES FOR VEHICLE
 const uint8_t VMODE_ST = 1;
 const uint8_t VMODE_TC = 2;
 
@@ -133,8 +133,8 @@ class VehicleTuneController {
         uint16_t apps_floor_2 = 20280; // ADC value for APPS 2 at 100% throttle
 
         float max_regen_steering_angle = 0.5; // radians for max regen steering angle
-        float regen_rms_amps = 15; // Amperes for regen RMS current
-        float regen_dump_amps = 30; // Amperes for regen dump current
+        float regen_rms_amps = 2; // Amperes for regen RMS current
+        float regen_dump_amps = 5; // Amperes for regen dump current
         float regen_rms_max_rpm = 2000; // RPM minimum for regen RMS current
         float regen_dump_min_rpm = 3000; // RPM minimum for regen dump current
 
@@ -603,6 +603,8 @@ unsigned long lastPingSend = 0; // last send on 0xF2 in millis
 unsigned long lastPingRequestAttempt = 0; // last request for all Pings in millis
 unsigned long lastInfoSend = 0; // last send of VDM Info in millis
 
+unsigned long prechargeStartTime = 0;
+
 enum Color {RED, GREEN, OFF};// green means press, red means dont press
 enum Style {SOLID, PULSE, FLASH};
 Color TSState = GREEN;
@@ -729,9 +731,11 @@ int8_t mVehicleSpeedMPH(){return ((DTI.getERPM()/MOTOR_POLE_PAIRS)*2*PI*WHEEL_RA
                                                                                                     
 */
 
-#define PRIMARY_CAN_BUS 1
-#define DATA_CAN_BUS 2
+#define PRIMARY_CAN_BUS 1 // helper
+#define DATA_CAN_BUS 2 // helper
+/*
 
+*/
 void writeMessage(unsigned int id, uint8_t* data, unsigned char len, uint8_t bus){
     CAN_message_t message;
     message.flags.extended = true;
@@ -746,7 +750,11 @@ void writeMessage(unsigned int id, uint8_t* data, unsigned char len, uint8_t bus
 
 /*
 Send A message to the dashboard panek to display a popup message
-
+@param error_code - Error Code to display on the Dash Panel (check spreadsheet)
+@param secs - Time in seconds to display the message
+@param tq - Torque setting 1-4 (optional)
+@param mc - Max Current in Amps (optional)
+@param r - Regen setting 1-4 (optional)
 */
 void sendDashPopup(int8_t error_code, int8_t secs, uint8_t tq = 0, uint8_t mc = 0, uint8_t r = 0){
     byte data_out[8] = {error_code, secs, tq, (uint8_t)(mc), mc, r, 0, 0};
@@ -760,6 +768,10 @@ void handleECUTuning(VehicleTuneController& tune){
 
 
 
+/*
+function to handle the driver inputs from the steering wheel and update the settings of the vehicle
+@param tune - Instantiated VehicleTuneController object for the vehicle
+*/
 void handleDriverInputs(VehicleTuneController& tune){
     if(msg.id == 0x11002){
         settings.power_level = msg.buf[0];
@@ -769,7 +781,10 @@ void handleDriverInputs(VehicleTuneController& tune){
     }
 }
 
-
+/*
+Sends VDM Information via CAN Primary Bus for TCM and DashBoard Information
+@param t - Instantiated VehicleTuneController object for the vehicle
+*/
 void sendVDMInfo(VehicleTuneController& t){
     if(millis() - lastInfoSend >= 1000/VDM_INFO_SEND_FREQENCY){
         byte* sys_check_data = sysCheck->getSysCheckFrame();
@@ -794,8 +809,20 @@ void sendVDMInfo(VehicleTuneController& t){
         if(active_limits->size()) sys_ok = 3;
         if(active_faults->size()) sys_ok = 4;
         uint8_t maxPowerkW = (t.getActiveCurrentLimit(settings.power_level) * ACU1.getTSVoltage())/1000;
-
-        byte data_out_2[8] = {vstate, vmode, 0, tcm_ok, can_ok, sys_ok, maxPowerkW, 0};
+        //! RAW STATE FOR MAPACHE DASHBOARD
+        uint8_t raw_state = 1;
+        if(state == ECU_FLASH) raw_state = 1;
+        else if(state == GLV_ON) raw_state = 2;
+        else if(state == TS_PRECHARGE) raw_state = 3;
+        else if(state == TS_DISCHARGE_OFF) raw_state = 4;
+        else if(state == PRECHARGING) raw_state = 5;
+        else if(state == PRECHARGE_COMPLETE) raw_state = 6;
+        else if(state == DRIVE_STANDBY) raw_state = 7;
+        else if(state == DRIVE_ACTIVE) raw_state = 8;
+        else if(state == DRIVE_REGEN) raw_state = 9;
+        else if(state == ERROR) raw_state = 10;
+        // ECU_FLASH, GLV_ON, TS_PRECHARGE, TS_DISCHARGE_OFF, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR TODO: RAW 
+        byte data_out_2[8] = {vstate, vmode, 0, tcm_ok, can_ok, sys_ok, maxPowerkW, raw_state};
         writeMessage(VDM_Info_1, data_out_2, 8, PRIMARY_CAN_BUS);
         lastInfoSend = millis();
     }
@@ -810,12 +837,16 @@ Sends a message to the Dash Panel to update the LED status of the buttons and wa
 */
 void sendDashLED(uint8_t AMS, uint8_t IMD, Color TSColor, Color RTDColor){
     if(millis() - lastDashLEDMessage >= 1000/DASH_PANEL_LED_FREQUENCY){
-        uint8_t tsr = TSColor == RED ? 255 : 0;
+        uint8_t tsr = TSColor == RED ? 1 : 0;
         uint8_t tsg = TSColor == GREEN ? 1 : 0;
-        uint8_t rtr = RTDColor == RED ? 255 : 0;    
+        uint8_t rtr = RTDColor == RED ? 1 : 0;    
         uint8_t rtg = RTDColor == GREEN ? 1 : 0;
-        int b = (abs((int16_t)(uint8_t)(millis() >> 4) - 128) << 1);
-        uint8_t data[8] = {AMS * 255, IMD * 255, tsr, tsg*b, rtr, rtg*b, 0, 0};
+        // int b = (abs((int16_t)(uint8_t)(millis() >> 4) - 128) << 1);
+        int b = int(abs((sin((2.0 * PI * millis()) / DASH_PULSE_PERIOD) + 1) * 127.5));
+        if(state == DRIVE_ACTIVE || state == DRIVE_REGEN || state == DRIVE_STANDBY) b = (millis()%500 < 250) ? 255 : 0;
+        uint8_t r = 255;
+        if(state == ERROR) r = ((millis()% 500) < 250) ? 255 : 0;
+        uint8_t data[8] = {AMS * 255, IMD * 255, tsr*r, tsg*b, rtr*r, rtg*b, 0, 0};
         writeMessage(LED_Outputs, data, 8, PRIMARY_CAN_BUS);
         lastDashLEDMessage = millis();
     }
@@ -835,24 +866,23 @@ void handleDashPanelInputs(){
             }
             State s = state;
             if(s == GLV_ON){
-                for(int i = 0; i < 10; i++){
-                    // ! for stability
-                    delay(3);
+              //  for(int i = 0; i < 10; i++){ 
+                    // delay(3);
                     uint8_t data[8] = {1, 0, 0, 0, 0, 0, 0, 0};
                     writeMessage(ACU_Control, data, 8, PRIMARY_CAN_BUS); 
+                    prechargeStartTime = millis();
                     state = TS_PRECHARGE;       
-                }
+                // }
             }
         }
         else if(msg.buf[1]){ // TS_OFF
             // shut off car entirely
-            for(int i = 0; i < 10; i++){
-                // ! for stability
-                delay(3);
+            // for(int i = 0; i < 10; i++){
+                // delay(3);
                 uint8_t data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
                 writeMessage(ACU_Control, data, 8, PRIMARY_CAN_BUS);
                 state = TS_DISCHARGE_OFF;
-            }
+            // }
         }
         else if(msg.buf[2]) { // RTD_ON
             if(brake < 500){
@@ -1022,6 +1052,7 @@ State glv_on() {
     }
     // wait for the TS ACTIVE button to be pressed
     // return TS_PRECHARGE;
+    if(ACU1.getTSVoltage() > 60) return TS_DISCHARGE_OFF;
     return GLV_ON;
 }  
 
@@ -1045,6 +1076,12 @@ State ts_precharge() {
     else if(ACU1.getAIRPos()){
         // ACU1.resetPrechargeDone();
         return PRECHARGE_COMPLETE;
+    }
+    if((millis() - prechargeStartTime > 500  && !ACU1.getAIRNeg())){
+        byte data_out[8] = {0, 0, 0, 0, 0, 0, 0, 0};    
+        writeMessage(ACU_Control, data_out, 8, PRIMARY_CAN_BUS);
+        sendDashPopup(0xB, 1);
+        return GLV_ON;
     }
     return TS_PRECHARGE;
 }
@@ -1102,7 +1139,7 @@ State drive_standby(bool& BSE_APPS_violation, VehicleTuneController& tune) {
     // only if no violation, and throttle is pressed, go to DRIVE
 
     if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_ACTIVE;
-    if(!BSE_APPS_violation && throttle == 0 && brake > 500 && DTI.getERPM() > 250) return DRIVE_REGEN;//TODO: Fix
+    if(!BSE_APPS_violation && throttle == 0 && DTI.getERPM() > 250) return DRIVE_REGEN;//TODO: Fix
 
     if(BSE_APPS_violation) {
         // SEND CAN WARNING TO DASH
@@ -1183,10 +1220,19 @@ State drive_regen(bool& BSE_APPS_violation, VehicleTuneController& tune){
     // ! CHANGE TO REAL BSE
     float throttle = getThrottle1(PEDALS.getAPPS1(), tune);
     if(throttle > 0.05) return DRIVE_ACTIVE;
-    if(brake < 500) return DRIVE_STANDBY;
+    // if(brake < 500) return DRIVE_STANDBY;
 
     float rpm = DTI.getERPM()/10.0;
     
+    if(mVehicleSpeedMPH() > 5 && (brake > 500 || throttle < 0.05)){
+        if(millis() - lastDTIMessage >= 1000/DTI_COMM_FREQUENCY){
+            DTI.setDriveEnable(1);
+            DTI.setBrakeCurrent(20);
+        }
+    }
+    else return DRIVE_STANDBY;
+    
+    /*
     if(millis() - lastDTIMessage > 1000/DTI_COMM_FREQUENCY){
         DTI.setDriveEnable(1);
         // Do this one in AMPS instead of Relative Current
@@ -1194,7 +1240,7 @@ State drive_regen(bool& BSE_APPS_violation, VehicleTuneController& tune){
         float accumulator_input_amps = 0; 
         float steering_angle = 0; //TODO: in nodes
         // must be > 5 kph
-        bool regen_ok = ACU1.getSOC() < 85 && rpm > 250 && brake > 0.05 && throttle == 0 && abs(steering_angle) < tune.getMaxRegenSteeringAngle();
+        bool regen_ok = ACU1.getSOC() < 85 && rpm > 250 && brake > 500 && throttle == 0 && abs(steering_angle) < tune.getMaxRegenSteeringAngle();
         bool max_regen_ok = regen_ok && rpm > tune.getRegenDumpMinRPM() && brake > 0.75 && !sysCheck->warn_battery_temp(tune) && !sysCheck->limit_battery_temp(tune);
         if(max_regen_ok) {// make sure revs are high enough for significant backemf
             // only for hard braking requests, dump energy back into accumulator
@@ -1202,15 +1248,17 @@ State drive_regen(bool& BSE_APPS_violation, VehicleTuneController& tune){
         } else if(regen_ok){
             // 250 - 2000 RPM interpolate from 0 to 15A based on RPM
             // 2000 - 3000 RPM is 15A 
-            if (rpm < tune.getRegenRMSMaxRPM()) accumulator_input_amps = 15*(rpm-250)/(tune.getRegenRMSMaxRPM()-250);
+            if (rpm < tune.getRegenRMSMaxRPM()) accumulator_input_amps = tune.getRegenRMSAmps()*(rpm-250)/(tune.getRegenRMSMaxRPM()-250);
             else accumulator_input_amps = tune.getRegenRMSAmps(); // TODO: Put this interpolation diagram in the tuning software
+            Serial.println(accumulator_input_amps);
+
         } else {
             accumulator_input_amps = 0;
         }
 
         DTI.setBrakeCurrent(-1 * accumulator_input_amps * tune.getActiveRegenPower(settings.regen_level));
         lastDTIMessage = millis();
-    }
+    }*/
     return DRIVE_REGEN;
 }
 
@@ -1314,7 +1362,10 @@ String vehicleHealth(){
         if(e == SystemsCheck::BSPD_fault) output += "BSPD | ";
         if(e == SystemsCheck::SDC_opened) output += "SDC ";
     }
-    output += "\n ----------------------------------------------------------";
+    if(active_faults->size() == 0) output += "NONE";
+    output += "\n";
+    output += "| MOTOR TEMP: " + String(DTI.getMotorTemp()) + " C | INVERTER TEMP: " + String(DTI.getInvTemp()) + " C \n| BATTERY TEMP: " + String(ACU1.getMaxCellTemp()) + " C \n"; 
+    output += " ----------------------------------------------------------";
     return output;
 }
 
@@ -1449,9 +1500,13 @@ void setup() {
     tune->setPowerLevelData(LIMIT, 0);
     tune->setPowerLevelData(LOW_PWR,10);
     tune->setPowerLevelData(MID_PWR, 30);
-    tune->setPowerLevelData(HIGH_PWR, 50);
-
-    settings.power_level = MID_PWR;
+    tune->setPowerLevelData(HIGH_PWR, 80);
+    tune->setRegenLevelData(REGEN_HIGH, 100);
+    settings.regen_level = REGEN_HIGH;
+    settings.power_level = HIGH_PWR;
+    settings.throttle_map = TORQUE_MAP_1;
+    TorqueProfile tp(1.8, 0.2, 0.7);
+    tune->setTorqueProfileData(TORQUE_MAP_1, tp);
     DTI.setMaxCurrent(tune->getActiveCurrentLimit(settings.power_level));
     
 }
