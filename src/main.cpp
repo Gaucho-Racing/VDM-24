@@ -1111,18 +1111,16 @@ READY TO DRIVE SUB STATES
 
 float getThrottle1(uint16_t a1, VehicleTuneController& tune){
     float throttle =  1.0 - ((a1 - tune.getAPPSFloor1()*1.0)/(tune.getAPPSZero1()-tune.getAPPSFloor1()));
-    if (throttle < 0.05) return 0;
-    else if (throttle > 1 && throttle < 1.1) return 1;
-    else if (throttle > 1.1) return 0;
-    else return throttle;
+    if (throttle > 1.1) return 0;
+    throttle = map(throttle, 0.05, 1, 0, 1);
+    return constrain(throttle, 0, 1);
 }
 
 float getThrottle2(uint16_t a2,  VehicleTuneController& tune){
     float throttle =  1.0 - ((a2 - tune.getAPPSFloor2()*1.0)/(tune.getAPPSZero2()-tune.getAPPSFloor2()));
-    if (throttle < 0.05) return 0;
-    else if (throttle > 1 && throttle < 1.1) return 1;
-    else if (throttle > 1.1) return 0;
-    else return throttle;
+    if (throttle > 1.1) return 0;
+    throttle = map(throttle, 0.05, 1, 0, 1);
+    return constrain(throttle, 0, 1);
 }
 
 State drive_standby(bool& BSE_APPS_violation, VehicleTuneController& tune) {
@@ -1227,7 +1225,7 @@ State drive_regen(bool& BSE_APPS_violation, VehicleTuneController& tune){
     if(mVehicleSpeedMPH() > 5 && (brake > 500 || throttle < 0.05)){
         if(millis() - lastDTIMessage >= 1000/DTI_COMM_FREQUENCY){
             DTI.setDriveEnable(1);
-            DTI.setBrakeCurrent(20);
+            DTI.setBrakeCurrent((0.05 - throttle) * 20 * 10);
         }
     }
     else return DRIVE_STANDBY;
@@ -1505,7 +1503,8 @@ void setup() {
     settings.regen_level = REGEN_HIGH;
     settings.power_level = HIGH_PWR;
     settings.throttle_map = TORQUE_MAP_1;
-    TorqueProfile tp(1.8, 0.2, 0.7);
+    TorqueProfile tp(1.7, 1.2, 0.6);
+    
     tune->setTorqueProfileData(TORQUE_MAP_1, tp);
     DTI.setMaxCurrent(tune->getActiveCurrentLimit(settings.power_level));
     
