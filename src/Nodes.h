@@ -591,7 +591,7 @@ struct ACU {
     float getMaxBalResistorTemp() const {return (0.01 * ((long)data[1][3] << 8) + data[1][4]) - 327.68;}
     float getSDCVoltage() const {return 0.0625 * ((uint16_t)data[1][5]);}
     float getGLVVoltage() const {return 0.0625 * ((uint16_t)data[1][6]);}
-    float getSOC() const {return 0.5 * data[1][7];} //state of charge
+    float getSOC() const {return data[1][7] / 2.55;} //state of charge
 
     void resetPrechargeDone() {data[1][2] &= 0b11101111;}
 
