@@ -760,8 +760,8 @@ Send A message to the dashboard panek to display a popup message
 */
 void sendDashPopup(int8_t error_code, int8_t secs, uint8_t tq = 0, uint8_t mc = 0, uint8_t r = 0){
     byte data_out[8] = {error_code, secs, tq, (uint8_t)(mc), mc, r, 0, 0};
-    Serial.println("Sending Dash Popup ");
-    for(int i = 0; i < 8; i++) Serial.print(data_out[i]);
+    // Serial.println("Sending Dash Popup ");
+    // for(int i = 0; i < 8; i++) Serial.print(data_out[i]);
     Serial.println("");
     writeMessage(Dash_PopUp_Alert, data_out, 8, PRIMARY_CAN_BUS);
 }
@@ -783,14 +783,13 @@ void handleDriverInputs(VehicleTuneController& tune){
         settings.throttle_map = msg.buf[1];
         settings.regen_level = msg.buf[2];
         sendDashPopup(0x9, 1, settings.throttle_map, tune.getActiveCurrentLimit(settings.power_level), settings.regen_level);
+        // ! deprecated standard
         // uint16_t rpm = DTI.getERPM()/10;
         // uint8_t tqMap = settings.throttle_map;
         // uint8_t maxCurrent = tune.getActiveCurrentLimit(settings.power_level);
         // uint8_t regen = settings.regen_level;
         // byte data_out_dash_3[8] = {(uint8_t)(rpm >> 8), (uint8_t)(rpm), tqMap, maxCurrent, regen, 0, 0, 0};
         // writeMessage(0xFA, data_out_dash_3, 8, PRIMARY_CAN_BUS);
-        Serial.println("SW Settings Updated");
-
     }
 }
 
