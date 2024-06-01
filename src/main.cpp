@@ -503,7 +503,7 @@ class SystemsCheck {
         // 1v = 310
         // bits 2, 3, 4, 5, 
         static bool AMS_fault(VehicleTuneController& t){ return digitalRead(AMS_OK_PIN) != HIGH ;}
-        static bool IMD_fault(VehicleTuneController& t){ return analogRead(IMD_OK_PIN) < 650 || analogRead(IMD_OK_PIN) > 790; }
+        static bool IMD_fault(VehicleTuneController& t){ return analogRead(IMD_OK_PIN) < 300 ; }
         static bool BSPD_fault(VehicleTuneController& t){ return digitalRead(BSPD_OK_PIN) != HIGH ;}
         // check voltage < 7V (this one is 16V 8 bit ADC)
         static bool SDC_opened(VehicleTuneController& t){/* return ACU1.getSDCVoltage() < 7;*/  return false;}
@@ -821,21 +821,20 @@ void sendVDMInfo(VehicleTuneController& t){
         if(active_limits->size()) sys_ok = 3;
         if(active_faults->size()) sys_ok = 4;
         uint8_t maxPowerkW = (t.getActiveCurrentLimit(settings.power_level) * 550)/1000;
-        //! RAW STATE FOR MAPACHE DASHBOARD
-        // uint8_t raw_state = 1;
-        // if(state == ECU_FLASH) raw_state = 1;
-        // else if(state == GLV_ON) raw_state = 2;
-        // else if(state == TS_PRECHARGE) raw_state = 3;
-        // else if(state == TS_DISCHARGE_OFF) raw_state = 4;
-        // else if(state == PRECHARGING) raw_state = 5;
-        // else if(state == PRECHARGE_COMPLETE) raw_state = 6;
-        // else if(state == DRIVE_STANDBY) raw_state = 7;
-        // else if(state == DRIVE_ACTIVE) raw_state = 8;
-        // else if(state == DRIVE_REGEN) raw_state = 9;
-        // else if(state == ERROR) raw_state = 10;
-        // // ECU_FLASH, GLV_ON, TS_PRECHARGE, TS_DISCHARGE_OFF, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR TODO: RAW 
-        // byte data_out_2[8] = {vstate, vmode, 0, tcm_ok, can_ok, sys_ok, maxPowerkW, raw_state};
-        // writeMessage(VDM_Info_1, data_out_2, 8, PRIMARY_CAN_BUS);
+        uint8_t raw_state = 1;
+        if(state == ECU_FLASH) raw_state = 1;
+        else if(state == GLV_ON) raw_state = 2;
+        else if(state == TS_PRECHARGE) raw_state = 3;
+        else if(state == TS_DISCHARGE_OFF) raw_state = 4;
+        else if(state == PRECHARGING) raw_state = 5;
+        else if(state == PRECHARGE_COMPLETE) raw_state = 6;
+        else if(state == DRIVE_STANDBY) raw_state = 7;
+        else if(state == DRIVE_ACTIVE) raw_state = 8;
+        else if(state == DRIVE_REGEN) raw_state = 9;
+        else if(state == ERROR) raw_state = 10;
+        // ECU_FLASH, GLV_ON, TS_PRECHARGE, TS_DISCHARGE_OFF, PRECHARGING, PRECHARGE_COMPLETE, DRIVE_STANDBY, DRIVE_ACTIVE, DRIVE_REGEN, ERROR 
+        byte data_out_2[8] = {vstate, vmode, 0, tcm_ok, can_ok, sys_ok, maxPowerkW, raw_state};
+        writeMessage(VDM_Info_1, data_out_2, 8, PRIMARY_CAN_BUS);
 
         //F8  state, mode, tcm, can, sys, maxP, vSpeed, Power
         //F9 Batt, Inv, Motor, TSV, BF, BR, PowerPercent, SOC
@@ -1125,6 +1124,7 @@ State ts_precharge() {
     if((millis() - prechargeStartTime > 500  && !ACU1.getAIRNeg())){
         byte data_out[8] = {0, 0, 0, 0, 0, 0, 0, 0};    
         writeMessage(ACU_Control, data_out, 8, PRIMARY_CAN_BUS);
+        Serial.println("Precharge Failed");
         sendDashPopup(0xB, 1);
         return GLV_ON;
     }
@@ -1271,6 +1271,7 @@ State drive_regen(bool& BSE_APPS_violation, VehicleTuneController& tune){
         if(millis() - lastDTIMessage >= 1000/DTI_COMM_FREQUENCY){
             DTI.setDriveEnable(1);
             DTI.setBrakeCurrent((0.05 - throttle) * 20 * 10);
+            lastDTIMessage = millis();
         }
     }
     else return DRIVE_STANDBY;
@@ -1533,7 +1534,7 @@ void setup() {
 
 
     // set state  
-    state = ECU_FLASH;
+    state = GLV_ON;
     //! FOR TEST ONLY - DELETE LATER
     // state = DRIVE_STANDBY;
     mode = STANDARD; 
@@ -1560,15 +1561,14 @@ void setup() {
 // MAIN LOOP
 void loop(){
     printDebug();
-    
-
     // System Checks
+    // Serial.println(analogRead(IMD_OK_PIN));
     // ! SYSTEM CHECKS ARE SUPRESSED FOR MOTOR TEST BENCH
     // ! UNCOMMENT FOR NOMINAL VEHICLE OPERATION
     sysCheck->hardware_system_critical(*active_faults, tune); 
     sysCheck->system_faults(*active_faults, tune);
-    sysCheck->system_limits(*active_limits, tune);
-    sysCheck->system_warnings(*active_warnings, tune);
+    // sysCheck->system_limits(*active_limits, tune);
+    // sysCheck->system_warnings(*active_warnings, tune); //TODO: implement exit conditions for warnings
     
     state = active_faults->size() ?  sendToError(*active_faults->begin()) : state;
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, HIGH);
