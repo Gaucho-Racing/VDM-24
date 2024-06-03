@@ -397,6 +397,7 @@ const uint8_t BSE_HIGH = A12;
 const uint8_t CURRENT_SIGNAL = A13;
 const uint8_t SDC_OUT_PIN = A4;
 const uint8_t SDC_IN_PIN = A14;
+const uint8_t AUX_OUT_PIN = 3;
 // const uiint8_t SDC_RESET = B8;
 
 
@@ -943,7 +944,7 @@ void handleDashPanelInputs(){
             if(state == PRECHARGE_COMPLETE){
                 state = DRIVE_STANDBY;
                 //TODO: play rtd sound
-            }
+                digitalWrite(AUX_OUT_PIN, HIGH);
         }
         else if(msg.buf[3]){  // RTD_OFF
             if(state == DRIVE_STANDBY) {
@@ -1531,6 +1532,7 @@ void setup() {
     pinMode(CURRENT_SIGNAL, INPUT);
     pinMode(SDC_IN_PIN, INPUT);
     pinMode(SDC_OUT_PIN, INPUT);
+    pinMode(AUX_OUT_PIN, OUTPUT);
 
 
     active_faults = new std::unordered_set<bool (*)(VehicleTuneController&)>(); 
@@ -1583,7 +1585,7 @@ void loop(){
     digitalWrite(SOFTWARE_OK_CONTROL_PIN, HIGH);
     settings.power_level = active_limits->size() ? LIMIT : settings.power_level; // limit power in overheat conditions
 
-
+    if(state == GLV_ON) digitalWrite(AUX_OUT_PIN, LOW);
     // if(settings.power_level == LIMIT) sendDashPopup(0xA, 5);
     // Serial.println(analogRead(IMD_OK_PIN)*3.3/(1024.0));
 
