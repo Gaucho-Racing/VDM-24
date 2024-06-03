@@ -395,8 +395,8 @@ const uint8_t IMD_OK_PIN = 20;
 const uint8_t AMS_OK_PIN = 21;
 const uint8_t BSE_HIGH = A12;
 const uint8_t CURRENT_SIGNAL = A13;
-const uint8_t SDC_OUT = A4;
-const uint8_t SDC_IN = A14;
+const uint8_t SDC_OUT_PIN = A4;
+const uint8_t SDC_IN_PIN = A14;
 // const uiint8_t SDC_RESET = B8;
 
 
@@ -457,25 +457,32 @@ class SystemsCheck {
 
         void system_limits(std::unordered_set<bool (*)(VehicleTuneController& t)> &al, VehicleTuneController* t){
             if(limit_motor_temp(*t)) al.insert(limit_motor_temp);
+            else if(al.find(limit_motor_temp) != al.end()) al.erase(limit_motor_temp);
             SYS_CHECK_CAN_FRAME[1] = limit_motor_temp(*t) ? (SYS_CHECK_CAN_FRAME[1] | 0b01000000) : (SYS_CHECK_CAN_FRAME[1] & 0b10111111);
             if(limit_battery_temp(*t)) al.insert(limit_battery_temp);
+            else if(al.find(limit_battery_temp) != al.end()) al.erase(limit_battery_temp);
             SYS_CHECK_CAN_FRAME[1] = limit_battery_temp(*t) ? (SYS_CHECK_CAN_FRAME[1] | 0b00001000) : (SYS_CHECK_CAN_FRAME[1] & 0b11110111);
             // if(limit_water_temp(*t)) al.insert(limit_water_temp);
             // SYS_CHECK_CAN_FRAME[2] = limit_water_temp(*t) ? (SYS_CHECK_CAN_FRAME[2] | 0b01000000) : (SYS_CHECK_CAN_FRAME[2] & 0b10111111);
             if(limit_mcu_temp(*t)) al.insert(limit_mcu_temp);
+            else if(al.find(limit_mcu_temp) != al.end()) al.erase(limit_mcu_temp);
             SYS_CHECK_CAN_FRAME[2] = limit_mcu_temp(*t) ? (SYS_CHECK_CAN_FRAME[2] | 0b00001000) : (SYS_CHECK_CAN_FRAME[2] & 0b11110111);
         }
 
         void system_warnings(std::unordered_set<bool (*)(VehicleTuneController& t)> &aw, VehicleTuneController* t){
             if(warn_motor_temp(*t)) aw.insert(warn_motor_temp);
+            else if(aw.find(warn_motor_temp) != aw.end()) aw.erase(warn_motor_temp);
             SYS_CHECK_CAN_FRAME[1] = warn_motor_temp(*t) ? (SYS_CHECK_CAN_FRAME[1] | 0b10000000) : (SYS_CHECK_CAN_FRAME[1] & 0b01111111);
             if(warn_battery_temp(*t)) aw.insert(warn_battery_temp);
+            else if(aw.find(warn_battery_temp) != aw.end()) aw.erase(warn_battery_temp);
             SYS_CHECK_CAN_FRAME[1] = warn_battery_temp(*t) ? (SYS_CHECK_CAN_FRAME[1] | 0b00010000) : (SYS_CHECK_CAN_FRAME[1] & 0b11101111);
             // if(warn_water_temp(*t)) aw.insert(warn_water_temp);
             // SYS_CHECK_CAN_FRAME[2] = warn_water_temp(*t) ? (SYS_CHECK_CAN_FRAME[2] | 0b10000000) : (SYS_CHECK_CAN_FRAME[2] & 0b01111111);
             if(warn_mcu_temp(*t)) aw.insert(warn_mcu_temp);
+            else if(aw.find(warn_mcu_temp) != aw.end()) aw.erase(warn_mcu_temp);
             SYS_CHECK_CAN_FRAME[2] = warn_mcu_temp(*t) ? (SYS_CHECK_CAN_FRAME[2] | 0b00010000) : (SYS_CHECK_CAN_FRAME[2] & 0b11101111);
             if(rev_limit_exceeded(*t)) aw.insert(rev_limit_exceeded);
+            else if(aw.find(rev_limit_exceeded) != aw.end()) aw.erase(rev_limit_exceeded);
             SYS_CHECK_CAN_FRAME[1] = rev_limit_exceeded(*t) ? (SYS_CHECK_CAN_FRAME[1] | 0b00000010) : (SYS_CHECK_CAN_FRAME[1] & 0b11111101);
         }
 
@@ -506,7 +513,7 @@ class SystemsCheck {
         static bool IMD_fault(VehicleTuneController& t){ return analogRead(IMD_OK_PIN) < 300 ; }
         static bool BSPD_fault(VehicleTuneController& t){ return digitalRead(BSPD_OK_PIN) != HIGH ;}
         // check voltage < 7V (this one is 16V 8 bit ADC)
-        static bool SDC_opened(VehicleTuneController& t){/* return ACU1.getSDCVoltage() < 7;*/  return false;}
+        static bool SDC_opened(VehicleTuneController& t){ return analogRead(SDC_IN_PIN) < 700 || analogRead(SDC_OUT_PIN) < 700;}
  
         // bit 6
         // bool SystemsCheck::max_current(const ){return DTI.getDCCurrent() > DTI.getDCCurrentLim();} 
@@ -1415,13 +1422,13 @@ String vehicleHealth(){
 
 String vehicleNetwork(){
     String output = "|          NETWORK SPEED: (microseconds)                 |\n";
-    if(timeout_nodes.find(ACU_Ping_Response) != timeout_nodes.end()) output += "| ACU: COOKED 💀🔥 \n";
+    if(timeout_nodes.find(ACU_Ping_Response) != timeout_nodes.end()) output += "| ACU: COOKED \n";
     else output += "| ACU: " + String(ping_response_times[ACU_Ping_Response]) + "\n" ;
-    if(timeout_nodes.find(Pedals_Ping_Response) != timeout_nodes.end()) output += "| Pedals: COOKED 💀🔥 \n";
+    if(timeout_nodes.find(Pedals_Ping_Response) != timeout_nodes.end()) output += "| Pedals: COOKED \n";
     else output += "| Pedals: " + String(ping_response_times[Pedals_Ping_Response]) + "\n" ;
-    if(timeout_nodes.find(Steering_Wheel_Ping_Response) != timeout_nodes.end()) output += "| Steering: COOKED 💀🔥 \n";
+    if(timeout_nodes.find(Steering_Wheel_Ping_Response) != timeout_nodes.end()) output += "| Steering: COOKED  \n";
     else output += "| Steering: " + String(ping_response_times[Steering_Wheel_Ping_Response]) + "\n" ;
-    if(timeout_nodes.find(Dash_Panel_Ping_Response) != timeout_nodes.end()) output += "| DashPanel: COOKED 💀🔥 \n";
+    if(timeout_nodes.find(Dash_Panel_Ping_Response) != timeout_nodes.end()) output += "| DashPanel: COOKED \n";
     else output += "| DashPanel: " + String(ping_response_times[Dash_Panel_Ping_Response]) + "  \n";
     output += "----------------------------------------------------------";
     return output;
@@ -1522,6 +1529,8 @@ void setup() {
     pinMode(BRAKE_LIGHT_PIN, OUTPUT);
     pinMode(BSE_HIGH, INPUT);    
     pinMode(CURRENT_SIGNAL, INPUT);
+    pinMode(SDC_IN_PIN, INPUT);
+    pinMode(SDC_OUT_PIN, INPUT);
 
 
     active_faults = new std::unordered_set<bool (*)(VehicleTuneController&)>(); 
@@ -1599,7 +1608,6 @@ void loop(){
     sendPingValues(); 
     sendVDMInfo(*tune); 
     
-    // Serial.println(ACU1.getSDCVoltage());
 
     if(can_primary.read(msg)){
         DTI.receive(msg.id, msg.buf);
