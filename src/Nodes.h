@@ -21,11 +21,11 @@
 
 
 #if defined(USE_CAN_PRIMARY) && !defined(USE_CAN_DATA)
-    #define CAN_PRIMARY_BUS CAN1
-    #define CAN_DATA_BUS CAN3  // Default to CAN3 if CAN_PRIMARY_BUS is selected
-#elif !defined(USE_CAN_PRIMARY) && defined(USE_CAN_DATA)
     #define CAN_PRIMARY_BUS CAN3
-    #define CAN_DATA_BUS CAN1
+    #define CAN_DATA_BUS CAN1  // Default to CAN3 if CAN_PRIMARY_BUS is selected
+#elif !defined(USE_CAN_PRIMARY) && defined(USE_CAN_DATA)
+    #define CAN_PRIMARY_BUS CAN1
+    #define CAN_DATA_BUS CAN3
 #else
     #error "Please define either USE_CAN_PRIMARY or USE_CAN_DATA"
 #endif
@@ -493,7 +493,6 @@ struct Pedals{
         }
         send(Pedals_Ping_Request);
     }
-
     private:
     void send(int x){
         for(int i = 0; i < 8; i++) msg.buf[i] = dataOut[i];
