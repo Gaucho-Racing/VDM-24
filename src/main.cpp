@@ -127,10 +127,10 @@ class VehicleTuneController {
         uint8_t temp_inverter_critical = 70; // degrees celsius for inverter critical
         uint16_t rev_limit = 5500;// RPM cutoff   
 
-        uint16_t apps_zero_1 = 14070; // ADC value for APPS 1 at 0% throttle
-        uint16_t apps_zero_2 = 28440; // ADC value for APPS 2 at 0% throttle
-        uint16_t apps_floor_1 = 9965; // ADC value for APPS 1 at 100% throttle
-        uint16_t apps_floor_2 = 20280; // ADC value for APPS 2 at 100% throttle
+        uint16_t apps_zero_1 = 13460; // ADC value for APPS 1 at 0% throttle
+        uint16_t apps_zero_2 = 27250; // ADC value for APPS 2 at 0% throttle
+        uint16_t apps_floor_1 = 9302; // ADC value for APPS 1 at 100% throttle
+        uint16_t apps_floor_2 = 18950; // ADC value for APPS 2 at 100% throttle
 
         float max_regen_steering_angle = 0.5; // radians for max regen steering angle
         float regen_rms_amps = 2; // Amperes for regen RMS current
@@ -1548,8 +1548,8 @@ void setup() {
     // ! UNCOMMENT FOR NOMINAL VEHICLE OPERATION
     tune->setPowerLevelData(LIMIT, 15);
     tune->setPowerLevelData(LOW_PWR,30);
-    tune->setPowerLevelData(MID_PWR, 50);
-    tune->setPowerLevelData(HIGH_PWR, 80);
+    tune->setPowerLevelData(MID_PWR, 80);
+    tune->setPowerLevelData(HIGH_PWR, 150);
     tune->setRegenLevelData(REGEN_HIGH, 100);
     settings.regen_level = REGEN_OFF;
     settings.power_level = HIGH_PWR;
@@ -1567,7 +1567,7 @@ void setup() {
 void loop(){
     // ! DISABLE REGEN
     settings.regen_level = REGEN_OFF; 
-    printDebug();
+    // printDebug();
     // System Checks
     // Serial.println(analogRead(IMD_OK_PIN));
     // ! SYSTEM CHECKS ARE SUPRESSED FOR MOTOR TEST BENCH
