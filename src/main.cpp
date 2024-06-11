@@ -626,6 +626,9 @@ Style RTDStyle = SOLID;
 const float DASH_PULSE_FREQUENCY = 0.5;  // Frequency of the sine wave in Hz
 const unsigned long DASH_PULSE_PERIOD = 1000 / DASH_PULSE_FREQUENCY;  // Period in milliseconds
 
+const uint8_t BSE_ACTIVATION_ADC = 500; // BSE ADC value for brake light and active brake signal
+
+
 #define SERIAL_BUFFER_SIZE 256;
 
 
@@ -903,38 +906,28 @@ void handleDashPanelInputs(){
     if(msg.id == Button_Event){
         if(msg.buf[0]){ // TS_ACTIVE
         // ! NEED BRAKE TO START CAR
-            // if(brake < 500) {
-            //     sendDashPopup(0x3, 3);
-            //     return;
-            // }
+            if(brake < BSE_ACTIVATION_ADC) {
+                return;
+            }
             State s = state;
             if(s == GLV_ON){
-              //  for(int i = 0; i < 10; i++){ 
-                    // delay(3);
-                    uint8_t data[8] = {1, 0, 0, 0, 0, 0, 0, 0};
-                    writeMessage(ACU_Control, data, 8, PRIMARY_CAN_BUS); 
-                    prechargeStartTime = millis();
-                    state = TS_PRECHARGE;       
-                // }
+                uint8_t data[8] = {1, 0, 0, 0, 0, 0, 0, 0};
+                writeMessage(ACU_Control, data, 8, PRIMARY_CAN_BUS); 
+                prechargeStartTime = millis();
+                state = TS_PRECHARGE;       
             }
         }
         else if(msg.buf[1]){ // TS_OFF
-            // shut off car entirely
-            // for(int i = 0; i < 10; i++){
-                // delay(3);
-                uint8_t data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-                writeMessage(ACU_Control, data, 8, PRIMARY_CAN_BUS);
-                state = TS_DISCHARGE_OFF;
-            // }
+            uint8_t data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+            writeMessage(ACU_Control, data, 8, PRIMARY_CAN_BUS);
+            state = TS_DISCHARGE_OFF;
         }
         else if(msg.buf[2]) { // RTD_ON
-            // if(brake < ){
-            //     sendDashPopup(0x3, 3);
-            //     return;
-            // }
-            if(state == PRECHARGE_COMPLETE){ // TODO: check throttle position
+            if(brake < BSE_ACTIVATION_ADC){
+                return;
+            }
+            if(state == PRECHARGE_COMPLETE){ 
                 state = DRIVE_STANDBY;
-                //TODO: play rtd sound
                 digitalWrite(AUX_OUT_PIN, HIGH);
             }
         }
@@ -1184,11 +1177,10 @@ State drive_standby(bool& BSE_APPS_violation, VehicleTuneController& tune) {
     // only if no violation, and throttle is pressed, go to DRIVE
 
     if(!BSE_APPS_violation && throttle > 0.05) return DRIVE_ACTIVE;
-    if(!BSE_APPS_violation && throttle == 0 && DTI.getERPM() > 250 && settings.regen_level != REGEN_OFF) return DRIVE_REGEN;//TODO: Fix
+    if(!BSE_APPS_violation && throttle == 0 && mVehicleSpeedMPH() > 5 && settings.regen_level != REGEN_OFF) return DRIVE_REGEN;
 
     if(BSE_APPS_violation) {
         // SEND CAN WARNING TO DASH
-        sendDashPopup(0x01, 3);
         if(throttle < 0.05) {
             // violation exit condition, reset violation and return to DRIVE_READY
             BSE_APPS_violation = false;
@@ -1231,7 +1223,7 @@ State drive_active(bool& BSE_APPS_violation, VehicleTuneController& tune) {
         return DRIVE_STANDBY;
     } 
     // APPS X BSE VIOLATION
-    if((brake > 2000 && throttle > 0.25)) {
+    if((brake > BSE_ACTIVATION_ADC && throttle > 0.25)) {
         sendDashPopup(0x01, 1);
         BSE_APPS_violation = true;
         return DRIVE_STANDBY; // Put car into neutral state, no engine power
@@ -1269,7 +1261,7 @@ State drive_regen(bool& BSE_APPS_violation, VehicleTuneController& tune){
 
     float rpm = DTI.getERPM()/10.0;
     
-    if(mVehicleSpeedMPH() > 5 && (brake > 500 || throttle < 0.05)){
+    if(mVehicleSpeedMPH() > 5 && (brake > BSE_ACTIVATION_ADC || throttle < 0.05)){
         if(millis() - lastDTIMessage >= 1000/DTI_COMM_FREQUENCY){
             DTI.setDriveEnable(1);
             DTI.setBrakeCurrent((0.05 - throttle) * 20 * 10);
